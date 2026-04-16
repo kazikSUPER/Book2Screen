@@ -22,3 +22,50 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+/server/obj
+
+# IDE Specific (Rider/Visual Studio/VS Code)
+.idea/
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.sln.docstates
+
+# .NET Build Artifacts
+bin/
+obj/
+TestResults/
+nupkg/
+
+# Environment Secrets (CRITICAL for Stage 3)
+.env
+.env.local
+.env.*.local
+*.pfx
+*.certificate
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Frontend (Vue 3 / Vite / Node)
+node_modules/
+dist/
+dist-ssr/
+.local
+npm-debug.log
+yarn-debug.log*
+yarn-error.log*
+.eslintcache
+.stylelintcache
+
+# Databases (PostgreSQL/Local DBs)
+*.db
+*.db-shm
+*.db-wal
+/pgdata/
+
+# OS Specific 
+.DS_Store
+Thumbs.db
