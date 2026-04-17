@@ -1,4 +1,9 @@
+// <copyright file="Program.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 using System.Reflection;
+using Book2Screen.Middleware;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,8 +15,11 @@ builder.Services.AddSwaggerGen(options =>
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
 });
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 builder.Services.AddHealthChecks()
-    .AddCheck("Database", () => 
+    .AddCheck("Database", () =>
     {
         return HealthCheckResult.Healthy("Database is responding (SELECT 1)");
     });
@@ -26,4 +34,4 @@ if (app.Environment.IsDevelopment())
 
 app.MapHealthChecks("/health");
 
-app.Run();
+await app.RunAsync();
