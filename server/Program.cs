@@ -4,6 +4,7 @@
 
 using System.Reflection;
 using Book2Screen.API__Web_.Middleware;
+using Book2Screen.Application.Validators;
 using Book2Screen.Infrastructure.Persistence;
 using FluentValidation;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
@@ -17,7 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
 
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+builder.Services.AddValidatorsFromAssemblyContaining<UserValidator>();
 
 builder.Services.AddFluentValidationRulesToSwagger();
 
