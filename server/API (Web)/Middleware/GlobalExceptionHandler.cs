@@ -1,7 +1,7 @@
-namespace Book2Screen.Middleware;
+namespace Book2Screen.API__Web_.Middleware;
 
 using System.Net;
-using Book2Screen.Models;
+using Book2Screen.Domain.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 
 /// <summary>

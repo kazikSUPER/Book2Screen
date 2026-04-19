@@ -4,6 +4,7 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -20,6 +21,12 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
+      <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
+      <PackageReference Include="AspNetCore.HealthChecks.UI.Core" Version="9.0.0" />
+      <PackageReference Include="DotNetEnv" Version="3.1.1" />
+      <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.6" />
+      <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
       <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
       <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
       <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
@@ -35,10 +42,13 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Config\" />
-      <Folder Include="Data\" />
-      <Folder Include="Dto\" />
-      <Folder Include="Services\" />
+      <Folder Include="API (Web)\" />
+      <Folder Include="API (Web)\Configurations\" />
+      <Folder Include="Application\DTOs\" />
+      <Folder Include="Application\Interfaces\" />
+      <Folder Include="Application\Services\" />
+      <Folder Include="Application\Validators\" />
+      <Folder Include="Infrastructure\ExternalServices\" />
     </ItemGroup>
 
     <ItemGroup>

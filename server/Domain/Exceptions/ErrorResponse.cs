@@ -1,4 +1,4 @@
-namespace Book2Screen.Models;
+namespace Book2Screen.Domain.Exceptions;
 
 /// <summary>
 /// Стандартна модель відповіді при виникненні помилки

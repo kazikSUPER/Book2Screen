@@ -3,7 +3,9 @@
 // </copyright>
 
 using System.Reflection;
-using Book2Screen.Middleware;
+using Book2Screen.API__Web_.Middleware;
+using Book2Screen.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Serilog;
 
