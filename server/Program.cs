@@ -9,7 +9,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Serilog;
 
+DotNetEnv.Env.Load();
+
 var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
+
+Console.WriteLine(connectionString);
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -34,10 +43,15 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 builder.Services.AddHealthChecks()
-    .AddCheck("Database", () =>
-    {
-        return HealthCheckResult.Healthy("Database is responding (SELECT 1)");
-    });
+    .AddNpgSql(
+    connectionString: connectionString ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found."),
+    name: "Supabase_PostgreSQL",
+    tags: new[] { "db", "sql", "supabase" },
+    failureStatus: HealthStatus.Unhealthy,
+    timeout: TimeSpan.FromSeconds(5))
+    .AddDbContextCheck<ApplicationDbContext>(
+    name: "EF_Core_Context",
+    tags: new[] { "orm", "efcore" });
 
 var app = builder.Build();
 
