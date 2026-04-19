@@ -25,6 +25,9 @@
       <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
       <PackageReference Include="AspNetCore.HealthChecks.UI.Core" Version="9.0.0" />
       <PackageReference Include="DotNetEnv" Version="3.1.1" />
+      <PackageReference Include="FluentValidation" Version="12.1.1" />
+      <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+      <PackageReference Include="MicroElements.Swashbuckle.FluentValidation" Version="7.1.4" />
       <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.6" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
       <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
@@ -47,7 +50,6 @@
       <Folder Include="Application\DTOs\" />
       <Folder Include="Application\Interfaces\" />
       <Folder Include="Application\Services\" />
-      <Folder Include="Application\Validators\" />
       <Folder Include="Infrastructure\ExternalServices\" />
     </ItemGroup>
 
