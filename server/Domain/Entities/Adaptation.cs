@@ -31,6 +31,8 @@ public class Adaptation : BaseEntity
 
     public string? Studio { get; set; }
 
+    public string? Country { get; set; }
+
     // Навігаційні властивості
     public ICollection<AdaptationActor> AdaptationActors { get; set; } = new List<AdaptationActor>();
 
