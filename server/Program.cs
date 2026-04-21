@@ -27,6 +27,8 @@ var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER");
 var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
 var host = Environment.GetEnvironmentVariable("HOST");
 
+builder.Services.AddControllers();
+
 builder.Services.AddValidatorsFromAssemblyContaining<UserValidator>();
 
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -92,6 +94,8 @@ builder.Services.AddHealthChecks()
     tags: new[] { "orm", "efcore" });
 
 var app = builder.Build();
+
+app.MapControllers();
 
 app.UseAuthentication();
 app.UseAuthorization();
