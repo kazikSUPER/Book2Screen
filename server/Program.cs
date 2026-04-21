@@ -4,8 +4,10 @@
 
 using System.Reflection;
 using System.Text;
+using AutoMapper;
 using Book2Screen.API__Web_.Middleware;
 using Book2Screen.Application.Interfaces;
+using Book2Screen.Application.Mappings;
 using Book2Screen.Application.Validators;
 using Book2Screen.Infrastructure.ExternalServices;
 using Book2Screen.Infrastructure.Persistence;
@@ -16,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using Serilog.Extensions.Logging;
 
 DotNetEnv.Env.Load();
 
@@ -26,6 +29,17 @@ var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
 var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER");
 var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
 var host = Environment.GetEnvironmentVariable("HOST");
+
+var mappingConfig = new MapperConfiguration(
+mc =>
+{
+    mc.AddProfile(new AdaptationProfile());
+},
+new SerilogLoggerFactory(Log.Logger));
+
+IMapper mapper = mappingConfig.CreateMapper();
+
+builder.Services.AddSingleton(mapper);
 
 builder.Services.AddControllers();
 

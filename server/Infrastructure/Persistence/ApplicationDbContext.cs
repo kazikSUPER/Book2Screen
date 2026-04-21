@@ -44,7 +44,7 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(u => u.Username).IsUnique();
             entity.HasIndex(u => u.Email).IsUnique();
 
-            entity.ToTable(t => t.HasCheckConstraint("CK_User_Role", "role IN ('user', 'admin', 'moderator')"));
+            entity.ToTable(t => t.HasCheckConstraint("CK_User_Role", "\"Role\" IN ('user', 'admin', 'moderator')"));
         });
 
         // Налаштування Work (One-to-One зв'язки з унікальними FK)
@@ -88,8 +88,10 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Rating>(entity =>
         {
             entity.HasIndex(r => r.WorkId).IsUnique();
-            entity.ToTable(t => t.HasCheckConstraint("CK_Rating_Book", "book_rating >= 0 AND book_rating <= 10"));
-            entity.ToTable(t => t.HasCheckConstraint("CK_Rating_Adaptation", "adaptation_rating >= 0 AND adaptation_rating <= 10"));
+
+            // Додаємо екрановані лапки та виправляємо назви на ті, що у вашому C# класі
+            entity.ToTable(t => t.HasCheckConstraint("CK_Rating_Book", "\"BookRating\" >= 0 AND \"BookRating\" <= 10"));
+            entity.ToTable(t => t.HasCheckConstraint("CK_Rating_Adaptation", "\"AdaptationRating\" >= 0 AND \"AdaptationRating\" <= 10"));
         });
     }
 
