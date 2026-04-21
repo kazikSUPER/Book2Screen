@@ -3,13 +3,18 @@
 // </copyright>
 
 using System.Reflection;
+using System.Text;
 using Book2Screen.API__Web_.Middleware;
+using Book2Screen.Application.Interfaces;
 using Book2Screen.Application.Validators;
+using Book2Screen.Infrastructure.ExternalServices;
 using Book2Screen.Infrastructure.Persistence;
 using FluentValidation;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
 
 DotNetEnv.Env.Load();
@@ -17,8 +22,36 @@ DotNetEnv.Env.Load();
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
+var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER");
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
+var host = Environment.GetEnvironmentVariable("HOST");
 
 builder.Services.AddValidatorsFromAssemblyContaining<UserValidator>();
+
+builder.Services.AddScoped<ITokenService, TokenService>();
+
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret ?? throw new InvalidOperationException("JWT secret not found."))),
+            ClockSkew = TimeSpan.Zero,
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddFluentValidationRulesToSwagger();
 
@@ -60,6 +93,9 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseSerilogRequestLogging();
 
 app.UseExceptionHandler();
@@ -72,12 +108,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/api/health");
 
 try
 {
     Log.Information("Starting web application");
-    await app.RunAsync();
+    await app.RunAsync(host);
 }
 catch (Exception ex)
 {
