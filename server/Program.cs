@@ -28,7 +28,6 @@ var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING"
 var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
 var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER");
 var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
-var host = Environment.GetEnvironmentVariable("HOST");
 
 var mappingConfig = new MapperConfiguration(
 mc =>
@@ -131,7 +130,7 @@ app.MapHealthChecks("/api/health");
 try
 {
     Log.Information("Starting web application");
-    await app.RunAsync(host);
+    await app.RunAsync();
 }
 catch (Exception ex)
 {
