@@ -47,13 +47,20 @@ public class GlobalExceptionHandler : IExceptionHandler
             _ => (int)HttpStatusCode.InternalServerError
         };
 
-        // 3. Формування моделі відповіді
+        // 3. Визначення errorCode та повідомлення
+        var (errorCode, message) = exception switch
+        {
+            KeyNotFoundException => ("NOT_FOUND", exception.Message),
+            UnauthorizedAccessException => ("UNAUTHORIZED", "You are not authorized to access this resource."),
+            _ => ("INTERNAL_ERROR", "An unexpected error occurred on the server.")
+        };
+
+        // 4. Формування моделі відповіді
         var response = new ErrorResponse
         {
             StatusCode = statusCode,
-            Message = statusCode == (int)HttpStatusCode.InternalServerError
-                ? "An unexpected error occurred on the server."
-                : exception.Message,
+            ErrorCode = errorCode,
+            Message = message,
             Timestamp = DateTime.UtcNow
         };
 
