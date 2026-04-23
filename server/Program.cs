@@ -12,6 +12,7 @@ using Book2Screen.Application.Services;
 using Book2Screen.Application.Validators;
 using Book2Screen.Infrastructure.ExternalServices;
 using Book2Screen.Infrastructure.Persistence;
+using Book2Screen.Infrastructure.Persistence.Seed;
 using FluentValidation;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -129,6 +130,38 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.MapHealthChecks("/api/health");
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    var db = services.GetRequiredService<ApplicationDbContext>();
+
+    var retryCount = 10;
+    while (retryCount > 0)
+    {
+        try
+        {
+            logger.LogInformation("Applying migrations and seeding (Attempts left: {Count})", retryCount);
+            await db.Database.MigrateAsync();
+            await DbSeeder.SeedAsync(db);
+            logger.LogInformation("Database is ready.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            retryCount--;
+            if (retryCount == 0)
+            {
+                logger.LogCritical(ex, "Database connection failed permanently.");
+                throw;
+            }
+
+            logger.LogWarning("Waiting for database... (5s)");
+            await Task.Delay(5000);
+        }
+    }
+}
 
 try
 {
