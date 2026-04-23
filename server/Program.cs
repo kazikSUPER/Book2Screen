@@ -8,6 +8,7 @@ using AutoMapper;
 using Book2Screen.API__Web_.Middleware;
 using Book2Screen.Application.Interfaces;
 using Book2Screen.Application.Mappings;
+using Book2Screen.Application.Services;
 using Book2Screen.Application.Validators;
 using Book2Screen.Infrastructure.ExternalServices;
 using Book2Screen.Infrastructure.Persistence;
@@ -45,6 +46,8 @@ builder.Services.AddControllers();
 builder.Services.AddValidatorsFromAssemblyContaining<UserValidator>();
 
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAdaptationService, AdaptationService>();
 
 builder.Services.AddAuthentication(options =>
     {

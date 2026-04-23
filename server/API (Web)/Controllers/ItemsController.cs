@@ -1,14 +1,9 @@
 namespace Book2Screen.API__Web_.Controllers;
 
-using System.Runtime.CompilerServices;
-using AutoFilterer.Extensions;
-using AutoMapper;
-using AutoMapper.QueryableExtensions;
 using Book2Screen.Application.DTOs;
 using Book2Screen.Application.Filters;
-using Book2Screen.Infrastructure.Persistence;
+using Book2Screen.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 /// <summary>
 /// Контролер для роботи з каталогом елементів (книг/фільмів).
@@ -18,13 +13,11 @@ using Microsoft.EntityFrameworkCore;
 [Produces("application/json")]
 public class ItemsController : ControllerBase
 {
-    private readonly ApplicationDbContext context;
-    private readonly IMapper mapper;
+    private readonly IAdaptationService adaptationService;
 
-    public ItemsController(ApplicationDbContext context, IMapper mapper)
+    public ItemsController(IAdaptationService adaptationService)
     {
-        this.context = context;
-        this.mapper = mapper;
+        this.adaptationService = adaptationService;
     }
 
     /// <summary>
@@ -33,10 +26,10 @@ public class ItemsController : ControllerBase
     /// <returns>Список елементів.</returns>
     /// <response code="200">Список успішно отримано.</response>
     [HttpGet]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<AdaptationDto>))]
     public async Task<IActionResult> GetAllItems()
     {
-        var list = await this.context.Adaptations.ProjectTo<AdaptationDto>(this.mapper.ConfigurationProvider).ToListAsync();
+        var list = await this.adaptationService.GetAllAdaptationsAsync();
         return this.Ok(list);
     }
 
@@ -48,17 +41,17 @@ public class ItemsController : ControllerBase
     /// <response code="200">Елемент знайдено.</response>
     /// <response code="404">Елемент із таким ID не знайдено.</response>
     [HttpGet("{id}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AdaptationDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetItemById(int id)
     {
-        var item = await this.context.Adaptations.FindAsync(id);
+        var item = await this.adaptationService.GetAdaptationByIdAsync(id);
         if (item == null)
         {
             return this.NotFound();
         }
 
-        return this.Ok(this.mapper.Map<AdaptationDto>(item));
+        return this.Ok(item);
     }
 
     /// <summary>
@@ -70,10 +63,7 @@ public class ItemsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<AdaptationDto>))]
     public async Task<IActionResult> GetFilteredItems([FromQuery] AdaptationFilter filter)
     {
-        var query = this.context.Adaptations.ApplyFilter(filter);
-
-        var results = await query.ProjectTo<AdaptationDto>(this.mapper.ConfigurationProvider).ToListAsync();
-
+        var results = await this.adaptationService.GetFilteredAdaptationsAsync(filter);
         return this.Ok(results);
     }
 }
