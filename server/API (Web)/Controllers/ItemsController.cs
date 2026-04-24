@@ -36,14 +36,14 @@ public class ItemsController : ControllerBase
     /// <summary>
     /// Отримати деталі конкретного елемента за його ідентифікатором.
     /// </summary>
-    /// <param name="id">Унікальний ідентифікатор елемента.</param>
+    /// <param name="id">Унікальний ідентифікатор елемента (GUID).</param>
     /// <returns>Детальна інформація про елемент.</returns>
     /// <response code="200">Елемент знайдено.</response>
     /// <response code="404">Елемент із таким ID не знайдено.</response>
     [HttpGet("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AdaptationDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetItemById(int id)
+    public async Task<IActionResult> GetItemById(Guid id)
     {
         var item = await this.adaptationService.GetAdaptationByIdAsync(id);
         if (item == null)
