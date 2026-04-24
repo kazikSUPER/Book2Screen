@@ -8,11 +8,11 @@ using System.ComponentModel.DataAnnotations;
 public class RegisterRequest
 {
     /// <summary>
-    /// Унікальне ім'я користувача.
+    /// Унікальне ім'я користувача (нікнейм).
     /// </summary>
     [Required]
     [MaxLength(50)]
-    public string Username { get; set; } = null!;
+    public string Nickname { get; set; } = null!;
 
     /// <summary>
     /// Електронна пошта користувача.

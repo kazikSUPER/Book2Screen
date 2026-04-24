@@ -8,11 +8,11 @@ using System.ComponentModel.DataAnnotations;
 public class LoginDto
 {
     /// <summary>
-    /// Логін користувача (пошта або унікальне ім'я).
+    /// Електронна пошта користувача.
     /// </summary>
     [Required]
-    [MaxLength(50)]
-    public string Username { get; set; } = null!;
+    [EmailAddress]
+    public string Email { get; set; } = null!;
 
     /// <summary>
     /// Пароль користувача.
