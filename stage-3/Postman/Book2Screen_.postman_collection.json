@@ -1,0 +1,1248 @@
+{
+  "info": {
+    "name": "Book2Screen API",
+    "_postman_id": "b2s-team17-sprint1-v4-1-2026",
+    "description": "Book2Screen API · Team 17 · Sprint 1 · v4.1 · 23.04.2026\n\nРеально реалізовані endpoints:\n  GET  /api/health              — plain text 'Healthy' (не JSON!) → BUG-007\n  POST /api/auth/register       — 200 + JWT\n  POST /api/auth/login          — 200 + JWT\n  GET  /api/items               — 200 + JSON array\n  GET  /api/items/{id}          — 500 (type mismatch: int vs Guid) → BUG-008\n  GET  /api/items/filter        — 200 + JSON array\n\nВідомі баги (виявлені при виконанні колекції):\n  BUG-007: GET /api/health повертає plain text 'Healthy', не JSON\n  BUG-008: GET /api/items/{id} — параметр int, але Entity.Id — Guid → 500\n  BUG-009: GET /api/items/9999 → 500 (same root cause as BUG-008)\n\nЗаблоковані (endpoint не реалізовано):\n  POST /api/votes   — TC-BUS-03 BLOCKED\n  POST /api/reviews — TC-REV-01 BLOCKED",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 · Health",
+      "description": "GET /api/health\nBUG-007: повертає plain text 'Healthy', не JSON.\nFix: додати ResponseWriter у MapHealthChecks() або UIResponseWriter.",
+      "item": [
+        {
+          "name": "TC-HEALTH-01 · GET /api/health — plain text (BUG-007)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// TC-HEALTH-01: Health Check",
+                  "// BUG-007: /api/health returns plain text 'Healthy', NOT JSON",
+                  "// Root cause: MapHealthChecks() called without ResponseWriter",
+                  "// Fix: app.MapHealthChecks('/api/health', new HealthCheckOptions {",
+                  "//   ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse });",
+                  "",
+                  "pm.test('TC-HEALTH-01 · Status 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// BUG-007: response is plain text, not JSON",
+                  "// Check what we actually get",
+                  "const raw = pm.response.text();",
+                  "const isJSON = raw.trim().startsWith('{') || raw.trim().startsWith('[');",
+                  "",
+                  "pm.test('TC-HEALTH-01 · BUG-007: response is plain text (not JSON)', () => {",
+                  "  // This documents the CURRENT buggy behavior",
+                  "  pm.expect(isJSON).to.equal(false,",
+                  "    'If this fails: BUG-007 is fixed! Health endpoint now returns JSON.');",
+                  "  console.warn('[BUG-007] /api/health returns plain text: \"' + raw + '\"');",
+                  "  console.warn('[BUG-007] Expected JSON: {\"status\":\"Healthy\", ...}');",
+                  "  console.warn('[BUG-007] Fix: add ResponseWriter to MapHealthChecks()');",
+                  "});",
+                  "",
+                  "// The actual content check (plain text)",
+                  "pm.test('TC-HEALTH-01 · Response contains health status word', () => {",
+                  "  pm.expect(raw.toLowerCase()).to.satisfy(t =>",
+                  "    t.includes('healthy') || t.includes('degraded') || t.includes('unhealthy'),",
+                  "    'Response should contain a health status word');",
+                  "});",
+                  "",
+                  "console.log('[TC-HEALTH-01] Raw response: \"' + raw + '\"');",
+                  "console.log('[TC-HEALTH-01] Content-Type: ' + pm.response.headers.get('Content-Type'));",
+                  "console.log('[TC-HEALTH-01] Elapsed: ' + pm.response.responseTime + 'ms');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "TC-HEALTH-01: Health Check\nExpected (correct): HTTP 200, JSON: {status:'Healthy'}\nActual (BUG-007): HTTP 200, plain text 'Healthy'\n\nBUG-007 (NEW, Major, P2):\nRoot cause: MapHealthChecks() without ResponseWriter defaults to plain text.\nFix: add UIResponseWriter.WriteHealthCheckUIResponse to HealthCheckOptions."
+          }
+        },
+        {
+          "name": "TC-PERF-01 · GET /api/health — warm response time < 500ms",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Run TC-HEALTH-01 first as warm-up, then run this request for measurement",
+                  "console.log('[TC-PERF-01] Warm measurement — ensure TC-HEALTH-01 was run first.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-PERF-01 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-PERF-01 · Warm response < 500ms', () => {",
+                  "  pm.expect(pm.response.responseTime).to.be.below(500);",
+                  "});",
+                  "console.log('[TC-PERF-01] Warm elapsed: ' + pm.response.responseTime + 'ms');",
+                  "console.log('[TC-PERF-01] Cold start from log: 2597.73ms (BUG-001)');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "TC-PERF-01: Warm response baseline < 500ms\nRun TC-HEALTH-01 first as warm-up.\nBUG-001: cold start recorded 2597.73ms in log-20260423.txt"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 · Auth",
+      "description": "POST /api/auth/register · POST /api/auth/login\nBUG-002: duplicate returns 401 instead of 409\nBUG-003: requests not logged by Serilog",
+      "item": [
+        {
+          "name": "TC-AUTH-01 · POST /api/auth/register — happy path",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-AUTH-01 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-AUTH-01 · Response is JSON', () => pm.response.to.be.json);",
+                  "const json = pm.response.json();",
+                  "pm.test('TC-AUTH-01 · Has token', () => {",
+                  "  pm.expect(json).to.have.property('token');",
+                  "  pm.expect(json.token).to.be.a('string').and.not.be.empty;",
+                  "});",
+                  "if (json.token) {",
+                  "  pm.collectionVariables.set('token', json.token);",
+                  "  pm.environment.set('token', json.token);",
+                  "}",
+                  "pm.test('TC-AUTH-01 · Token saved', () => pm.expect(pm.environment.get('token')).to.not.be.empty);",
+                  "pm.test('TC-AUTH-01 · SBR-02: No stack trace', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('StackTrace');",
+                  "});",
+                  "console.log('[TC-AUTH-01] elapsed: ' + pm.response.responseTime + 'ms');",
+                  "console.warn('[TC-AUTH-01] BUG-003: this request may not appear in Serilog log file');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"qauser_{{$randomInt}}\",\n  \"email\": \"qauser_{{$randomInt}}@test.com\",\n  \"password\": \"P@ssw0rd123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "TC-AUTH-01: Register new user\nExpected: 200, { token:<JWT> }\nToken auto-saved to {{token}}"
+          }
+        },
+        {
+          "name": "TC-AUTH-02 · POST /api/auth/login — happy path",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-AUTH-02 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-AUTH-02 · Response is JSON', () => pm.response.to.be.json);",
+                  "const json = pm.response.json();",
+                  "pm.test('TC-AUTH-02 · Has token', () => {",
+                  "  pm.expect(json).to.have.property('token');",
+                  "  pm.expect(json.token).to.be.a('string').and.not.be.empty;",
+                  "});",
+                  "if (json.token) { pm.environment.set('token', json.token); }",
+                  "console.log('[TC-AUTH-02] elapsed: ' + pm.response.responseTime + 'ms');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"P@ssw0rd123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "TC-AUTH-02: Login existing user\nPrecondition: user 'admin' registered\nExpected: 200, { token:<JWT> }"
+          }
+        },
+        {
+          "name": "TC-AUTH-03 · POST /api/auth/register — duplicate → BUG-002 (401 not 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// BUG-002: returns 401 instead of 409 Conflict",
+                  "pm.test('TC-AUTH-03 · BUG-002: currently 401 (expected 409 after fix)', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  console.warn('[BUG-002] 401 returned for duplicate — should be 409 Conflict');",
+                  "  console.warn('[BUG-002] Fix: AuthController.cs Unauthorized() → Conflict()');",
+                  "});",
+                  "pm.test('TC-AUTH-03 · SBR-01: No HTML', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('<html>');",
+                  "});",
+                  "pm.test('TC-AUTH-03 · SBR-02: No stack trace', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('StackTrace');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"email\": \"admin@test.com\",\n  \"password\": \"P@ssw0rd123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "TC-AUTH-03 / TC-BUS-01: Duplicate registration\nExpected (after fix): 409 Conflict, { errorCode:'DUPLICATE_RESOURCE' }\nActual (BUG-002): 401 Unauthorized\nBUG-002 (P2, Major)"
+          }
+        },
+        {
+          "name": "TC-BUS-02 · POST /api/auth/login — wrong password → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-BUS-02 · Status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('TC-BUS-02 · No BCrypt details', () => {",
+                  "  const t = pm.response.text();",
+                  "  pm.expect(t).to.not.include('BCrypt');",
+                  "  pm.expect(t).to.not.include('PasswordHash');",
+                  "});",
+                  "pm.test('TC-BUS-02 · SBR-02: No stack trace', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('StackTrace');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"WRONG_PASSWORD_XYZ\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "TC-BUS-02: Wrong password\nExpected: 401, no hash details\nStatus: PASS"
+          }
+        },
+        {
+          "name": "TC-PERF-02 · POST /api/auth/register — response time < 2000ms",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-PERF-02 · Status 200 or 401', () => {",
+                  "  pm.expect([200, 401]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('TC-PERF-02 · Response time < 2000ms', () => {",
+                  "  pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});",
+                  "console.log('[TC-PERF-02] elapsed: ' + pm.response.responseTime + 'ms');",
+                  "console.warn('[TC-PERF-02] BUG-003: no Serilog entry for /auth/* — server-side elapsed unverifiable');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"perf_{{$randomInt}}\",\n  \"email\": \"perf_{{$randomInt}}@test.com\",\n  \"password\": \"P@ssw0rd123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "TC-PERF-02: Register performance baseline < 2000ms\nBUG-003: no Serilog log for /auth/* — server-side elapsed cannot be confirmed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 · Items",
+      "description": "GET /api/items · GET /api/items/{id} · GET /api/items/filter\n\nBUG-008 (NEW): GET /api/items/{id} — controller param is 'int id' but Entity.Id is Guid.\nFindAsync(int) throws InvalidCastException → 500.\nBUG-009 (NEW): same root cause — GET /api/items/9999 → 500 instead of 404.\nBUG-005: seed data absent — all GETs return []",
+      "item": [
+        {
+          "name": "TC-ITEMS-01 · GET /api/items — all adaptations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ITEMS-01 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-ITEMS-01 · Response is JSON array', () => {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});",
+                  "const items = pm.response.json();",
+                  "if (items.length === 0) {",
+                  "  console.warn('[TC-ITEMS-01] WARN: empty array — BUG-005 (seed data absent)');",
+                  "} else {",
+                  "  pm.test('TC-ITEMS-01 · Items have required fields', () => {",
+                  "    const item = items[0];",
+                  "    pm.expect(item).to.have.property('id');",
+                  "    pm.expect(item).to.have.property('title');",
+                  "    pm.expect(item).to.have.property('type');",
+                  "  });",
+                  "  // Save first item's Guid ID for use in TC-ITEMS-02",
+                  "  pm.environment.set('firstItemId', items[0].id);",
+                  "  console.log('[TC-ITEMS-01] ' + items.length + ' item(s). First ID saved: ' + items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "items"
+              ]
+            },
+            "description": "TC-ITEMS-01: GET all adaptations\nExpected: 200, JSON array\nWARN: BUG-005 — seed data absent, returns []\nNote: first item Guid ID saved to {{firstItemId}} for TC-ITEMS-02"
+          }
+        },
+        {
+          "name": "TC-ITEMS-02 · GET /api/items/{id} — BUG-008 (int vs Guid)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// TC-ITEMS-02: BUG-008 — GetItemById(int id) but Entity.Id is Guid",
+                  "// /api/items/1 (int) → FindAsync(1) on Guid PK → 500 InvalidCastException",
+                  "// /api/items/<guid> → model binding Guid→int → 400 Bad Request",
+                  "// Fix: change GetItemById(int id) → GetItemById(Guid id)",
+                  "",
+                  "const code = pm.response.code;",
+                  "console.log('[TC-ITEMS-02] Status: ' + code);",
+                  "console.log('[TC-ITEMS-02] URL: ' + pm.request.url.toString());",
+                  "",
+                  "// Document BUG-008: both 400 and 500 are wrong — 200 or 404 expected",
+                  "pm.test('TC-ITEMS-02 · BUG-008: 500 returned (int→Guid crash) — expected 200 or 404', () => {",
+                  "  if (code === 500) {",
+                  "    console.error('[BUG-008] 500: FindAsync(int) on Guid PK throws InvalidCastException');",
+                  "    console.error('[BUG-008] Fix: GetItemById(int id) → GetItemById(Guid id)');",
+                  "  } else if (code === 400) {",
+                  "    console.error('[BUG-008] 400: model binding failed — Guid value cannot bind to int param');",
+                  "    console.error('[BUG-008] Fix: GetItemById(int id) → GetItemById(Guid id)');",
+                  "  }",
+                  "  // Test FAILS intentionally to surface BUG-008",
+                  "  pm.expect([200, 404]).to.include(code,",
+                  "    'BUG-008: GetItemById(int id) wrong type — got ' + code + ', expected 200 or 404. Fix: change param to Guid');",
+                  "});",
+                  "",
+                  "// SBR checks regardless",
+                  "pm.test('TC-ITEMS-02 · SBR-01: No HTML in response', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('<html>');",
+                  "});",
+                  "pm.test('TC-ITEMS-02 · SBR-02: No stack trace', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('StackTrace');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/items/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "items",
+                "1"
+              ]
+            },
+            "description": "TC-ITEMS-02: GET adaptation by ID\nBUG-008 (Major, P1): GetItemById(int id) — parameter is int, Entity.Id is Guid\n\nReal behavior per input type:\n  /api/items/1         → 500 (FindAsync(1) fails on Guid column)\n  /api/items/<guid>    → 400 (model binding: Guid cannot bind to int)\n  /api/items/<empty>   → 400 (missing route value)\n\nFix: change signature to GetItemById(Guid id)\n\nThis test uses integer '1' to trigger the 500 and document BUG-008."
+          }
+        },
+        {
+          "name": "TC-ITEMS-03 · GET /api/items/nonexistent — BUG-008 (400 not 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// TC-ITEMS-03: Non-existent Guid should return 404",
+                  "// BUG-008: GetItemById(int id) — Guid cannot bind to int → 400 instead of 404",
+                  "// Fix: GetItemById(Guid id) → FindAsync(Guid) → null → 404",
+                  "",
+                  "const code = pm.response.code;",
+                  "console.log('[TC-ITEMS-03] Status: ' + code);",
+                  "",
+                  "pm.test('TC-ITEMS-03 · BUG-008: 400 returned instead of 404 (Guid→int binding fail)', () => {",
+                  "  if (code === 400) {",
+                  "    console.error('[BUG-008] 400: Guid URL param cannot bind to int method param');",
+                  "    console.error('[BUG-008] Fix: GetItemById(int id) → GetItemById(Guid id)');",
+                  "    console.error('[BUG-008] After fix: Guid not in DB → FindAsync → null → 404');",
+                  "  }",
+                  "  // Test FAILS intentionally to surface BUG-008",
+                  "  pm.expect(code).to.equal(404,",
+                  "    'BUG-008: got ' + code + ', expected 404. GetItemById(int id) cannot accept Guid URL. Fix: change to Guid id');",
+                  "});",
+                  "",
+                  "pm.test('TC-ITEMS-03 · SBR-01: No HTML', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('<html>');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/items/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "items",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            },
+            "description": "TC-ITEMS-03: Non-existent ID should return 404\nBUG-008 (same root cause): GetItemById(int id)\n\nReal behavior:\n  /api/items/00000000-0000-0000-0000-000000000000 → 400\n  (Guid cannot bind to int parameter → model binding error)\n  Expected: 404 Not Found\n\nFix: change GetItemById(int id) → GetItemById(Guid id)\nAfter fix: Guid not in DB → FindAsync returns null → 404"
+          }
+        },
+        {
+          "name": "TC-ITEMS-04 · GET /api/items/filter?title=Dune",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ITEMS-04 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-ITEMS-04 · Response is JSON array', () => {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});",
+                  "const r = pm.response.json();",
+                  "console.log('[TC-ITEMS-04] Filter title=Dune: ' + r.length + ' result(s).');",
+                  "if (r.length === 0) console.warn('[TC-ITEMS-04] Empty — BUG-005 (no seed data).');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/items/filter?title=Dune",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "items",
+                "filter"
+              ],
+              "query": [
+                {
+                  "key": "title",
+                  "value": "Dune"
+                }
+              ]
+            },
+            "description": "TC-ITEMS-04: Filter by title (LIKE %Dune%)\nExpected: 200, JSON array"
+          }
+        },
+        {
+          "name": "TC-ITEMS-FILTER-02 · GET /api/items/filter?type=movie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ITEMS-FILTER-02 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-ITEMS-FILTER-02 · Response is JSON array', () => {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});",
+                  "const r = pm.response.json();",
+                  "if (r.length > 0) {",
+                  "  pm.test('TC-ITEMS-FILTER-02 · All items type=movie', () => {",
+                  "    r.forEach(i => pm.expect(i.type.toLowerCase()).to.equal('movie'));",
+                  "  });",
+                  "}",
+                  "console.log('[TC-ITEMS-FILTER-02] type=movie: ' + r.length + ' result(s).');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/items/filter?type=movie",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "items",
+                "filter"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "movie"
+                }
+              ]
+            },
+            "description": "TC-ITEMS-FILTER-02: Filter by type=movie\nExpected: 200, all items have type='movie'"
+          }
+        },
+        {
+          "name": "TC-ITEMS-FILTER-03 · GET /api/items/filter — year range 2010-2024",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ITEMS-FILTER-03 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-ITEMS-FILTER-03 · Response is JSON array', () => {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});",
+                  "const r = pm.response.json();",
+                  "if (r.length > 0) {",
+                  "  pm.test('TC-ITEMS-FILTER-03 · All items in year range', () => {",
+                  "    r.forEach(i => {",
+                  "      if (i.releaseYear !== null) {",
+                  "        pm.expect(i.releaseYear).to.be.at.least(2010);",
+                  "        pm.expect(i.releaseYear).to.be.at.most(2024);",
+                  "      }",
+                  "    });",
+                  "  });",
+                  "}",
+                  "console.log('[TC-ITEMS-FILTER-03] year 2010-2024: ' + r.length + ' result(s).');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/items/filter?ReleaseYear.Min=2010&ReleaseYear.Max=2024",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "items",
+                "filter"
+              ],
+              "query": [
+                {
+                  "key": "ReleaseYear.Min",
+                  "value": "2010"
+                },
+                {
+                  "key": "ReleaseYear.Max",
+                  "value": "2024"
+                }
+              ]
+            },
+            "description": "TC-ITEMS-FILTER-03: Filter by year range 2010–2024\nAdaptationFilter.ReleaseYear = Range<int>\nExpected: 200, all items releaseYear in [2010, 2024]"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 · Error Cases",
+      "item": [
+        {
+          "name": "TC-ERR-400 · POST /api/auth/login — empty body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ERR-400 · Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('TC-ERR-400 · SBR-01: No HTML', () => {",
+                  "  const t = pm.response.text();",
+                  "  pm.expect(t).to.not.include('<html>');",
+                  "});",
+                  "pm.test('TC-ERR-400 · SBR-02: No stack trace', () => {",
+                  "  const t = pm.response.text();",
+                  "  pm.expect(t).to.not.include('StackTrace');",
+                  "  pm.expect(t).to.not.include('   at ');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-ERR-TYPE · POST /api/auth/register — email=number",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ERR-TYPE · Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('TC-ERR-TYPE · SBR-01: No HTML', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('<html>');",
+                  "});",
+                  "pm.test('TC-ERR-TYPE · SBR-02: No stack trace', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('StackTrace');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": 12345,\n  \"password\": \"P@ssw0rd123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-ERR-EDGE-01 · POST /api/auth/register — partial JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ERR-EDGE-01 · Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('TC-ERR-EDGE-01 · Validation error for missing fields', () => {",
+                  "  const t = pm.response.text().toLowerCase();",
+                  "  pm.expect(t).to.satisfy(s =>",
+                  "    s.includes('email') || s.includes('password') ||",
+                  "    s.includes('required') || s.includes('validation'));",
+                  "});",
+                  "pm.test('TC-ERR-EDGE-01 · SBR-01: No HTML', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('<html>');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-ERR-MALFORMED · POST /api/auth/register — malformed JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ERR-MALFORMED · Status 400 (no 500 crash)', () => {",
+                  "  pm.expect(pm.response.code).to.equal(400);",
+                  "});",
+                  "pm.test('TC-ERR-MALFORMED · SBR-02: No stack trace', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('StackTrace');",
+                  "  pm.expect(pm.response.text()).to.not.include('   at ');",
+                  "});",
+                  "pm.test('TC-ERR-MALFORMED · SBR-01: No HTML', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('<html>');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"username\": \"test\", \"email\": \"x@x.com\""
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-VALIDATION-SCHEMA · POST /api/auth/register — empty body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-VALIDATION-SCHEMA · Status 400', () => pm.response.to.have.status(400));",
+                  "const t = pm.response.text().toLowerCase();",
+                  "pm.test('TC-VALIDATION-SCHEMA · username in error', () => {",
+                  "  pm.expect(t).to.satisfy(s => s.includes('username') || s.includes('required'));",
+                  "});",
+                  "pm.test('TC-VALIDATION-SCHEMA · email in error', () => {",
+                  "  pm.expect(t).to.satisfy(s => s.includes('email') || s.includes('required'));",
+                  "});",
+                  "pm.test('TC-VALIDATION-SCHEMA · password in error', () => {",
+                  "  pm.expect(t).to.satisfy(s => s.includes('password') || s.includes('required'));",
+                  "});",
+                  "pm.test('TC-VALIDATION-SCHEMA · SBR-01: No HTML', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('<html>');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-ERR-500 · POST /api/auth/register — null body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-ERR-500 · Status 400 or 500', () => {",
+                  "  pm.expect([400, 500]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('TC-ERR-500 · SBR-01: No HTML', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('<html>');",
+                  "});",
+                  "pm.test('TC-ERR-500 · SBR-02: No stack trace', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('StackTrace');",
+                  "  pm.expect(pm.response.text()).to.not.include('   at Book2Screen');",
+                  "});",
+                  "if (pm.response.code === 500) {",
+                  "  const j = pm.response.json();",
+                  "  pm.test('TC-ERR-500 · Has statusCode', () => pm.expect(j).to.have.property('statusCode'));",
+                  "  pm.test('TC-ERR-500 · Has message', () => pm.expect(j).to.have.property('message'));",
+                  "  pm.test('TC-ERR-500 · Has timestamp', () => pm.expect(j).to.have.property('timestamp'));",
+                  "  if (!j.errorCode) {",
+                  "    console.warn('[BUG-004/BUG-006] errorCode missing from 500 response');",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "null"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 · Security",
+      "item": [
+        {
+          "name": "TC-SEC-01 · No stack trace leak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-SEC-01 · No StackTrace in body', () => {",
+                  "  const t = pm.response.text();",
+                  "  pm.expect(t).to.not.include('StackTrace');",
+                  "  pm.expect(t).to.not.include('   at Book2Screen');",
+                  "});",
+                  "pm.test('TC-SEC-01 · No file path leak', () => {",
+                  "  const t = pm.response.text();",
+                  "  pm.expect(t).to.not.include('C:\\\\Users');",
+                  "  pm.expect(t).to.not.include('/home/');",
+                  "  pm.expect(t).to.not.include('/app/');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ invalid json here"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SEC-02 · No SQL error in response",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-SEC-02 · No SQL text in response', () => {",
+                  "  const t = pm.response.text().toLowerCase();",
+                  "  pm.expect(t).to.not.include('select ');",
+                  "  pm.expect(t).to.not.include('drop table');",
+                  "  pm.expect(t).to.not.include('npgsql');",
+                  "  pm.expect(t).to.not.include('syntax error');",
+                  "  pm.expect(t).to.not.include('pg_');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/items/filter?title='; DROP TABLE users; --",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "items",
+                "filter"
+              ],
+              "query": [
+                {
+                  "key": "title",
+                  "value": "'; DROP TABLE users; --"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SEC-03 · Combined sensitive data leak check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const t = pm.response.text();",
+                  "const tl = t.toLowerCase();",
+                  "pm.test('TC-SEC-03 · No SQL text', () => {",
+                  "  pm.expect(tl).to.not.include('select ');",
+                  "  pm.expect(tl).to.not.include('npgsql');",
+                  "});",
+                  "pm.test('TC-SEC-03 · No stack trace', () => {",
+                  "  pm.expect(t).to.not.include('StackTrace');",
+                  "  pm.expect(t).to.not.include('   at Book2Screen');",
+                  "});",
+                  "pm.test('TC-SEC-03 · No file paths', () => {",
+                  "  pm.expect(t).to.not.include('C:\\\\');",
+                  "  pm.expect(t).to.not.include('/home/');",
+                  "});",
+                  "pm.test('TC-SEC-03 · No connection string', () => {",
+                  "  pm.expect(tl).to.not.include('host=');",
+                  "  pm.expect(tl).to.not.include('password=');",
+                  "  pm.expect(tl).to.not.include('connectionstring');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": null,\n  \"email\": null,\n  \"password\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 · BLOCKED (endpoints not implemented)",
+      "description": "Entities + Validators exist in codebase but NO Controller/Route.\nAll return 404 until Sprint 2.",
+      "item": [
+        {
+          "name": "TC-BUS-03 · POST /api/votes — BLOCKED",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.warn('[TC-BUS-03] BLOCKED: POST /api/votes not implemented in Sprint 1.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-BUS-03 · BLOCKED — 404 confirms no route', () => {",
+                  "  pm.response.to.have.status(404);",
+                  "  console.warn('[TC-BUS-03] VoteValidator exists but no controller. Re-test in Sprint 2.');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{$guid}}\",\n  \"workId\": \"{{$guid}}\",\n  \"selectedOption\": \"book\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/votes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "votes"
+              ]
+            },
+            "description": "BLOCKED: VoteValidator exists (SelectedOption ∈ [book, adaptation], WorkId required) but no controller."
+          }
+        },
+        {
+          "name": "TC-REV-01 · POST /api/reviews — BLOCKED",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.warn('[TC-REV-01] BLOCKED: POST /api/reviews not implemented.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-REV-01 · BLOCKED — 404 confirms no route', () => {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workId\": \"{{$guid}}\",\n  \"targetType\": \"book\",\n  \"text\": \"This is a test review with enough characters.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reviews"
+              ]
+            },
+            "description": "BLOCKED: ReviewValidator exists (Text ≥10 chars, TargetType ∈ [book, adaptation, comparison]) but no controller."
+          }
+        }
+      ]
+    }
+  ]
+}
