@@ -29,6 +29,8 @@ public class ReviewService : IReviewService
             UserId = userId,
             WorkId = request.WorkId,
             Text = request.Text,
+            IsSpoiler = request.IsSpoiler,
+            Rating = request.Rating,
             TargetType = "comparison" 
         };
 
@@ -41,8 +43,8 @@ public class ReviewService : IReviewService
             WorkId = review.WorkId,
             UserId = review.UserId ?? Guid.Empty,
             Text = review.Text,
-            IsSpoiler = false, // Тимчасово
-            Rating = 0,       // Тимчасово
+            IsSpoiler = review.IsSpoiler,
+            Rating = review.Rating,
             CreatedAt = review.CreatedAt
         };
     }
@@ -58,8 +60,8 @@ public class ReviewService : IReviewService
                 WorkId = r.WorkId,
                 UserId = r.UserId ?? Guid.Empty,
                 Text = r.Text,
-                IsSpoiler = false, // Тимчасово
-                Rating = 0,       // Тимчасово
+                IsSpoiler = r.IsSpoiler,
+                Rating = r.Rating,
                 CreatedAt = r.CreatedAt
             })
             .ToListAsync();

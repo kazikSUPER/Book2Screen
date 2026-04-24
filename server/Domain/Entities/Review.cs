@@ -25,5 +25,9 @@ public class Review : BaseEntity
     [Required]
     public string Text { get; set; } = null!;
 
+    public bool IsSpoiler { get; set; } = false;
+
+    public double Rating { get; set; } = 0;
+
     public int LikesCount { get; set; } = 0;
 }

@@ -2,7 +2,7 @@
 
 // Твір (книга + її екранізація) — основна сутність Book2Screen.
 export interface BookScreenItem {
-  id: number;
+  id: string;
   title: string;
   year: number;
   genre: string;

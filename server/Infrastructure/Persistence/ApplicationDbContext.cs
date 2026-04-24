@@ -28,6 +28,8 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<Review> Reviews => this.Set<Review>();
 
+    public DbSet<Vote> Votes => this.Set<Vote>();
+
     public DbSet<Rating> Ratings => this.Set<Rating>();
 
     /// <inheritdoc/>
@@ -62,6 +64,38 @@ public class ApplicationDbContext : DbContext
                 .WithOne(a => a.Work)
                 .HasForeignKey<Work>(w => w.AdaptationId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Налаштування Review
+        modelBuilder.Entity<Review>(entity =>
+        {
+            entity.HasOne(r => r.User)
+                .WithMany(u => u.Reviews)
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(r => r.Work)
+                .WithMany(w => w.Reviews)
+                .HasForeignKey(r => r.WorkId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Налаштування Vote
+        modelBuilder.Entity<Vote>(entity =>
+        {
+            entity.HasIndex(v => new { v.UserId, v.WorkId }).IsUnique();
+
+            entity.HasOne(v => v.User)
+                .WithMany(u => u.Votes)
+                .HasForeignKey(v => v.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(v => v.Work)
+                .WithMany(w => w.Votes)
+                .HasForeignKey(v => v.WorkId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.ToTable(t => t.HasCheckConstraint("CK_Vote_Option", "\"SelectedOption\" IN ('book', 'adaptation', 'movie')"));
         });
 
         // Багато-до-багатьох: Books <-> Authors

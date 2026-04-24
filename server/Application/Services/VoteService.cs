@@ -24,21 +24,44 @@ public class VoteService : IVoteService
     /// <inheritdoc/>
     public async Task<VoteResponse> VoteAsync(Guid userId, VoteRequest request)
     {
-        // Тимчасово відключено до застосування міграцій
+        var existingVote = await this.context.Votes
+            .FirstOrDefaultAsync(v => v.UserId == userId && v.WorkId == request.WorkId);
+
+        if (existingVote != null)
+        {
+            existingVote.SelectedOption = request.VoteType.ToLower();
+        }
+        else
+        {
+            var vote = new Vote
+            {
+                UserId = userId,
+                WorkId = request.WorkId,
+                SelectedOption = request.VoteType.ToLower()
+            };
+            await this.context.Votes.AddAsync(vote);
+        }
+
+        await this.context.SaveChangesAsync();
         return await this.GetVoteStatsAsync(request.WorkId);
     }
 
     public async Task<VoteResponse> GetVoteStatsAsync(Guid workId)
     {
-        // Повертаємо пусту статистику, поки таблиці не існує
+        var votes = await this.context.Votes.Where(v => v.WorkId == workId).ToListAsync();
+        
+        int total = votes.Count;
+        int bookVotes = votes.Count(v => v.SelectedOption == "book");
+        int movieVotes = votes.Count(v => v.SelectedOption == "movie" || v.SelectedOption == "adaptation");
+
         return new VoteResponse
         {
             WorkId = workId,
-            TotalVotes = 0,
-            BookVotes = 0,
-            MovieVotes = 0,
-            BookPercentage = 0,
-            MoviePercentage = 0
+            TotalVotes = total,
+            BookVotes = bookVotes,
+            MovieVotes = movieVotes,
+            BookPercentage = total > 0 ? (double)bookVotes / total * 100 : 0,
+            MoviePercentage = total > 0 ? (double)movieVotes / total * 100 : 0
         };
     }
 }
