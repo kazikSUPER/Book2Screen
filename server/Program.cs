@@ -45,6 +45,16 @@ builder.Services.AddSingleton(mapper);
 
 builder.Services.AddControllers();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddValidatorsFromAssemblyContaining<UserValidator>();
 
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -130,6 +140,8 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
+app.UseCors("AllowAll");
+
 app.MapControllers();
 
 app.UseAuthentication();
@@ -147,7 +159,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapHealthChecks("/api/health");
+app.MapHealthChecks("/health");
 
 using (var scope = app.Services.CreateScope())
 {
