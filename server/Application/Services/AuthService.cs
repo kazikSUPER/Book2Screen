@@ -6,33 +6,47 @@ using Book2Screen.Domain.Entities;
 using Book2Screen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
+/// <summary>
+/// Сервіс для керування автентифікацією користувачів.
+/// </summary>
 public class AuthService : IAuthService
 {
     private readonly ApplicationDbContext context;
     private readonly ITokenService tokenService;
 
+    /// <summary>
+    /// Ініціалізує новий екземпляр <see cref="AuthService"/>.
+    /// </summary>
     public AuthService(ApplicationDbContext context, ITokenService tokenService)
     {
         this.context = context;
         this.tokenService = tokenService;
     }
 
-    public async Task<string?> LoginAsync(LoginDto loginDto)
+    /// <inheritdoc/>
+    public async Task<AuthResponse?> LoginAsync(LoginDto loginDto)
     {
-        var user = await this.context.Users.FirstOrDefaultAsync(u => u.Username == loginDto.Username);
+        var user = await this.context.Users.FirstOrDefaultAsync(u => u.Email == loginDto.Email);
 
         if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
         {
             return null;
         }
 
-        return this.tokenService.CreateToken(user);
+        return new AuthResponse
+        {
+            Token = this.tokenService.CreateToken(user),
+            UserId = user.Id.ToString(),
+            Email = user.Email,
+            Nickname = user.Username,
+        };
     }
 
-    public async Task<string?> RegisterAsync(RegisterRequest registerRequest)
+    /// <inheritdoc/>
+    public async Task<AuthResponse?> RegisterAsync(RegisterRequest registerRequest)
     {
         var userExists = await this.context.Users.AnyAsync(u =>
-            u.Username == registerRequest.Username || u.Email == registerRequest.Email);
+            u.Username == registerRequest.Nickname || u.Email == registerRequest.Email);
 
         if (userExists)
         {
@@ -41,7 +55,7 @@ public class AuthService : IAuthService
 
         var user = new User
         {
-            Username = registerRequest.Username,
+            Username = registerRequest.Nickname,
             Email = registerRequest.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password),
         };
@@ -49,6 +63,12 @@ public class AuthService : IAuthService
         await this.context.Users.AddAsync(user);
         await this.context.SaveChangesAsync();
 
-        return this.tokenService.CreateToken(user);
+        return new AuthResponse
+        {
+            Token = this.tokenService.CreateToken(user),
+            UserId = user.Id.ToString(),
+            Email = user.Email,
+            Nickname = user.Username,
+        };
     }
 }

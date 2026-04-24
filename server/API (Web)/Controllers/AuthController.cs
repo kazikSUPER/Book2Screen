@@ -36,13 +36,13 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var token = await this.authService.LoginAsync(loginDto);
-            if (token == null)
+            var response = await this.authService.LoginAsync(loginDto);
+            if (response == null)
             {
                 return this.Unauthorized("Invalid username or password.");
             }
 
-            return this.Ok(new AuthResponse { Token = token });
+            return this.Ok(response);
         }
         catch (Exception ex)
         {
@@ -62,13 +62,13 @@ public class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest registerRequest)
     {
-        var token = await this.authService.RegisterAsync(registerRequest);
+        var response = await this.authService.RegisterAsync(registerRequest);
 
-        if (token == null)
+        if (response == null)
         {
             return this.Unauthorized("User with this username or email already exists.");
         }
 
-        return this.Ok(new AuthResponse { Token = token });
+        return this.Ok(response);
     }
 }

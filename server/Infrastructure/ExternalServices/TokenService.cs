@@ -12,6 +12,25 @@ using Microsoft.IdentityModel.Tokens;
 /// </summary>
 public class TokenService : ITokenService
 {
+    private readonly string secret;
+    private readonly string? issuer;
+    private readonly string? audience;
+    private readonly int expiryMinutes;
+
+    /// <summary>
+    /// Ініціалізує новий екземпляр <see cref="TokenService"/> та завантажує налаштування JWT із середовища.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Викидається, якщо JWT_SECRET не встановлено.</exception>
+    public TokenService()
+    {
+        this.secret = Environment.GetEnvironmentVariable("JWT_SECRET") 
+            ?? throw new InvalidOperationException("JWT_SECRET environment variable is not set.");
+        this.issuer = Environment.GetEnvironmentVariable("JWT_ISSUER");
+        this.audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
+        var expiresIn = Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES");
+        this.expiryMinutes = expiresIn != null ? int.Parse(expiresIn) : 60;
+    }
+
     /// <summary>
     /// Створює підписаний JWT токен на основі даних користувача.
     /// </summary>
@@ -27,28 +46,22 @@ public class TokenService : ITokenService
     /// <exception cref="ArgumentNullException">Викидається, якщо секретний ключ або дані користувача відсутні.</exception>
     public string CreateToken(User user)
     {
-        // Отримання значень з оточення
-        var secret = Environment.GetEnvironmentVariable("JWT_SECRET");
-        var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER");
-        var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
-        var expiresIn = Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES");
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret!));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this.secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Role, user.Role.ToString()),
+            new Claim(ClaimTypes.Role, user.Role ?? "user"),
         };
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMinutes(expiresIn != null ? int.Parse(expiresIn) : 60),
-            Issuer = issuer,
-            Audience = audience,
+            Expires = DateTime.UtcNow.AddMinutes(this.expiryMinutes),
+            Issuer = this.issuer,
+            Audience = this.audience,
             SigningCredentials = creds,
         };
 
