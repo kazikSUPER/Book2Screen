@@ -44,7 +44,7 @@ public class GlobalExceptionHandler : IExceptionHandler
         {
             KeyNotFoundException => (int)HttpStatusCode.NotFound,
             UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
-            _ => (int)HttpStatusCode.InternalServerError
+            _ => (int)HttpStatusCode.InternalServerError,
         };
 
         // 3. Визначення errorCode та повідомлення
@@ -52,7 +52,7 @@ public class GlobalExceptionHandler : IExceptionHandler
         {
             KeyNotFoundException => ("NOT_FOUND", exception.Message),
             UnauthorizedAccessException => ("UNAUTHORIZED", "You are not authorized to access this resource."),
-            _ => ("INTERNAL_ERROR", "An unexpected error occurred on the server.")
+            _ => ("INTERNAL_ERROR", "An unexpected error occurred on the server."),
         };
 
         // 4. Формування моделі відповіді
@@ -61,7 +61,7 @@ public class GlobalExceptionHandler : IExceptionHandler
             StatusCode = statusCode,
             ErrorCode = errorCode,
             Message = message,
-            Timestamp = DateTime.UtcNow
+            Timestamp = DateTime.UtcNow,
         };
 
         // 4. Налаштування HTTP-відповіді
