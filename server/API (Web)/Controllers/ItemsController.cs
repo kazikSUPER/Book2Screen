@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 /// Контролер для роботи з каталогом елементів (книг/фільмів).
 /// </summary>
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [Produces("application/json")]
 public class ItemsController : ControllerBase
 {

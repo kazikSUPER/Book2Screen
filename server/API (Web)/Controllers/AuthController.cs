@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 /// Контролер для керування автентифікацією та реєстрацією користувачів.
 /// </summary>
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [Produces("application/json")]
 public class AuthController : ControllerBase
 {
