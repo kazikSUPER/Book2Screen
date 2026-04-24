@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 /// Контролер для роботи з творами (Works) у форматі, який очікує фронтенд.
 /// </summary>
 [ApiController]
-[Route("api/v1/works")]
+[Route("api/v1/[controller]")]
 [Produces("application/json")]
 public class WorksController : ControllerBase
 {
@@ -20,34 +20,42 @@ public class WorksController : ControllerBase
     }
 
     /// <summary>
-    /// Отримати список усіх творів (адаптацій).
+    /// Отримати список усіх творів (адаптацій) у форматі для головної сторінки.
     /// </summary>
+    /// <returns>Список об'єктів BookScreenItem.</returns>
+    /// <response code="200">Успішне отримання списку.</response>
     [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<BookScreenItemDto>))]
     public async Task<IActionResult> GetWorks()
     {
         var adaptations = await this.adaptationService.GetAllAdaptationsAsync();
-        
-        // Мапимо AdaptationDto на формат BookScreenItem для фронтенду
-        var result = adaptations.Select(a => new
+
+        var result = adaptations.Select(a => new BookScreenItemDto
         {
-            id = a.Id,
-            title = a.Title,
-            year = a.ReleaseYear ?? 0,
-            genre = "Драма", // Тимчасово
-            country = a.Country ?? "Unknown",
-            poster = a.PosterUrl ?? "https://via.placeholder.com/300x450",
-            bookRating = 4.5, // Заглушка
-            filmRating = 4.2, // Заглушка
-            description = a.Description ?? ""
+            Id = a.Id,
+            Title = a.Title,
+            Year = a.ReleaseYear ?? 0,
+            Genre = "Драма",
+            Country = a.Country ?? "Unknown",
+            Poster = a.PosterUrl ?? "https://via.placeholder.com/300x450",
+            BookRating = 4.5,
+            FilmRating = 4.2,
+            Description = a.Description ?? "",
         });
 
         return this.Ok(result);
     }
 
     /// <summary>
-    /// Отримати твір за ID.
+    /// Отримати деталі твору за його ідентифікатором.
     /// </summary>
+    /// <param name="id">GUID твору.</param>
+    /// <returns>Об'єкт BookScreenItem.</returns>
+    /// <response code="200">Твір знайдено.</response>
+    /// <response code="404">Твір з таким ID не знайдено.</response>
     [HttpGet("{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BookScreenItemDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetWorkById(Guid id)
     {
         var a = await this.adaptationService.GetAdaptationByIdAsync(id);
@@ -56,17 +64,17 @@ public class WorksController : ControllerBase
             return this.NotFound();
         }
 
-        var result = new
+        var result = new BookScreenItemDto
         {
-            id = a.Id,
-            title = a.Title,
-            year = a.ReleaseYear ?? 0,
-            genre = "Драма",
-            country = a.Country ?? "Unknown",
-            poster = a.PosterUrl ?? "https://via.placeholder.com/300x450",
-            bookRating = 4.5,
-            filmRating = 4.2,
-            description = a.Description ?? ""
+            Id = a.Id,
+            Title = a.Title,
+            Year = a.ReleaseYear ?? 0,
+            Genre = "Драма",
+            Country = a.Country ?? "Unknown",
+            Poster = a.PosterUrl ?? "https://via.placeholder.com/300x450",
+            BookRating = 4.5,
+            FilmRating = 4.2,
+            Description = a.Description ?? "",
         };
 
         return this.Ok(result);
