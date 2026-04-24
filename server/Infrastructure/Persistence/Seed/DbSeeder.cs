@@ -77,6 +77,7 @@ public static class DbSeeder
             DurationMinutes = 155,
             Studio = "Legendary Pictures",
             Country = "USA",
+            PosterUrl = "https://upload.wikimedia.org/wikipedia/uk/7/71/%D0%94%D1%8E%D0%BD%D0%B0_%282021%29_%D0%BF%D0%BE%D1%81%D1%82%D0%B5%D1%80.jpg",
         };
 
         // Створюємо Work (головний об'єкт порівняння)
