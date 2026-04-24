@@ -1,37 +1,115 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { RouterView, RouterLink } from 'vue-router'
+import { ref, provide, onMounted } from 'vue';
+import { RouterView, RouterLink, useRouter } from 'vue-router';
+import LoginModal from './components/LoginModal.vue';
+import RegisterModal from './components/RegisterModal.vue';
+import ResetPasswordModal from './components/ResetPasswordModal.vue';
+import logoImg from './assets/Hero.png';
+import { checkHealth } from './services/health';
+import { useUserStore } from './state/user';
 
+const router = useRouter();
+const userStore = useUserStore();
+
+// ── Health-check при старті застосунку ──────────────
+// Етап 3, Крок 3: фронт пінгує /health, щоб одразу бачити стан бекенду.
+const backendStatus = ref<'checking' | 'up' | 'down'>('checking');
+
+onMounted(async () => {
+  try {
+    await checkHealth();
+    backendStatus.value = 'up';
+
+    console.info('[Book2Screen] Backend /health: OK');
+  } catch (err) {
+    backendStatus.value = 'down';
+
+    console.warn('[Book2Screen] Backend /health: FAILED', err);
+  }
+});
+
+// ── Search ──────────────────────────────────────────
+const searchQuery = ref('');
+const onSearchSubmit = () => {
+  if (searchQuery.value.trim()) {
+    router.push({ name: 'search', query: { q: searchQuery.value.trim() } });
+  }
+};
+
+// ── Modals ──────────────────────────────────────────
+type ModalType = 'login' | 'register' | 'reset' | null;
+const activeModal = ref<ModalType>(null);
+
+// ── Filters ─────────────────────────────────────────
 const genres: string[] = [
-  'Комедія', 'Драма', 'Фантастика', 'Фентезі',
-  'Жахи', 'Детектив', 'Кримінал', 'Пригоди',
-  'Історичні', 'Біографічні', 'Документальні',
-]
+  'Комедія',
+  'Драма',
+  'Фантастика',
+  'Фентезі',
+  'Жахи',
+  'Детектив',
+  'Кримінал',
+  'Пригоди',
+  'Історичні',
+  'Біографічні',
+  'Документальні',
+];
 
 const countries: string[] = [
-  'Україна', 'США', 'Велика Британія', 'Канада',
-  'Греція', 'Італія', 'Туреччина', 'Іспанія',
-  'Німеччина', 'Японія', 'Швеція',
-]
+  'Україна',
+  'США',
+  'Велика Британія',
+  'Канада',
+  'Греція',
+  'Італія',
+  'Туреччина',
+  'Іспанія',
+  'Німеччина',
+  'Японія',
+  'Швеція',
+];
 
-const selectedGenre = ref<string | null>(null)
-const selectedCountry = ref<string | null>(null)
-const searchQuery = ref('')
+const selectedGenre = ref<string | null>(null);
+const selectedCountry = ref<string | null>(null);
+
+provide('searchQuery', searchQuery);
+provide('selectedGenre', selectedGenre);
+provide('selectedCountry', selectedCountry);
+
+// ── Auth button click ───────────────────────────────
+const handleAuthClick = () => {
+  if (userStore.isAuthenticated) {
+    userStore.logout();
+  } else {
+    activeModal.value = 'login';
+  }
+};
 </script>
 
 <template>
   <div class="app-wrapper">
+    <!-- Банер статусу бекенду (показується тільки якщо сервер не відповідає) -->
+    <div v-if="backendStatus === 'down'" class="backend-status-banner">
+      ⚠ Backend недоступний. Дані не завантажуються.
+    </div>
+
     <header class="header">
       <RouterLink to="/" class="logo">
-        Book 📖<br />+<br />🎬 Screen
+        <img :src="logoImg" alt="Book2Screen" class="logo-img" />
       </RouterLink>
 
       <div class="search-bar">
-        <input v-model="searchQuery" type="text" placeholder="Пошук..." />
+        <input v-model="searchQuery" type="text" placeholder="Пошук..." @keyup.enter="onSearchSubmit" />
         <span class="search-icon">🔍</span>
       </div>
 
-      <RouterLink to="/login" class="login-btn">→</RouterLink>
+      <button
+        class="login-btn"
+        :title="userStore.isAuthenticated ? `Вийти (${userStore.email})` : 'Вхід'"
+        @click="handleAuthClick"
+      >
+        {{ userStore.isAuthenticated ? '✕' : '→' }}
+      </button>
     </header>
 
     <div class="main-layout">
@@ -45,7 +123,9 @@ const searchQuery = ref('')
               class="filter-item"
               :class="{ active: selectedGenre === genre }"
               @click="selectedGenre = selectedGenre === genre ? null : genre"
-            >{{ genre }}</li>
+            >
+              {{ genre }}
+            </li>
           </ul>
         </div>
 
@@ -58,7 +138,9 @@ const searchQuery = ref('')
               class="filter-item"
               :class="{ active: selectedCountry === country }"
               @click="selectedCountry = selectedCountry === country ? null : country"
-            >{{ country }}</li>
+            >
+              {{ country }}
+            </li>
           </ul>
         </div>
       </aside>
@@ -67,19 +149,32 @@ const searchQuery = ref('')
         <RouterView />
       </main>
     </div>
+
+    <LoginModal
+      v-if="activeModal === 'login'"
+      @close="activeModal = null"
+      @open-register="activeModal = 'register'"
+      @open-reset="activeModal = 'reset'"
+    />
+    <RegisterModal v-if="activeModal === 'register'" @close="activeModal = null" @success="activeModal = null" />
+    <ResetPasswordModal v-if="activeModal === 'reset'" @close="activeModal = null" />
   </div>
 </template>
 
 <style>
 :root {
-  --pink-light: #F7CCCC;
-  --pink-mid:   #E4AFAF;
-  --dark-bg:    #311620;
-  --dark-card:  #3D0000;
-  --accent:     #8E182F;
+  --pink-light: #f7cccc;
+  --pink-mid: #e4afaf;
+  --dark-bg: #ffffff;
+  --dark-card: #3d0000;
+  --accent: #8e182f;
 }
 
-*, *::before, *::after { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
@@ -95,35 +190,51 @@ body {
   min-height: 100vh;
 }
 
+/* ── Backend status banner ── */
+.backend-status-banner {
+  background: #cc0000;
+  color: white;
+  text-align: center;
+  padding: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+}
+
 /* ── Header ── */
 .header {
-  background-color: var(--dark-card);
-  height: 64px;
+  background-color: #311620;
+  height: 80px; /* Трохи вище для пропорційності */
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  gap: 16px;
+  padding: 0 24px;
+  position: relative; /* Важливо для абсолютного центрування пошуку */
   flex-shrink: 0;
 }
 
 .logo {
-  background-color: var(--pink-light);
-  color: var(--dark-card);
+  background-color: #f7cccc;
+  color: black;
   text-decoration: none;
-  padding: 6px 14px;
+  padding: 4px 8px;
   border-radius: 8px;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.4;
-  text-align: center;
-  white-space: nowrap;
-  flex-shrink: 0;
+  font-family: 'Ink Free', cursive;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 72px; /* Зменшено, щоб не вилазило за межі шапки */
+  width: 195px;
+}
+
+.logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .search-bar {
-  flex: 1;
-  max-width: 520px;
+  width: 700px;
+  flex-shrink: 0;
   position: relative;
   display: flex;
   align-items: center;
@@ -132,16 +243,18 @@ body {
 .search-bar input {
   width: 100%;
   padding: 9px 40px 9px 16px;
-  border-radius: 20px;
-  border: none;
-  background-color: var(--pink-light);
+  border-radius: 15px;
+  border: 1px black solid;
+  background-color: #f7cccc;
   color: var(--dark-card);
   font-size: 14px;
   font-family: 'Georgia', serif;
   outline: none;
 }
 
-.search-bar input::placeholder { color: var(--accent); }
+.search-bar input::placeholder {
+  color: var(--accent);
+}
 
 .search-icon {
   position: absolute;
@@ -152,47 +265,61 @@ body {
 
 .login-btn {
   color: var(--pink-light);
+  background: none;
+  border: none;
+  cursor: pointer;
   text-decoration: none;
   font-size: 26px;
   flex-shrink: 0;
   transition: color 0.2s;
 }
-.login-btn:hover { color: #fff; }
+.login-btn:hover {
+  color: #fff;
+}
 
 /* ── Layout ── */
 .main-layout {
   display: flex;
   flex: 1;
+  padding: 10px; /* Створює ту саму білу рамку навколо всього, як у Фігмі */
+  margin: 0 auto; /* Центрує контент на дуже широких екранах */
+  width: 100%;
 }
 
 /* ── Sidebar ── */
 .sidebar {
-  width: 185px;
+  width: 250px;
   flex-shrink: 0;
-  background-color: var(--pink-light);
-  border-right: 2px solid var(--dark-card);
-  padding: 16px 12px;
+  background-color: #f7cccc;
+  border: 1px black solid;
+  border-radius: 5px;
+  padding: 20px 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
   overflow-y: auto;
 }
 
 .filter-box {
-  background-color: var(--pink-mid);
-  border: 1px solid var(--dark-card);
-  border-radius: 6px;
-  padding: 10px 12px;
+  background-color: #e4afaf;
+  border: 1px black solid;
+  border-radius: 10px;
+  padding: 5px 15px;
+  box-shadow: 3px 4px 4px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 .filter-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--dark-card);
-  margin: 0 0 8px;
-  text-align: center;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--dark-card);
+  font-size: 25px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #311620;
+  margin: 0 0 4px;
+  align-self: stretch;
+  padding-left: 2px;
 }
 
 .filter-list {
@@ -201,26 +328,29 @@ body {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  width: 100%;
 }
 
 .filter-item {
-  font-size: 13px;
-  color: var(--dark-card);
+  font-size: 20px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #311620;
   cursor: pointer;
-  padding: 3px 6px;
+  padding: 2px 4px;
   border-radius: 4px;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .filter-item:hover {
-  background: var(--accent);
-  color: var(--pink-light);
+  background: #8e182f;
+  color: #f7cccc;
 }
 
 .filter-item.active {
-  background: var(--accent);
-  color: var(--pink-light);
+  background: #8e182f;
+  color: #f7cccc;
   font-weight: 600;
 }
 
@@ -230,5 +360,34 @@ body {
   overflow-y: auto;
   min-width: 0;
   background-color: var(--dark-bg);
+}
+
+/* ── Адаптив ── */
+@media (max-width: 1280px) {
+  .header {
+    gap: 80px;
+    padding: 0 16px;
+  }
+
+  .search-bar {
+    width: 500px;
+  }
+
+  .sidebar {
+    width: 200px;
+  }
+
+  .filter-title {
+    font-size: 22px;
+  }
+
+  .filter-item {
+    font-size: 18px;
+  }
+
+  .logo-img {
+    width: 160px;
+    height: 65px;
+  }
 }
 </style>
