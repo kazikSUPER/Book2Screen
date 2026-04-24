@@ -23,7 +23,14 @@ using Microsoft.OpenApi;
 using Serilog;
 using Serilog.Extensions.Logging;
 
-DotNetEnv.Env.Load();
+if (File.Exists("../.env"))
+{
+    DotNetEnv.Env.Load("../.env");
+}
+else
+{
+    DotNetEnv.Env.Load();
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,6 +67,8 @@ builder.Services.AddValidatorsFromAssemblyContaining<UserValidator>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdaptationService, AdaptationService>();
+builder.Services.AddScoped<IVoteService, VoteService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
 
 builder.Services.AddAuthentication(options =>
     {
@@ -142,10 +151,10 @@ var app = builder.Build();
 
 app.UseCors("AllowAll");
 
-app.MapControllers();
-
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapControllers();
 
 app.UseSerilogRequestLogging();
 
@@ -156,8 +165,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-app.UseHttpsRedirection();
 
 app.MapHealthChecks("/health");
 
@@ -173,14 +180,34 @@ using (var scope = app.Services.CreateScope())
         try
         {
             logger.LogInformation("Applying migrations and seeding (Attempts left: {Count})", retryCount);
-            await db.Database.MigrateAsync();
-            await DbSeeder.SeedAsync(db);
+
+            try
+            {
+                await db.Database.MigrateAsync();
+                logger.LogInformation("Database migrations applied successfully.");
+            }
+            catch (Exception migrateEx)
+            {
+                logger.LogWarning(migrateEx, "Migration skipped - database may already be up to date. Message: {Message}", migrateEx.Message);
+            }
+
+            try
+            {
+                await DbSeeder.SeedAsync(db);
+                logger.LogInformation("Database seeding completed.");
+            }
+            catch (Exception seedEx)
+            {
+                logger.LogWarning(seedEx, "Database seeding skipped - data may already exist. Message: {Message}", seedEx.Message);
+            }
+
             logger.LogInformation("Database is ready.");
             break;
         }
         catch (Exception ex)
         {
             retryCount--;
+            logger.LogError(ex, "Error during database initialization. Message: {Message}", ex.Message);
             if (retryCount == 0)
             {
                 logger.LogCritical(ex, "Database connection failed permanently.");
