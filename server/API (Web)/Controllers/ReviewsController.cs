@@ -1,3 +1,7 @@
+// <copyright file="ReviewsController.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.API__Web_.Controllers;
 
 using System.Security.Claims;
@@ -16,6 +20,10 @@ public class ReviewsController : ControllerBase
 {
     private readonly IReviewService reviewService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReviewsController"/> class.
+    /// </summary>
+    /// <param name="reviewService">Сервіс відгуків.</param>
     public ReviewsController(IReviewService reviewService)
     {
         this.reviewService = reviewService;
@@ -26,6 +34,7 @@ public class ReviewsController : ControllerBase
     /// </summary>
     /// <param name="workId">ID твору.</param>
     /// <response code="200">Повертає список відгуків.</response>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [HttpGet("work/{workId}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<ReviewResponse>))]
     public async Task<IActionResult> GetReviewsByWork(Guid workId)
@@ -40,6 +49,7 @@ public class ReviewsController : ControllerBase
     /// <param name="request">Дані відгуку (текст, рейтинг, мітка спойлера).</param>
     /// <response code="200">Відгук успішно додано.</response>
     /// <response code="401">Користувач не авторизований.</response>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [HttpPost]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ReviewResponse))]

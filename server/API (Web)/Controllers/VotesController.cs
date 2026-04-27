@@ -1,3 +1,7 @@
+// <copyright file="VotesController.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.API__Web_.Controllers;
 
 using System.Security.Claims;
@@ -16,6 +20,10 @@ public class VotesController : ControllerBase
 {
     private readonly IVoteService voteService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VotesController"/> class.
+    /// </summary>
+    /// <param name="voteService">Сервіс голосування.</param>
     public VotesController(IVoteService voteService)
     {
         this.voteService = voteService;
@@ -26,6 +34,7 @@ public class VotesController : ControllerBase
     /// </summary>
     /// <param name="workId">ID твору.</param>
     /// <response code="200">Повертає об'єкт зі статистикою голосування.</response>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [HttpGet("{workId}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(VoteResponse))]
     public async Task<IActionResult> GetVoteStats(Guid workId)
@@ -43,6 +52,7 @@ public class VotesController : ControllerBase
     /// <param name="request">Дані голосування (ID твору та тип "book" або "movie").</param>
     /// <response code="200">Голос успішно враховано, повертає оновлену статистику.</response>
     /// <response code="401">Користувач не авторизований.</response>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [HttpPost]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(VoteResponse))]

@@ -1,3 +1,7 @@
+// <copyright file="AuthController.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.API__Web_.Controllers;
 
 using Book2Screen.Application.DTOs;
@@ -15,6 +19,10 @@ public class AuthController : ControllerBase
 {
     private readonly IAuthService authService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuthController"/> class.
+    /// </summary>
+    /// <param name="authService">Сервіс автентифікації.</param>
     public AuthController(IAuthService authService)
     {
         this.authService = authService;

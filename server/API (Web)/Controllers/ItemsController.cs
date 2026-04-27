@@ -1,3 +1,7 @@
+// <copyright file="ItemsController.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.API__Web_.Controllers;
 
 using Book2Screen.Application.DTOs;
@@ -15,6 +19,10 @@ public class ItemsController : ControllerBase
 {
     private readonly IAdaptationService adaptationService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ItemsController"/> class.
+    /// </summary>
+    /// <param name="adaptationService">Сервіс адаптацій.</param>
     public ItemsController(IAdaptationService adaptationService)
     {
         this.adaptationService = adaptationService;
@@ -59,6 +67,7 @@ public class ItemsController : ControllerBase
     /// </summary>
     /// <param name="filter">Параметри фільтрації (назва, тип, країна, діапазон років тощо).</param>
     /// <response code="200">Повертає відфільтрований список адаптацій.</response>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [HttpGet("filter")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<AdaptationDto>))]
     public async Task<IActionResult> GetFilteredItems([FromQuery] AdaptationFilter filter)

@@ -2,8 +2,8 @@ namespace Book2Screen.Tests.Services;
 
 using System.IdentityModel.Tokens.Jwt;
 using API__Web_.Configurations;
-using Book2Screen.Domain.Entities;
-using Book2Screen.Infrastructure.ExternalServices;
+using Domain.Entities;
+using Infrastructure.ExternalServices;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,13 +12,14 @@ public class TokenServiceTests
 {
     private readonly ITestOutputHelper _out;
 
-    private const string TestSecret   = "super-secret-key-for-unit-tests-32chars!!";
-    private const string TestIssuer   = "book2screen-test";
+    private const string TestSecret = "super-secret-key-for-unit-tests-32chars!!";
+    private const string TestIssuer = "book2screen-test";
     private const string TestAudience = "book2screen-test-client";
 
     public TokenServiceTests(ITestOutputHelper output) => _out = output;
 
-    private static TokenService CreateService() {
+    private static TokenService CreateService()
+    {
         var options = new JwtOptions
         {
             Issuer = TestIssuer,
@@ -31,11 +32,11 @@ public class TokenServiceTests
 
     private static User MakeUser(string username = "testuser", string role = "user") => new()
     {
-        Id           = Guid.NewGuid(),
-        Username     = username,
-        Email        = $"{username}@test.com",
+        Id = Guid.NewGuid(),
+        Username = username,
+        Email = $"{username}@test.com",
         PasswordHash = BCrypt.Net.BCrypt.HashPassword("P@ssw0rd"),
-        Role         = role,
+        Role = role,
     };
 
     // ── TC-UNIT-01 ──────────────────────────────────────────────────────────
@@ -53,7 +54,7 @@ public class TokenServiceTests
     public void CreateToken_ValidUser_ContainsCorrectClaims()
     {
         var user = MakeUser(username: "qauser", role: "admin");
-        var jwt  = new JwtSecurityTokenHandler()
+        var jwt = new JwtSecurityTokenHandler()
                        .ReadJwtToken(CreateService().CreateToken(user));
 
         // Dump all claims so we can see exact type strings
@@ -66,26 +67,26 @@ public class TokenServiceTests
         // ClaimTypes.Role           → "role"
         var name = jwt.Claims.FirstOrDefault(c => c.Type == "unique_name");
         Assert.NotNull(name);
-        Assert.Equal("qauser", name!.Value);
+        Assert.Equal("qauser", name.Value);
 
         var id = jwt.Claims.FirstOrDefault(c => c.Type == "nameid");
         Assert.NotNull(id);
-        Assert.Equal(user.Id.ToString(), id!.Value);
+        Assert.Equal(user.Id.ToString(), id.Value);
 
         var role = jwt.Claims.FirstOrDefault(c => c.Type == "role");
         Assert.NotNull(role);
-        Assert.Equal("admin", role!.Value);
+        Assert.Equal("admin", role.Value);
     }
 
     // ── TC-UNIT-03 ──────────────────────────────────────────────────────────
     [Fact]
     public void CreateToken_ValidUser_ExpiresInConfiguredMinutes()
     {
-        var service    = CreateService();
-        var user       = MakeUser();
+        var service = CreateService();
+        var user = MakeUser();
         var beforeCall = DateTime.UtcNow;
-        var jwt        = new JwtSecurityTokenHandler().ReadJwtToken(service.CreateToken(user));
-        var afterCall  = DateTime.UtcNow;
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(service.CreateToken(user));
+        var afterCall = DateTime.UtcNow;
 
         Assert.True(
             jwt.ValidTo >= beforeCall.AddMinutes(119.5) &&
@@ -98,10 +99,10 @@ public class TokenServiceTests
     public void CreateToken_SameUserCalledTwice_ReturnsDifferentTokens()
     {
         var service = CreateService();
-        var user    = MakeUser();
-        var token1  = service.CreateToken(user);
-        System.Threading.Thread.Sleep(1100);
-        var token2  = service.CreateToken(user);
+        var user = MakeUser();
+        var token1 = service.CreateToken(user);
+        Thread.Sleep(1100);
+        var token2 = service.CreateToken(user);
         Assert.NotEqual(token1, token2);
     }
 
@@ -109,13 +110,13 @@ public class TokenServiceTests
     [Fact]
     public void Constructor_MissingSecret_ThrowsInvalidOperationException()
     {
-        var user = MakeUser();
+        MakeUser();
         var options = new JwtOptions
         {
             Issuer = "TestIssuer",
             Audience = "TestAudience",
             ExpiryMinutes = 120,
-            Secret = null
+            Secret = null!
         };
         Assert.Throws<InvalidOperationException>(() => new TokenService(options));
     }

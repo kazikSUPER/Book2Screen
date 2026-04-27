@@ -1,3 +1,7 @@
+// <copyright file="GlobalExceptionHandler.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.API__Web_.Middleware;
 
 using System.Net;
@@ -9,15 +13,16 @@ using Microsoft.AspNetCore.Diagnostics;
 /// </summary>
 public class GlobalExceptionHandler : IExceptionHandler
 {
-    private readonly ILogger<GlobalExceptionHandler> _logger;
+    private readonly ILogger<GlobalExceptionHandler> logger;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="GlobalExceptionHandler"/> class.
     /// Ініціалізує новий екземпляр <see cref="GlobalExceptionHandler"/>.
     /// </summary>
     /// <param name="logger">Екземпляр логера для запису помилок (Serilog).</param>
     public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
     {
-        _logger = logger;
+        this.logger = logger;
     }
 
     /// <summary>
@@ -33,7 +38,7 @@ public class GlobalExceptionHandler : IExceptionHandler
         CancellationToken cancellationToken)
     {
         // 1. Логування помилки з рівнем Error та StackTrace
-        _logger.LogError(
+        this.logger.LogError(
             exception,
             "An unhandled exception occurred: {Message}. Path: {Path}",
             exception.Message,

@@ -1,3 +1,7 @@
+// <copyright file="ErrorResponse.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Domain.Exceptions;
 
 /// <summary>
@@ -6,22 +10,22 @@ namespace Book2Screen.Domain.Exceptions;
 public class ErrorResponse
 {
     /// <summary>
-    /// HTTP статус-код (напр. 400, 404, 500).
+    /// Gets or sets hTTP статус-код (напр. 400, 404, 500).
     /// </summary>
     public int StatusCode { get; set; }
 
     /// <summary>
-    /// Машинно-зчитуваний код помилки (напр. "INTERNAL_ERROR", "NOT_FOUND").
+    /// Gets or sets машинно-зчитуваний код помилки (напр. "INTERNAL_ERROR", "NOT_FOUND").
     /// </summary>
     public string ErrorCode { get; set; } = string.Empty;
 
     /// <summary>
-    /// Короткий опис помилки для користувача.
+    /// Gets or sets короткий опис помилки для користувача.
     /// </summary>
     public string Message { get; set; } = string.Empty;
 
     /// <summary>
-    /// Час виникнення помилки (UTC).
+    /// Gets or sets час виникнення помилки (UTC).
     /// </summary>
     public DateTime Timestamp { get; set; }
 }

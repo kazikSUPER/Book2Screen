@@ -1,3 +1,7 @@
+// <copyright file="RegisterRequest.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Application.DTOs;
 
 using System.ComponentModel.DataAnnotations;
@@ -8,14 +12,14 @@ using System.ComponentModel.DataAnnotations;
 public class RegisterRequest
 {
     /// <summary>
-    /// Унікальне ім'я користувача (нікнейм).
+    /// Gets or sets унікальне ім'я користувача (нікнейм).
     /// </summary>
     [Required]
     [MaxLength(50)]
     public string Nickname { get; set; } = null!;
 
     /// <summary>
-    /// Електронна пошта користувача.
+    /// Gets or sets електронну пошту користувача.
     /// </summary>
     [Required]
     [EmailAddress]
@@ -23,7 +27,7 @@ public class RegisterRequest
     public string Email { get; set; } = null!;
 
     /// <summary>
-    /// Пароль користувача.
+    /// Gets or sets пароль користувача.
     /// </summary>
     [Required]
     public string Password { get; set; } = null!;

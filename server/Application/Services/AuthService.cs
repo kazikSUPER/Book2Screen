@@ -1,3 +1,7 @@
+// <copyright file="AuthService.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Application.Services;
 
 using Book2Screen.Application.DTOs;
@@ -15,8 +19,11 @@ public class AuthService : IAuthService
     private readonly ITokenService tokenService;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="AuthService"/> class.
     /// Ініціалізує новий екземпляр <see cref="AuthService"/>.
     /// </summary>
+    /// <param name="context">Контекст бази даних.</param>
+    /// <param name="tokenService">Сервіс для роботи з токенами.</param>
     public AuthService(ApplicationDbContext context, ITokenService tokenService)
     {
         this.context = context;

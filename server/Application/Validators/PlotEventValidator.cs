@@ -1,3 +1,7 @@
+// <copyright file="PlotEventValidator.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Application.Validators;
 
 using Book2Screen.Domain.Entities;
@@ -8,15 +12,18 @@ using FluentValidation;
 /// </summary>
 public class PlotEventValidator : AbstractValidator<PlotEvent>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PlotEventValidator"/> class.
+    /// </summary>
     public PlotEventValidator()
     {
-        RuleFor(x => x.Title)
+        this.RuleFor(x => x.Title)
             .NotEmpty().MaximumLength(255);
 
-        RuleFor(x => x.SequenceNumber)
+        this.RuleFor(x => x.SequenceNumber)
             .GreaterThan(0).WithMessage("Sequence number must be positive");
 
-        RuleFor(x => x.SourceType)
+        this.RuleFor(x => x.SourceType)
             .Must(s => new[] { "book", "adaptation" }.Contains(s.ToLower()))
             .WithMessage("Source must be 'book' or 'adaptation'");
     }

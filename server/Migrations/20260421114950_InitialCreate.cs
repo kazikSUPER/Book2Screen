@@ -1,4 +1,8 @@
-﻿#nullable disable
+﻿// <copyright file="20260421114950_InitialCreate.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
+#nullable disable
 
 namespace Book2Screen.Migrations
 {

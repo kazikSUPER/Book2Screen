@@ -1,3 +1,7 @@
+// <copyright file="AdaptationService.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Application.Services;
 
 using AutoFilterer.Extensions;
@@ -19,11 +23,11 @@ public class AdaptationService : IAdaptationService
     private readonly IMapper mapper;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="AdaptationService"/> class.
     /// Ініціалізує новий <see cref="AdaptationService"/> клас.
     /// </summary>
     /// <param name="context">Контекст бази даних.</param>
     /// <param name="mapper">Мапер для Dto.</param>
-
     public AdaptationService(ApplicationDbContext context, IMapper mapper)
     {
         this.context = context;

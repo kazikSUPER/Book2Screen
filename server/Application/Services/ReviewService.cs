@@ -1,3 +1,7 @@
+// <copyright file="ReviewService.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Application.Services;
 
 using Book2Screen.Application.DTOs;
@@ -14,8 +18,10 @@ public class ReviewService : IReviewService
     private readonly ApplicationDbContext context;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ReviewService"/> class.
     /// Ініціалізує новий екземпляр <see cref="ReviewService"/>.
     /// </summary>
+    /// <param name="context">Контекст бази даних.</param>
     public ReviewService(ApplicationDbContext context)
     {
         this.context = context;
@@ -31,7 +37,7 @@ public class ReviewService : IReviewService
             Text = request.Text,
             IsSpoiler = request.IsSpoiler,
             Rating = request.Rating,
-            TargetType = "comparison" 
+            TargetType = "comparison",
         };
 
         await this.context.Reviews.AddAsync(review);
@@ -45,10 +51,11 @@ public class ReviewService : IReviewService
             Text = review.Text,
             IsSpoiler = review.IsSpoiler,
             Rating = review.Rating,
-            CreatedAt = review.CreatedAt
+            CreatedAt = review.CreatedAt,
         };
     }
 
+    /// <inheritdoc/>
     public async Task<IEnumerable<ReviewResponse>> GetReviewsByWorkIdAsync(Guid workId)
     {
         return await this.context.Reviews
@@ -62,7 +69,7 @@ public class ReviewService : IReviewService
                 Text = r.Text,
                 IsSpoiler = r.IsSpoiler,
                 Rating = r.Rating,
-                CreatedAt = r.CreatedAt
+                CreatedAt = r.CreatedAt,
             })
             .ToListAsync();
     }

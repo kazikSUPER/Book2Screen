@@ -1,3 +1,7 @@
+// <copyright file="AdaptationFilter.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Application.Filters;
 
 using AutoFilterer.Attributes;
@@ -10,42 +14,42 @@ using AutoFilterer.Types;
 public class AdaptationFilter : FilterBase
 {
     /// <summary>
-    /// Фільтр за назвою. Шукає збіги за частиною слова (LIKE %value%).
+    /// Gets or sets фільтр за назвою. Шукає збіги за частиною слова (LIKE %value%).
     /// </summary>
-    /// <example>Lord of the Rings</example>
+    /// <example>Lord of the Rings.</example>
     [StringFilterOptions(StringFilterOption.Contains)]
     public string? Title { get; set; }
 
     /// <summary>
-    /// Тип адаптації (наприклад: movie, series, anime).
+    /// Gets or sets тип адаптації (наприклад: movie, series, anime).
     /// </summary>
-    /// <example>movie</example>
+    /// <example>movie.</example>
     public string? Type { get; set; }
 
     /// <summary>
-    /// Країна виробництва.
+    /// Gets or sets країна виробництва.
     /// </summary>
-    /// <example>USA</example>
+    /// <example>USA.</example>
     public string? Country { get; set; }
 
     /// <summary>
-    /// Студія, що займалася виробництвом.
+    /// Gets or sets студія, що займалася виробництвом.
     /// </summary>
     /// <example>Warner Bros.</example>
     public string? Studio { get; set; }
 
     /// <summary>
-    /// Діапазон років виходу.
+    /// Gets or sets діапазон років виходу.
     /// Використовуйте 'ReleaseYear.Min' та 'ReleaseYear.Max'.
     /// </summary>
     /// <remarks>
-    /// Приклад в URL: ?ReleaseYear.Min=2010&amp;ReleaseYear.Max=2020
+    /// Приклад в URL: ?ReleaseYear.Min=2010&amp;ReleaseYear.Max=2020.
     /// </remarks>
     public Range<int>? ReleaseYear { get; set; }
 
     /// <summary>
-    /// Поле для сортування (наприклад: Title, ReleaseYear).
+    /// Gets or sets поле для сортування (наприклад: Title, ReleaseYear).
     /// </summary>
-    /// <example>Title</example>
+    /// <example>Title.</example>
     public string? Sort { get; set; }
 }

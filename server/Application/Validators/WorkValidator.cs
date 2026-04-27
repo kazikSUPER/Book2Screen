@@ -1,3 +1,7 @@
+// <copyright file="WorkValidator.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Application.Validators;
 
 using Book2Screen.Domain.Entities;
@@ -8,12 +12,15 @@ using FluentValidation;
 /// </summary>
 public class WorkValidator : AbstractValidator<Work>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkValidator"/> class.
+    /// </summary>
     public WorkValidator()
     {
-        RuleFor(x => x.Title)
+        this.RuleFor(x => x.Title)
             .NotEmpty().MaximumLength(255);
 
-        RuleFor(x => x.BookId).NotEmpty();
-        RuleFor(x => x.AdaptationId).NotEmpty();
+        this.RuleFor(x => x.BookId).NotEmpty();
+        this.RuleFor(x => x.AdaptationId).NotEmpty();
     }
 }

@@ -1,3 +1,7 @@
+// <copyright file="ApplicationDbContext.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Infrastructure.Persistence;
 
 using System.Reflection;
@@ -9,28 +13,77 @@ using Microsoft.EntityFrameworkCore;
 /// </summary>
 public class ApplicationDbContext : DbContext
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApplicationDbContext"/> class.
+    /// </summary>
+    /// <param name="options">Налаштування контексту.</param>
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
     }
 
+    /// <summary>
+    /// Gets the set of users.
+    /// </summary>
     public DbSet<User> Users => this.Set<User>();
 
+    /// <summary>
+    /// Gets the set of books.
+    /// </summary>
     public DbSet<Book> Books => this.Set<Book>();
 
+    /// <summary>
+    /// Gets the set of adaptations.
+    /// </summary>
     public DbSet<Adaptation> Adaptations => this.Set<Adaptation>();
 
+    /// <summary>
+    /// Gets the set of authors.
+    /// </summary>
     public DbSet<Author> Authors => this.Set<Author>();
 
+    /// <summary>
+    /// Gets the set of actors.
+    /// </summary>
     public DbSet<Actor> Actors => this.Set<Actor>();
 
+    /// <summary>
+    /// Gets the set of works.
+    /// </summary>
     public DbSet<Work> Works => this.Set<Work>();
 
+    /// <summary>
+    /// Gets the set of reviews.
+    /// </summary>
     public DbSet<Review> Reviews => this.Set<Review>();
 
+    /// <summary>
+    /// Gets the set of votes.
+    /// </summary>
     public DbSet<Vote> Votes => this.Set<Vote>();
 
+    /// <summary>
+    /// Gets the set of ratings.
+    /// </summary>
     public DbSet<Rating> Ratings => this.Set<Rating>();
+
+    /// <inheritdoc/>
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        var entries = this.ChangeTracker.Entries()
+            .Where(e => e.Entity is BaseEntity && (e.State == EntityState.Added || e.State == EntityState.Modified));
+
+        foreach (var entry in entries)
+        {
+            ((BaseEntity)entry.Entity).UpdatedAt = DateTime.UtcNow;
+            if (entry.State == EntityState.Added)
+            {
+                ((BaseEntity)entry.Entity).CreatedAt = DateTime.UtcNow;
+            }
+        }
+
+        return base.SaveChangesAsync(cancellationToken);
+    }
 
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -127,22 +180,5 @@ public class ApplicationDbContext : DbContext
             entity.ToTable(t => t.HasCheckConstraint("CK_Rating_Book", "\"BookRating\" >= 0 AND \"BookRating\" <= 10"));
             entity.ToTable(t => t.HasCheckConstraint("CK_Rating_Adaptation", "\"AdaptationRating\" >= 0 AND \"AdaptationRating\" <= 10"));
         });
-    }
-
-    /// <inheritdoc/>
-    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        var entries = this.ChangeTracker.Entries()
-            .Where(e => e.Entity is BaseEntity && (e.State == EntityState.Added || e.State == EntityState.Modified));
-
-        foreach (var entry in entries)
-        {
-            ((BaseEntity)entry.Entity).UpdatedAt = DateTime.UtcNow;
-            if (entry.State == EntityState.Added)
-            {
-                ((BaseEntity)entry.Entity).CreatedAt = DateTime.UtcNow;
-            }
-        }
-        return base.SaveChangesAsync(cancellationToken);
     }
 }

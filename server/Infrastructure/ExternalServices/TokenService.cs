@@ -1,9 +1,13 @@
+// <copyright file="TokenService.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Infrastructure.ExternalServices;
 
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using API__Web_.Configurations;
+using Book2Screen.API__Web_.Configurations;
 using Book2Screen.Application.Interfaces;
 using Book2Screen.Domain.Entities;
 using Microsoft.IdentityModel.Tokens;
@@ -19,8 +23,10 @@ public class TokenService : ITokenService
     private readonly int expiryMinutes;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="TokenService"/> class.
     /// Ініціалізує новий екземпляр <see cref="TokenService"/> та завантажує налаштування JWT із середовища.
     /// </summary>
+    /// <param name="jwtOptions">Налаштування JWT.</param>
     /// <exception cref="InvalidOperationException">Викидається, якщо JWT_SECRET не встановлено.</exception>
     public TokenService(JwtOptions jwtOptions)
     {
@@ -55,7 +61,7 @@ public class TokenService : ITokenService
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Role, user.Role ?? "user"),
         };
-        
+
         var now = DateTime.UtcNow;
 
         var tokenDescriptor = new SecurityTokenDescriptor

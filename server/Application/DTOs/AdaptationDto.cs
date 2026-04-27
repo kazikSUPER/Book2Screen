@@ -1,3 +1,7 @@
+// <copyright file="AdaptationDto.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Application.DTOs;
 
 using System.ComponentModel.DataAnnotations;
@@ -8,52 +12,52 @@ using System.ComponentModel.DataAnnotations;
 public class AdaptationDto
 {
     /// <summary>
-    /// Унікальний ідентифікатор.
+    /// Gets or sets унікальний ідентифікатор.
     /// </summary>
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Назва адаптації.
+    /// Gets or sets назву адаптації.
     /// </summary>
-    /// <example>Інтерстеллар</example>
+    /// <example>Інтерстеллар.</example>
     [Required]
     public string Title { get; set; } = null!;
 
     /// <summary>
-    /// Тип: movie або series.
+    /// Gets or sets тип: movie або series.
     /// </summary>
-    /// <example>movie</example>
+    /// <example>movie.</example>
     [Required]
     public string Type { get; set; } = null!;
 
     /// <summary>
-    /// Короткий опис сюжету.
+    /// Gets or sets короткий опис сюжету.
     /// </summary>
     public string? Description { get; set; }
 
     /// <summary>
-    /// Рік виходу на екрани.
+    /// Gets or sets рік виходу на екрани.
     /// </summary>
-    /// <example>2014</example>
+    /// <example>2014.</example>
     public int? ReleaseYear { get; set; }
 
     /// <summary>
-    /// Тривалість у хвилинах.
+    /// Gets or sets тривалість у хвилинах.
     /// </summary>
     public int? DurationMinutes { get; set; }
 
     /// <summary>
-    /// Посилання на зображення постера.
+    /// Gets or sets посилання на зображення постера.
     /// </summary>
     public string? PosterUrl { get; set; }
 
     /// <summary>
-    /// Студія виробництва.
+    /// Gets or sets студію виробництва.
     /// </summary>
     public string? Studio { get; set; }
 
     /// <summary>
-    /// Країна виробництва.
+    /// Gets or sets країну виробництва.
     /// </summary>
     public string? Country { get; set; }
 }

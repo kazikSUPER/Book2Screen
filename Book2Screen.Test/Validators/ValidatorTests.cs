@@ -5,7 +5,7 @@
 namespace Book2Screen.Tests.Validators;
 
 using Book2Screen.Application.Validators;
-using Book2Screen.Domain.Entities;
+using Domain.Entities;
 using Xunit;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -24,10 +24,10 @@ public class UserValidatorTests
 
     private static User ValidUser() => new()
     {
-        Username     = "testuser",
-        Email        = "test@example.com",
+        Username = "testuser",
+        Email = "test@example.com",
         PasswordHash = "hashed",
-        Role         = "user",
+        Role = "user",
     };
 
     // ── TC-UNIT-06 ─────────────────────────────────────────────────────────
@@ -137,8 +137,8 @@ public class AdaptationValidatorTests
 
     private static Adaptation ValidAdaptation() => new()
     {
-        Title       = "Dune: Part Two",
-        Type        = "movie",
+        Title = "Dune: Part Two",
+        Type = "movie",
         ReleaseYear = 2024,
     };
 

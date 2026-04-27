@@ -1,3 +1,7 @@
+// <copyright file="ITokenService.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Application.Interfaces;
 
 using Book2Screen.Domain.Entities;

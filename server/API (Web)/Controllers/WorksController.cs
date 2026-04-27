@@ -1,3 +1,7 @@
+// <copyright file="WorksController.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.API__Web_.Controllers;
 
 using Book2Screen.Application.DTOs;
@@ -14,6 +18,10 @@ public class WorksController : ControllerBase
 {
     private readonly IAdaptationService adaptationService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorksController"/> class.
+    /// </summary>
+    /// <param name="adaptationService">Сервіс адаптацій.</param>
     public WorksController(IAdaptationService adaptationService)
     {
         this.adaptationService = adaptationService;
@@ -40,7 +48,7 @@ public class WorksController : ControllerBase
             Poster = a.PosterUrl ?? "https://via.placeholder.com/300x450",
             BookRating = 4.5,
             FilmRating = 4.2,
-            Description = a.Description ?? "",
+            Description = a.Description ?? string.Empty,
         });
 
         return this.Ok(result);
@@ -74,7 +82,7 @@ public class WorksController : ControllerBase
             Poster = a.PosterUrl ?? "https://via.placeholder.com/300x450",
             BookRating = 4.5,
             FilmRating = 4.2,
-            Description = a.Description ?? "",
+            Description = a.Description ?? string.Empty,
         };
 
         return this.Ok(result);
