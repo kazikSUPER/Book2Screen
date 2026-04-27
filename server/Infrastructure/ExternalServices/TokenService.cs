@@ -3,6 +3,7 @@ namespace Book2Screen.Infrastructure.ExternalServices;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using API__Web_.Configurations;
 using Book2Screen.Application.Interfaces;
 using Book2Screen.Domain.Entities;
 using Microsoft.IdentityModel.Tokens;
@@ -21,14 +22,13 @@ public class TokenService : ITokenService
     /// Ініціалізує новий екземпляр <see cref="TokenService"/> та завантажує налаштування JWT із середовища.
     /// </summary>
     /// <exception cref="InvalidOperationException">Викидається, якщо JWT_SECRET не встановлено.</exception>
-    public TokenService()
+    public TokenService(JwtOptions jwtOptions)
     {
-        this.secret = Environment.GetEnvironmentVariable("JWT_SECRET") 
+        this.secret = jwtOptions.Secret
             ?? throw new InvalidOperationException("JWT_SECRET environment variable is not set.");
-        this.issuer = Environment.GetEnvironmentVariable("JWT_ISSUER");
-        this.audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
-        var expiresIn = Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES");
-        this.expiryMinutes = expiresIn != null ? int.Parse(expiresIn) : 60;
+        this.issuer = jwtOptions.Issuer;
+        this.audience = jwtOptions.Audience;
+        this.expiryMinutes = jwtOptions.ExpiryMinutes;
     }
 
     /// <summary>
@@ -55,11 +55,15 @@ public class TokenService : ITokenService
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Role, user.Role ?? "user"),
         };
+        
+        var now = DateTime.UtcNow;
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMinutes(this.expiryMinutes),
+            NotBefore = now,
+            IssuedAt = now,
+            Expires = now.AddMinutes(this.expiryMinutes),
             Issuer = this.issuer,
             Audience = this.audience,
             SigningCredentials = creds,

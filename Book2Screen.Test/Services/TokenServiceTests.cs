@@ -1,6 +1,7 @@
 namespace Book2Screen.Tests.Services;
 
 using System.IdentityModel.Tokens.Jwt;
+using API__Web_.Configurations;
 using Book2Screen.Domain.Entities;
 using Book2Screen.Infrastructure.ExternalServices;
 using Xunit;
@@ -17,13 +18,15 @@ public class TokenServiceTests
 
     public TokenServiceTests(ITestOutputHelper output) => _out = output;
 
-    private static TokenService CreateService()
-    {
-        Environment.SetEnvironmentVariable("JWT_SECRET",         TestSecret);
-        Environment.SetEnvironmentVariable("JWT_ISSUER",         TestIssuer);
-        Environment.SetEnvironmentVariable("JWT_AUDIENCE",       TestAudience);
-        Environment.SetEnvironmentVariable("JWT_EXPIRY_MINUTES", "120");
-        return new TokenService();
+    private static TokenService CreateService() {
+        var options = new JwtOptions
+        {
+            Issuer = TestIssuer,
+            Audience = TestAudience,
+            ExpiryMinutes = 120,
+            Secret = TestSecret,
+        };
+        return new TokenService(options);
     }
 
     private static User MakeUser(string username = "testuser", string role = "user") => new()
@@ -104,13 +107,16 @@ public class TokenServiceTests
 
     // ── TC-UNIT-05 ──────────────────────────────────────────────────────────
     [Fact]
-    public void CreateToken_MissingSecret_ThrowsException()
+    public void Constructor_MissingSecret_ThrowsInvalidOperationException()
     {
-        var original = Environment.GetEnvironmentVariable("JWT_SECRET");
-        Environment.SetEnvironmentVariable("JWT_SECRET", null);
-        var service = new TokenService();
-        var user    = MakeUser();
-        try   { Assert.ThrowsAny<Exception>(() => service.CreateToken(user)); }
-        finally { Environment.SetEnvironmentVariable("JWT_SECRET", original ?? TestSecret); }
+        var user = MakeUser();
+        var options = new JwtOptions
+        {
+            Issuer = "TestIssuer",
+            Audience = "TestAudience",
+            ExpiryMinutes = 120,
+            Secret = null
+        };
+        Assert.Throws<InvalidOperationException>(() => new TokenService(options));
     }
 }

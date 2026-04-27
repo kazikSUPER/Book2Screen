@@ -55,7 +55,6 @@
 
     <ItemGroup>
       <Folder Include="API (Web)\" />
-      <Folder Include="API (Web)\Configurations\" />
     </ItemGroup>
 
     <ItemGroup>

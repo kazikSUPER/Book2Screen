@@ -5,6 +5,7 @@
 using System.Reflection;
 using System.Text;
 using AutoMapper;
+using Book2Screen.API__Web_.Configurations;
 using Book2Screen.API__Web_.Middleware;
 using Book2Screen.Application.Interfaces;
 using Book2Screen.Application.Mappings;
@@ -35,9 +36,13 @@ else
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
-var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
-var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER");
-var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
+var jwtOptions = new JwtOptions
+{
+    Issuer = Environment.GetEnvironmentVariable("JWT_ISSUER"),
+    Audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE"),
+    ExpiryMinutes = Convert.ToInt32(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES")),
+    Secret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? throw new InvalidOperationException("JWT secret not found."),
+};
 
 var mappingConfig = new MapperConfiguration(
 mc =>
@@ -83,9 +88,9 @@ builder.Services.AddAuthentication(options =>
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret ?? throw new InvalidOperationException("JWT secret not found."))),
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret ?? throw new InvalidOperationException("JWT secret not found."))),
             ClockSkew = TimeSpan.Zero,
         };
     });
