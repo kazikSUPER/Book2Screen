@@ -1,71 +1,57 @@
-# Logs
-logs
+# --- General & OS ---
+.DS_Store
+Thumbs.db
 *.log
+logs/
+*.tmp
+
+# --- IDEs & Editors ---
+.idea/
+.vs/
+.vscode/
+*.sln.docstates
+*.user
+*.userosscache
+*.suo
+*.ntvs*
+*.njsproj
+*.sw?
+
+# --- Frontend (Vue 3 / Vite / Node) ---
+# This covers ui/node_modules and any other node_modules
+node_modules/
+dist/
+dist-ssr/
+*.local
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
+.eslintcache
+.stylelintcache
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-/server/obj
-
-# IDE Specific (Rider/Visual Studio/VS Code)
-.idea/
-.vs/
-.vscode/
-*.user
-*.userosscache
-*.sln.docstates
-
-# .NET Build Artifacts
+# --- Backend (.NET) ---
+# This covers server/bin, server/obj, Book2Screen.Test/bin, etc.
 bin/
 obj/
 TestResults/
+[Dd]ebug/
+[Rr]elease/
 nupkg/
 
-# Environment Secrets (CRITICAL for Stage 3)
+# --- Environment Secrets (CRITICAL) ---
 .env
 .env.local
 .env.*.local
 *.pfx
 *.certificate
 
-# Docker
+# --- Docker ---
 .dockerignore
 docker-compose.override.yml
 
-# Frontend (Vue 3 / Vite / Node)
-node_modules/
-dist/
-dist-ssr/
-.local
-npm-debug.log
-yarn-debug.log*
-yarn-error.log*
-.eslintcache
-.stylelintcache
-
-# Databases (PostgreSQL/Local DBs)
+# --- Databases ---
 *.db
 *.db-shm
 *.db-wal
 /pgdata/
-
-# OS Specific 
-.DS_Store
-Thumbs.db
