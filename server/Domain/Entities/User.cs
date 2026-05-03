@@ -53,4 +53,9 @@ public class User : BaseEntity
     /// Gets or sets колекцію голосів користувача.
     /// </summary>
     public ICollection<Vote> Votes { get; set; } = new List<Vote>();
+
+    /// <summary>
+    /// Gets or sets колекцію обраних творів користувача.
+    /// </summary>
+    public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
 }

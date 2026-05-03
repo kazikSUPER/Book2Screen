@@ -67,4 +67,9 @@ public class Work : BaseEntity
     /// Gets or sets події сюжету.
     /// </summary>
     public ICollection<PlotEvent> PlotEvents { get; set; } = new List<PlotEvent>();
+
+    /// <summary>
+    /// Gets or sets список обраного.
+    /// </summary>
+    public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
 }

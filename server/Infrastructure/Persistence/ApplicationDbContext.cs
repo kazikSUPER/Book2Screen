@@ -67,6 +67,11 @@ public class ApplicationDbContext : DbContext
     /// </summary>
     public DbSet<Rating> Ratings => this.Set<Rating>();
 
+    /// <summary>
+    /// Gets the set of favorites.
+    /// </summary>
+    public DbSet<Favorite> Favorites => this.Set<Favorite>();
+
     /// <inheritdoc/>
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -179,6 +184,22 @@ public class ApplicationDbContext : DbContext
             // Додаємо екрановані лапки та виправляємо назви на ті, що у вашому C# класі
             entity.ToTable(t => t.HasCheckConstraint("CK_Rating_Book", "\"BookRating\" >= 0 AND \"BookRating\" <= 10"));
             entity.ToTable(t => t.HasCheckConstraint("CK_Rating_Adaptation", "\"AdaptationRating\" >= 0 AND \"AdaptationRating\" <= 10"));
+        });
+
+        // Налаштування Favorite
+        modelBuilder.Entity<Favorite>(entity =>
+        {
+            entity.HasIndex(f => new { f.UserId, f.WorkId }).IsUnique();
+
+            entity.HasOne(f => f.User)
+                .WithMany(u => u.Favorites)
+                .HasForeignKey(f => f.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(f => f.Work)
+                .WithMany(w => w.Favorites)
+                .HasForeignKey(f => f.WorkId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
