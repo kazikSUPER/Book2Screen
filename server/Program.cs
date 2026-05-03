@@ -44,6 +44,8 @@ var jwtOptions = new JwtOptions
     Secret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? throw new InvalidOperationException("JWT secret not found."),
 };
 
+builder.Services.AddSingleton(jwtOptions);
+
 var mappingConfig = new MapperConfiguration(
 mc =>
 {
