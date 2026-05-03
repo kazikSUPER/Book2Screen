@@ -79,4 +79,50 @@ public class AuthController : ControllerBase
 
         return this.Ok(response);
     }
+
+    /// <summary>
+    /// Запит на відновлення паролю.
+    /// </summary>
+    /// <param name="request">Запит з Email.</param>
+    /// <returns>Повертає 200 OK.</returns>
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        await this.authService.ForgotPasswordAsync(request);
+        return this.Ok(new { message = "If the email exists, a reset code has been sent." });
+    }
+
+    /// <summary>
+    /// Перевірка коду відновлення.
+    /// </summary>
+    /// <param name="request">Запит з Email та кодом.</param>
+    /// <returns>Повертає 200 OK, якщо код вірний.</returns>
+    [HttpPost("verify-code")]
+    public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeRequest request)
+    {
+        var isValid = await this.authService.VerifyResetCodeAsync(request);
+        if (!isValid)
+        {
+            return this.BadRequest("Invalid or expired code.");
+        }
+
+        return this.Ok(new { message = "Code verified successfully." });
+    }
+
+    /// <summary>
+    /// Скидання паролю на новий.
+    /// </summary>
+    /// <param name="request">Запит з Email, кодом та новим паролем.</param>
+    /// <returns>Повертає 200 OK у разі успіху.</returns>
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        var success = await this.authService.ResetPasswordAsync(request);
+        if (!success)
+        {
+            return this.BadRequest("Invalid code or email.");
+        }
+
+        return this.Ok(new { message = "Password has been reset successfully." });
+    }
 }

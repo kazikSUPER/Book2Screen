@@ -78,4 +78,75 @@ public class AuthService : IAuthService
             Nickname = user.Username,
         };
     }
+
+    /// <inheritdoc/>
+    public async Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request)
+    {
+        var user = await this.context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        if (user == null)
+        {
+            return true;
+        }
+
+        var code = new Random().Next(100000, 999999).ToString();
+
+        var oldTokens = this.context.PasswordResetTokens.Where(t => t.Email == request.Email);
+        this.context.PasswordResetTokens.RemoveRange(oldTokens);
+
+        var resetToken = new PasswordResetToken
+        {
+            Email = request.Email,
+            Code = code,
+            ExpiryTime = DateTime.UtcNow.AddMinutes(15),
+            IsUsed = false,
+        };
+
+        await this.context.PasswordResetTokens.AddAsync(resetToken);
+        await this.context.SaveChangesAsync();
+
+        Console.WriteLine($"[DEBUG] Reset code for {request.Email}: {code}");
+
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> VerifyResetCodeAsync(VerifyCodeRequest request)
+    {
+        var token = await this.context.PasswordResetTokens
+            .FirstOrDefaultAsync(t => t.Email == request.Email && t.Code == request.Code && !t.IsUsed);
+
+        if (token == null || token.ExpiryTime < DateTime.UtcNow)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        var token = await this.context.PasswordResetTokens
+            .FirstOrDefaultAsync(t => t.Email == request.Email && t.Code == request.Code && !t.IsUsed);
+
+        if (token == null || token.ExpiryTime < DateTime.UtcNow)
+        {
+            return false;
+        }
+
+        var user = await this.context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        if (user == null)
+        {
+            return false;
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        token.IsUsed = true;
+
+        this.context.Users.Update(user);
+        this.context.PasswordResetTokens.Update(token);
+        await this.context.SaveChangesAsync();
+
+        return true;
+    }
 }
