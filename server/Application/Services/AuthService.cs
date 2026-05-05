@@ -17,6 +17,7 @@ public class AuthService : IAuthService
 {
     private readonly ApplicationDbContext context;
     private readonly ITokenService tokenService;
+    private readonly IEmailService emailService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AuthService"/> class.
@@ -24,10 +25,12 @@ public class AuthService : IAuthService
     /// </summary>
     /// <param name="context">Контекст бази даних.</param>
     /// <param name="tokenService">Сервіс для роботи з токенами.</param>
-    public AuthService(ApplicationDbContext context, ITokenService tokenService)
+    /// <param name="emailService">Сервіс для відправки пошти.</param>
+    public AuthService(ApplicationDbContext context, ITokenService tokenService, IEmailService emailService)
     {
         this.context = context;
         this.tokenService = tokenService;
+        this.emailService = emailService;
     }
 
     /// <inheritdoc/>
@@ -104,7 +107,10 @@ public class AuthService : IAuthService
         await this.context.PasswordResetTokens.AddAsync(resetToken);
         await this.context.SaveChangesAsync();
 
-        Console.WriteLine($"[DEBUG] Reset code for {request.Email}: {code}");
+        await this.emailService.SendEmailAsync(
+            request.Email,
+            "Код відновлення паролю — Book2Screen",
+            $"<p>Ваш код для відновлення паролю: <b>{code}</b></p><p>Код дійсний протягом 15 хвилин.</p>");
 
         return true;
     }

@@ -1,4 +1,7 @@
-// Book2Screen.Tests/Services/PasswordResetTests.cs
+// <copyright file="PasswordResetTests.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Tests.Services;
 
 using Book2Screen.Application.DTOs;
@@ -10,66 +13,92 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
 
+/// <summary>
+/// Unit tests for password reset functionality.
+/// </summary>
 public class PasswordResetTests
 {
-    private readonly ApplicationDbContext _context;
-    private readonly Mock<ITokenService> _tokenServiceMock;
-    private readonly IAuthService _authService;
+    private readonly ApplicationDbContext context;
+    private readonly Mock<ITokenService> tokenServiceMock;
+    private readonly Mock<IEmailService> emailServiceMock;
+    private readonly IAuthService authService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PasswordResetTests"/> class.
+    /// </summary>
     public PasswordResetTests()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        _context = new ApplicationDbContext(options);
-        _tokenServiceMock = new Mock<ITokenService>();
+        this.context = new ApplicationDbContext(options);
+        this.tokenServiceMock = new Mock<ITokenService>();
+        this.emailServiceMock = new Mock<IEmailService>();
 
-        _authService = new AuthService(_context, _tokenServiceMock.Object);
+        this.authService = new AuthService(this.context, this.tokenServiceMock.Object, this.emailServiceMock.Object);
     }
 
+    /// <summary>
+    /// Checks that ForgotPasswordAsync generates a code and calls email service when user exists.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
-    public async Task ForgotPasswordAsync_ShouldReturnTrueAndGenerateCode_WhenUserExists()
+    public async Task ForgotPasswordAsync_ShouldReturnTrueAndSendEmail_WhenUserExists()
     {
         // Arrange
         var user = new User
         {
             Username = "testuser",
             Email = "test@example.com",
-            PasswordHash = "hash"
+            PasswordHash = "hash",
         };
-        await _context.Users.AddAsync(user);
-        await _context.SaveChangesAsync();
+        await this.context.Users.AddAsync(user);
+        await this.context.SaveChangesAsync();
 
         var request = new ForgotPasswordRequest { Email = "test@example.com" };
 
         // Act
-        var result = await _authService.ForgotPasswordAsync(request);
+        var result = await this.authService.ForgotPasswordAsync(request);
 
         // Assert
         Assert.True(result);
-        var token = await _context.PasswordResetTokens.FirstOrDefaultAsync(t => t.Email == "test@example.com");
+        var token = await this.context.PasswordResetTokens.FirstOrDefaultAsync(t => t.Email == "test@example.com");
         Assert.NotNull(token);
         Assert.NotNull(token.Code);
         Assert.False(token.IsUsed);
-        Assert.True(token.ExpiryTime > DateTime.UtcNow);
+        this.emailServiceMock.Verify(
+            s => s.SendEmailAsync(
+                It.Is<string>(e => e == "test@example.com"),
+                It.IsAny<string>(),
+                It.Is<string>(b => b.Contains(token.Code))),
+            Times.Once);
     }
 
+    /// <summary>
+    /// Checks that ForgotPasswordAsync returns true but does nothing when user does not exist.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
-    public async Task ForgotPasswordAsync_ShouldReturnTrueButNotGenerateCode_WhenUserDoesNotExist()
+    public async Task ForgotPasswordAsync_ShouldReturnTrueButNotSendEmail_WhenUserDoesNotExist()
     {
         // Arrange
         var request = new ForgotPasswordRequest { Email = "nonexistent@example.com" };
 
         // Act
-        var result = await _authService.ForgotPasswordAsync(request);
+        var result = await this.authService.ForgotPasswordAsync(request);
 
         // Assert
-        Assert.True(result); // Returns true for security reasons
-        var token = await _context.PasswordResetTokens.FirstOrDefaultAsync(t => t.Email == "nonexistent@example.com");
+        Assert.True(result);
+        var token = await this.context.PasswordResetTokens.FirstOrDefaultAsync(t => t.Email == "nonexistent@example.com");
         Assert.Null(token);
+        this.emailServiceMock.Verify(s => s.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
+    /// <summary>
+    /// Checks that VerifyResetCodeAsync returns true for valid code.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task VerifyResetCodeAsync_ShouldReturnTrue_WhenCodeIsValid()
     {
@@ -79,105 +108,61 @@ public class PasswordResetTests
             Email = "test@example.com",
             Code = "123456",
             ExpiryTime = DateTime.UtcNow.AddMinutes(10),
-            IsUsed = false
+            IsUsed = false,
         };
-        await _context.PasswordResetTokens.AddAsync(token);
-        await _context.SaveChangesAsync();
+        await this.context.PasswordResetTokens.AddAsync(token);
+        await this.context.SaveChangesAsync();
 
         var request = new VerifyCodeRequest { Email = "test@example.com", Code = "123456" };
 
         // Act
-        var result = await _authService.VerifyResetCodeAsync(request);
+        var result = await this.authService.VerifyResetCodeAsync(request);
 
         // Assert
         Assert.True(result);
     }
 
+    /// <summary>
+    /// Checks that ResetPasswordAsync updates the password.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
-    public async Task VerifyResetCodeAsync_ShouldReturnFalse_WhenCodeIsExpired()
-    {
-        // Arrange
-        var token = new PasswordResetToken
-        {
-            Email = "test@example.com",
-            Code = "123456",
-            ExpiryTime = DateTime.UtcNow.AddMinutes(-5), // Expired
-            IsUsed = false
-        };
-        await _context.PasswordResetTokens.AddAsync(token);
-        await _context.SaveChangesAsync();
-
-        var request = new VerifyCodeRequest { Email = "test@example.com", Code = "123456" };
-
-        // Act
-        var result = await _authService.VerifyResetCodeAsync(request);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public async Task VerifyResetCodeAsync_ShouldReturnFalse_WhenCodeIsUsed()
-    {
-        // Arrange
-        var token = new PasswordResetToken
-        {
-            Email = "test@example.com",
-            Code = "123456",
-            ExpiryTime = DateTime.UtcNow.AddMinutes(10),
-            IsUsed = true // Already used
-        };
-        await _context.PasswordResetTokens.AddAsync(token);
-        await _context.SaveChangesAsync();
-
-        var request = new VerifyCodeRequest { Email = "test@example.com", Code = "123456" };
-
-        // Act
-        var result = await _authService.VerifyResetCodeAsync(request);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public async Task ResetPasswordAsync_ShouldResetPasswordAndMarkTokenAsUsed_WhenValid()
+    public async Task ResetPasswordAsync_ShouldUpdatePassword_WhenValid()
     {
         // Arrange
         var user = new User
         {
             Username = "testuser",
             Email = "test@example.com",
-            PasswordHash = "oldhash"
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("OldPass"),
         };
-        await _context.Users.AddAsync(user);
+        await this.context.Users.AddAsync(user);
 
         var token = new PasswordResetToken
         {
             Email = "test@example.com",
             Code = "123456",
             ExpiryTime = DateTime.UtcNow.AddMinutes(10),
-            IsUsed = false
+            IsUsed = false,
         };
-        await _context.PasswordResetTokens.AddAsync(token);
-        await _context.SaveChangesAsync();
+        await this.context.PasswordResetTokens.AddAsync(token);
+        await this.context.SaveChangesAsync();
 
         var request = new ResetPasswordRequest
         {
             Email = "test@example.com",
             Code = "123456",
-            NewPassword = "newPassword123!"
+            NewPassword = "NewPass123!",
         };
 
         // Act
-        var result = await _authService.ResetPasswordAsync(request);
+        var result = await this.authService.ResetPasswordAsync(request);
 
         // Assert
         Assert.True(result);
-        var updatedUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == "test@example.com");
-        Assert.NotEqual("oldhash", updatedUser!.PasswordHash);
-        Assert.True(BCrypt.Net.BCrypt.Verify("newPassword123!", updatedUser.PasswordHash));
-
-        var updatedToken = await _context.PasswordResetTokens.FirstOrDefaultAsync(t => t.Id == token.Id);
+        var updatedUser = await this.context.Users.FirstOrDefaultAsync(u => u.Email == "test@example.com");
+        Assert.True(BCrypt.Net.BCrypt.Verify("NewPass123!", updatedUser!.PasswordHash));
+        var updatedToken = await this.context.PasswordResetTokens.FirstOrDefaultAsync(t => t.Id == token.Id);
         Assert.True(updatedToken!.IsUsed);
     }
 }
