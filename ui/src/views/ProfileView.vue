@@ -180,21 +180,11 @@ onMounted(() => {
   }
   loadAll();
 });
-
-function handleLogout(): void {
-  userStore.logout();
-  router.push({ name: 'home' });
-}
 </script>
 
 <template>
   <div v-if="userStore.isAuthenticated" class="profile">
-    <div class="profile__header-row">
-      <h1 class="profile__title">Ваш профіль</h1>
-      <button type="button" class="profile__logout-btn" @click="handleLogout">
-        ⏻ Вийти
-      </button>
-    </div>
+    <h1 class="profile__title">Ваш профіль</h1>
 
     <!-- ═════════════ Шапка профілю ═════════════ -->
     <section class="profile-header">
@@ -376,32 +366,6 @@ function handleLogout(): void {
   font-size: 28px;
   font-weight: 400;
   color: var(--text-on-light);
-}
-
-.profile__header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.profile__logout-btn {
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
-  padding: 6px 16px;
-  font-family: var(--font-display);
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-  white-space: nowrap;
-}
-
-.profile__logout-btn:hover {
-  background: var(--color-primary);
-  color: var(--text-on-primary);
-  border-color: var(--color-primary-dark);
 }
 
 /* ── Шапка профілю ─────────────────────────────────────── */
