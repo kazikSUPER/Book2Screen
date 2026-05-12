@@ -49,7 +49,7 @@ public class AdminController : ControllerBase
     /// </summary>
     /// <param name="id">ID адаптації.</param>
     /// <returns>Адаптація.</returns>
-    [HttpGet("adaptations/{id}")]
+    [HttpGet("adaptations/{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AdaptationDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAdaptationById(Guid id)
@@ -69,7 +69,7 @@ public class AdminController : ControllerBase
     /// <param name="id">ID адаптації.</param>
     /// <param name="adaptationDto">Нові дані.</param>
     /// <returns>Оновлена адаптація.</returns>
-    [HttpPut("adaptations/{id}")]
+    [HttpPut("adaptations/{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AdaptationDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateAdaptation(Guid id, [FromBody] AdaptationDto adaptationDto)
@@ -88,7 +88,7 @@ public class AdminController : ControllerBase
     /// </summary>
     /// <param name="id">ID адаптації.</param>
     /// <returns>NoContent.</returns>
-    [HttpDelete("adaptations/{id}")]
+    [HttpDelete("adaptations/{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteAdaptation(Guid id)

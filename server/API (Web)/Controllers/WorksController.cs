@@ -61,7 +61,7 @@ public class WorksController : ControllerBase
     /// <returns>Об'єкт BookScreenItemDto.</returns>
     /// <response code="200">Твір знайдено.</response>
     /// <response code="404">Твір з таким ID не знайдено.</response>
-    [HttpGet("{id}")]
+    [HttpGet("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BookScreenItemDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetWorkById(Guid id)

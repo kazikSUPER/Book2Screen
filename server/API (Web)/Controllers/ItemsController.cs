@@ -48,7 +48,7 @@ public class ItemsController : ControllerBase
     /// <returns>Детальна інформація про елемент.</returns>
     /// <response code="200">Елемент знайдено.</response>
     /// <response code="404">Елемент із таким ID не знайдено.</response>
-    [HttpGet("{id}")]
+    [HttpGet("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AdaptationDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetItemById(Guid id)

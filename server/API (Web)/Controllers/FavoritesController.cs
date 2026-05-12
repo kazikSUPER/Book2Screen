@@ -75,11 +75,11 @@ public class FavoritesController : ControllerBase
     }
 
     /// <summary>
-    /// Видаляє твір з обраного.
+    /// Видалити твір з обраного.
     /// </summary>
     /// <param name="workId">ID твору.</param>
     /// <returns>Статус операції.</returns>
-    [HttpDelete("{workId}")]
+    [HttpDelete("{workId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> RemoveFromFavorites(Guid workId)
@@ -104,7 +104,7 @@ public class FavoritesController : ControllerBase
     /// </summary>
     /// <param name="workId">ID твору.</param>
     /// <returns>Boolean значення.</returns>
-    [HttpGet("check/{workId}")]
+    [HttpGet("check/{workId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
     public async Task<IActionResult> CheckFavorite(Guid workId)
     {
