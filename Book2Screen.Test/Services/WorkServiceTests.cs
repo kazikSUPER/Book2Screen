@@ -10,6 +10,7 @@ using Xunit;
 public class WorkServiceTests : IDisposable
 {
     private readonly ApplicationDbContext _context;
+    private readonly VoteService _voteService;
     private readonly WorkService _service;
 
     public WorkServiceTests()
@@ -18,7 +19,8 @@ public class WorkServiceTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         _context = new ApplicationDbContext(options);
-        _service = new WorkService(_context);
+        _voteService = new VoteService(_context);
+        _service = new WorkService(_context, _voteService);
     }
 
     public void Dispose()
