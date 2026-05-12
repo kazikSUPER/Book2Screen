@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { RouterView, RouterLink, useRouter, useRoute } from 'vue-router';
-import { storeToRefs } from 'pinia';
 import LoginModal from './components/LoginModal.vue';
 import RegisterModal from './components/RegisterModal.vue';
 import ResetPasswordModal from './components/ResetPasswordModal.vue';
@@ -17,13 +16,6 @@ const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
 const filtersStore = useFiltersStore();
-
-// storeToRefs — стандартний спосіб отримати реактивні значення з Pinia store у компоненті.
-// Без нього email/token — объєкт Ref, а не рядок, і includes() повертає false.
-const { email, isAuthenticated } = storeToRefs(userStore);
-
-// Адмін: залогінений + email містить 'admin'
-const isAdmin = computed(() => isAuthenticated.value && email.value?.includes('admin'));
 
 // ── Filter panel — показується тільки на сторінках, де є каталог.
 // Конфігурація секцій залежить від маршруту (за дизайном Figma).
@@ -74,9 +66,8 @@ const isMobileFiltersOpen = ref(false);
 
 // ── Auth ─────────────────────────────────────────────
 const handleAuthClick = () => {
-  if (isAuthenticated.value) {
-    // Залогінений → переходить у профіль
-    router.push({ name: 'profile' });
+  if (userStore.isAuthenticated) {
+    userStore.logout();
   } else {
     activeModal.value = 'login';
   }
@@ -95,24 +86,6 @@ const handleAuthClick = () => {
         <Logo size="md" />
       </RouterLink>
 
-      <!-- Навігаційні кнопки -->
-      <nav class="header-nav" aria-label="Основна навігація">
-        <RouterLink to="/" class="nav-link" active-class="nav-link--active" exact>Головна</RouterLink>
-        <RouterLink to="/top" class="nav-link" active-class="nav-link--active">ТОП</RouterLink>
-        <RouterLink
-          v-if="isAuthenticated"
-          to="/profile"
-          class="nav-link"
-          active-class="nav-link--active"
-        >Профіль</RouterLink>
-        <RouterLink
-          v-if="isAdmin"
-          to="/admin"
-          class="nav-link nav-link--admin"
-          active-class="nav-link--active"
-        >Адмін</RouterLink>
-      </nav>
-
       <div class="search-bar header-search">
         <input v-model="filtersStore.searchQuery" type="text" placeholder="Пошук..." @keyup.enter="onSearchSubmit" />
         <button class="search-submit" aria-label="Шукати" @click="onSearchSubmit">
@@ -125,8 +98,7 @@ const handleAuthClick = () => {
 
       <button
         class="login-btn"
-        :title="isAuthenticated ? `Профіль (${email})` : 'Увійти'"
-        :aria-label="isAuthenticated ? 'Перейти в профіль' : 'Увійти'"
+        :title="userStore.isAuthenticated ? `Вийти (${userStore.email})` : 'Вхід'"
         @click="handleAuthClick"
       >
         <IconUser :size="28" />
@@ -142,29 +114,6 @@ const handleAuthClick = () => {
       <!-- Mobile-кнопка для відкриття фільтрів -->
       <button class="mobile-filters-btn" @click="isMobileFiltersOpen = true">⚙ Фільтри</button>
     </div>
-
-    <!-- Mobile-only nav bar (під рядком пошуку) -->
-    <nav class="mobile-nav" aria-label="Мобільна навігація">
-      <RouterLink to="/" class="mobile-nav__link" active-class="mobile-nav__link--active" exact>🏠 Головна</RouterLink>
-      <RouterLink to="/top" class="mobile-nav__link" active-class="mobile-nav__link--active">🏆 ТОП</RouterLink>
-      <RouterLink
-        v-if="isAuthenticated"
-        to="/profile"
-        class="mobile-nav__link"
-        active-class="mobile-nav__link--active"
-      >👤 Профіль</RouterLink>
-      <RouterLink
-        v-if="isAdmin"
-        to="/admin"
-        class="mobile-nav__link mobile-nav__link--admin"
-        active-class="mobile-nav__link--active"
-      >⚙ Адмін</RouterLink>
-      <button
-        v-if="!isAuthenticated"
-        class="mobile-nav__link mobile-nav__link--login"
-        @click="activeModal = 'login'"
-      >↩ Увійти</button>
-    </nav>
 
     <div class="main-layout">
       <FilterPanel
@@ -219,60 +168,10 @@ const handleAuthClick = () => {
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  gap: 16px;
+  gap: 24px;
   position: relative;
   flex-shrink: 0;
   border-bottom: 1px solid var(--color-header);
-}
-
-/* ── Header nav ── */
-.header-nav {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.nav-link {
-  color: var(--text-on-dark);
-  text-decoration: none;
-  font-family: var(--font-display);
-  font-size: 14px;
-  padding: 6px 14px;
-  border-radius: var(--radius-md);
-  border: 1px solid transparent;
-  transition:
-    background 0.2s,
-    border-color 0.2s,
-    color 0.2s;
-  white-space: nowrap;
-}
-
-.nav-link:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.nav-link--active {
-  background: var(--color-primary);
-  border-color: var(--color-primary-dark);
-  color: var(--text-on-primary);
-}
-
-.nav-link--admin {
-  color: #ffd700;
-  border-color: rgba(255, 215, 0, 0.3);
-}
-
-.nav-link--admin:hover {
-  background: rgba(255, 215, 0, 0.15);
-  border-color: rgba(255, 215, 0, 0.5);
-}
-
-.nav-link--admin.nav-link--active {
-  background: #b8860b;
-  border-color: #8b6914;
-  color: #fff;
 }
 
 .logo-link {
@@ -390,103 +289,38 @@ const handleAuthClick = () => {
   flex-shrink: 0;
 }
 
-/* ── Mobile nav bar (bottom strip, видно тільки ≤768px) ── */
-.mobile-nav {
-  display: none;
-  background-color: var(--color-header);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 6px 8px;
-  flex-shrink: 0;
-  gap: 4px;
-  align-items: center;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.mobile-nav::-webkit-scrollbar {
-  display: none;
-}
-
-.mobile-nav__link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-on-dark);
-  text-decoration: none;
-  font-family: var(--font-display);
-  font-size: 13px;
-  padding: 6px 12px;
-  border-radius: var(--radius-md);
-  border: 1px solid transparent;
-  white-space: nowrap;
-  flex-shrink: 0;
-  background: none;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-}
-
-.mobile-nav__link:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.mobile-nav__link--active {
-  background: var(--color-primary) !important;
-  border-color: var(--color-primary-dark) !important;
-  color: var(--text-on-primary) !important;
-}
-
-.mobile-nav__link--admin {
-  color: #ffd700;
-}
-
-.mobile-nav__link--login {
-  color: var(--text-on-dark);
-  opacity: 0.8;
-}
-
 /* ── Адаптив ── */
 @media (max-width: 1280px) {
   .header {
-    gap: 12px;
+    gap: 16px;
     padding: 0 16px;
   }
   .header-search {
-    width: 400px;
+    width: 500px;
   }
 }
 
 @media (max-width: 1024px) {
   .header {
-    gap: 8px;
+    gap: 12px;
     padding: 0 12px;
   }
   .header-search {
     width: auto;
     flex: 1;
-    max-width: 300px;
-  }
-  .nav-link {
-    font-size: 13px;
-    padding: 5px 10px;
+    max-width: 400px;
   }
 }
 
 @media (max-width: 768px) {
   .header {
-    gap: 8px;
-    padding: 0 12px;
+    gap: 12px;
+    padding: 0 16px;
   }
   .header-search {
     display: none;
   }
-  .header-nav {
-    display: none; /* на мобільному навігацію виносимо в mobile-nav */
-  }
   .mobile-search {
-    display: flex;
-  }
-  .mobile-nav {
     display: flex;
   }
   .mobile-search .search-bar input {

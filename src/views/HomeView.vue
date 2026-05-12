@@ -2,7 +2,7 @@
   <div class="home">
     <section class="hero">
       <img :src="heroImg" alt="Книга чи фільм – що краще?" class="hero-image" />
-      <button class="hero-btn" @click="goToTop">Переглянути ТОП</button>
+      <button class="hero-btn">Переглянути роботи</button>
     </section>
 
     <section class="popular">
@@ -28,7 +28,7 @@
               <p class="card-meta">Рік: {{ item.year }}</p>
               <p class="card-meta">Жанр: {{ item.genre }}</p>
               <p class="card-meta">Країна: {{ item.country }}</p>
-              <button class="card-btn" @click.stop="goToItem(item)">Переглянути</button>
+              <button class="card-btn">Переглянути</button>
             </div>
           </div>
         </div>
@@ -77,10 +77,6 @@ export default defineComponent({
       if (cardsRef.value) cardsRef.value.scrollBy({ left: 380, behavior: 'smooth' });
     };
 
-    const goToTop = (): void => {
-      router.push({ name: 'top' });
-    };
-
     const goToItem = (item: BookScreenItem): void => {
       router.push({ name: 'detail', params: { id: item.id } });
     };
@@ -93,7 +89,6 @@ export default defineComponent({
       loadItems,
       scrollRight,
       goToItem,
-      goToTop,
       heroImg,
     };
   },
