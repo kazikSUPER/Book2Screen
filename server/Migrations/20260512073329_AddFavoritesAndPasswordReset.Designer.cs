@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Book2Screen.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260503083228_AddPasswordResetTable")]
-    partial class AddPasswordResetTable
+    [Migration("20260512073329_AddFavoritesAndPasswordReset")]
+    partial class AddFavoritesAndPasswordReset
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -287,6 +287,34 @@ namespace Book2Screen.Migrations
                         .IsUnique();
 
                     b.ToTable("DifferenceMap");
+                });
+
+            modelBuilder.Entity("Book2Screen.Domain.Entities.Favorite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WorkId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkId");
+
+                    b.HasIndex("UserId", "WorkId")
+                        .IsUnique();
+
+                    b.ToTable("Favorites");
                 });
 
             modelBuilder.Entity("Book2Screen.Domain.Entities.PasswordResetToken", b =>
@@ -630,6 +658,25 @@ namespace Book2Screen.Migrations
                     b.Navigation("Work");
                 });
 
+            modelBuilder.Entity("Book2Screen.Domain.Entities.Favorite", b =>
+                {
+                    b.HasOne("Book2Screen.Domain.Entities.User", "User")
+                        .WithMany("Favorites")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Book2Screen.Domain.Entities.Work", "Work")
+                        .WithMany("Favorites")
+                        .HasForeignKey("WorkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+
+                    b.Navigation("Work");
+                });
+
             modelBuilder.Entity("Book2Screen.Domain.Entities.PlotEvent", b =>
                 {
                     b.HasOne("Book2Screen.Domain.Entities.Work", "Work")
@@ -731,6 +778,8 @@ namespace Book2Screen.Migrations
 
             modelBuilder.Entity("Book2Screen.Domain.Entities.User", b =>
                 {
+                    b.Navigation("Favorites");
+
                     b.Navigation("Reviews");
 
                     b.Navigation("Votes");
@@ -739,6 +788,8 @@ namespace Book2Screen.Migrations
             modelBuilder.Entity("Book2Screen.Domain.Entities.Work", b =>
                 {
                     b.Navigation("DifferenceMap");
+
+                    b.Navigation("Favorites");
 
                     b.Navigation("PlotEvents");
 
