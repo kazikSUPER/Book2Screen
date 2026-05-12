@@ -19,7 +19,7 @@ export default defineComponent({
       isLoading.value = true;
       errorMessage.value = '';
       try {
-        item.value = await fetchWorkById(Number(route.params.id));
+        item.value = await fetchWorkById(route.params.id as string);
       } catch (err) {
         errorMessage.value = extractErrorMessage(err);
         item.value = null;

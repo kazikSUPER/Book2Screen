@@ -55,13 +55,13 @@ export type VoteType = 'BOOK' | 'MOVIE';
 // Голос користувача за твір.
 // Endpoint: POST /api/v1/votes
 export interface VoteRequest {
-  workId: number;
+  workId: string;
   voteType: VoteType;
 }
 
 // Актуальний розподіл голосів за твір.
 export interface VoteResponse {
-  workId: number;
+  workId: string;
   totalVotes: number;
   bookVotes: number;
   movieVotes: number;
@@ -74,7 +74,7 @@ export interface VoteResponse {
 // Запит на створення відгуку.
 // Endpoint: POST /api/v1/reviews
 export interface ReviewRequest {
-  workId: number;
+  workId: string;
   text: string;
   isSpoiler: boolean;
   rating: number;
@@ -83,7 +83,7 @@ export interface ReviewRequest {
 // Відповідь зі збереженим відгуком.
 export interface ReviewResponse {
   reviewId: string;
-  workId: number;
+  workId: string;
   userId: string;
   text: string;
   isSpoiler: boolean;

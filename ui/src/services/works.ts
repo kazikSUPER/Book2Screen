@@ -39,7 +39,7 @@ export async function fetchWorks(params: FetchWorksParams = {}): Promise<BookScr
 /**
  * GET /api/v1/works/:id
  */
-export async function fetchWorkById(id: number): Promise<BookScreenItem> {
+export async function fetchWorkById(id: string): Promise<BookScreenItem> {
   try {
     const response = await apiClient.get<BookScreenItem>(`/api/v1/works/${id}`);
     return response.data;

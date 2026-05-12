@@ -26,7 +26,7 @@ export default defineComponent({
 
     const resultsCount = computed(() => filteredItems.value.length);
 
-    const goToItem = (id: number) => {
+    const goToItem = (id: string) => {
       router.push({ name: 'detail', params: { id } });
     };
 

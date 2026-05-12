@@ -2,7 +2,7 @@ import type { BookScreenItem } from '../services/types';
 
 export const ALL_ITEMS: BookScreenItem[] = [
   {
-    id: 1,
+    id: '1',
     title: 'Гаррі Поттер і філософський камінь',
     year: 2001,
     genre: 'Фентезі',
@@ -14,7 +14,7 @@ export const ALL_ITEMS: BookScreenItem[] = [
     description: 'Хлопчик-сирота дізнається, що він чарівник, і вступає до школи Гоґвортс.',
   },
   {
-    id: 2,
+    id: '2',
     title: 'Володар перснів: Братство персня',
     year: 2001,
     genre: 'Фентезі',
@@ -26,7 +26,7 @@ export const ALL_ITEMS: BookScreenItem[] = [
     description: 'Хобіт Фродо вирушає у небезпечну подорож, щоб знищити Єдиний Перстень.',
   },
   {
-    id: 3,
+    id: '3',
     title: 'Дюна',
     year: 2021,
     genre: 'Фантастика',
@@ -38,7 +38,7 @@ export const ALL_ITEMS: BookScreenItem[] = [
     description: 'Пол Атрейдес прибуває на пустельну планету Арракіс — єдине джерело найціннішої речовини.',
   },
   {
-    id: 4,
+    id: '4',
     title: 'Мартін Іден',
     year: 2019,
     genre: 'Драма',
@@ -49,7 +49,7 @@ export const ALL_ITEMS: BookScreenItem[] = [
     description: 'Молодий моряк прагне стати письменником заради кохання та визнання.',
   },
   {
-    id: 5,
+    id: '5',
     title: 'Хрещений батько',
     year: 1972,
     genre: 'Кримінал',
@@ -61,7 +61,7 @@ export const ALL_ITEMS: BookScreenItem[] = [
     description: "Сага про могутню мафіозну сім'ю Корлеоне і боротьбу за владу.",
   },
   {
-    id: 6,
+    id: '6',
     title: 'Убити пересмішника',
     year: 1962,
     genre: 'Драма',

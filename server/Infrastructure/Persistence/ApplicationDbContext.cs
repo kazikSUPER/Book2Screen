@@ -66,11 +66,15 @@ public class ApplicationDbContext : DbContext
     /// Gets the set of ratings.
     /// </summary>
     public DbSet<Rating> Ratings => this.Set<Rating>();
+/// <summary>
+/// Gets the set of favorites.
+/// </summary>
+public DbSet<Favorite> Favorites => this.Set<Favorite>();
 
-    /// <summary>
-    /// Gets the set of favorites.
-    /// </summary>
-    public DbSet<Favorite> Favorites => this.Set<Favorite>();
+/// <summary>
+/// Gets the set of password reset tokens.
+/// </summary>
+public DbSet<PasswordResetToken> PasswordResetTokens => this.Set<PasswordResetToken>();
 
     /// <inheritdoc/>
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
