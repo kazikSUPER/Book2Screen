@@ -1,38 +1,66 @@
 <script setup lang="ts">
-import { ref, provide, onMounted } from 'vue';
-import { RouterView, RouterLink, useRouter } from 'vue-router';
+import { ref, computed, onMounted } from 'vue';
+import { RouterView, RouterLink, useRouter, useRoute } from 'vue-router';
+import { storeToRefs } from 'pinia';
 import LoginModal from './components/LoginModal.vue';
 import RegisterModal from './components/RegisterModal.vue';
 import ResetPasswordModal from './components/ResetPasswordModal.vue';
-import logoImg from './assets/Hero.png';
+import ToastContainer from './components/ToastContainer.vue';
+import FilterPanel, { type FilterSection } from './components/FilterPanel.vue';
+import Logo from './components/Logo.vue';
+import IconUser from './components/IconUser.vue';
 import { checkHealth } from './services/health';
 import { useUserStore } from './state/user';
+import { useFiltersStore } from './state/filters';
 
 const router = useRouter();
+const route = useRoute();
 const userStore = useUserStore();
+const filtersStore = useFiltersStore();
+
+// storeToRefs — стандартний спосіб отримати реактивні значення з Pinia store у компоненті.
+// Без нього email/token — объєкт Ref, а не рядок, і includes() повертає false.
+const { email, isAuthenticated } = storeToRefs(userStore);
+
+// Адмін: залогінений + email містить 'admin'
+const isAdmin = computed(() => isAuthenticated.value && email.value?.includes('admin'));
+
+// ── Filter panel — показується тільки на сторінках, де є каталог.
+// Конфігурація секцій залежить від маршруту (за дизайном Figma).
+const filterPanelConfig = computed<{ visible: boolean; sections: FilterSection[] }>(() => {
+  switch (route.name) {
+    case 'home':
+      // Home — за Figma тільки жанри і країни.
+      return { visible: true, sections: ['genres', 'countries'] };
+    case 'search':
+      // Search — повний набір.
+      return { visible: true, sections: ['sort', 'genres', 'countries', 'years', 'rating'] };
+    default:
+      // Top, Detail, Profile, Admin — без бічної панелі.
+      return { visible: false, sections: [] };
+  }
+});
 
 // ── Health-check при старті застосунку ──────────────
-// Етап 3, Крок 3: фронт пінгує /health, щоб одразу бачити стан бекенду.
 const backendStatus = ref<'checking' | 'up' | 'down'>('checking');
 
 onMounted(async () => {
   try {
     await checkHealth();
     backendStatus.value = 'up';
-
     console.info('[Book2Screen] Backend /health: OK');
   } catch (err) {
     backendStatus.value = 'down';
-
     console.warn('[Book2Screen] Backend /health: FAILED', err);
   }
 });
 
 // ── Search ──────────────────────────────────────────
-const searchQuery = ref('');
+// Поле пошуку у хедері тепер пише напряму у filters store —
+// тому будь-яка сторінка одразу бачить актуальний searchQuery.
 const onSearchSubmit = () => {
-  if (searchQuery.value.trim()) {
-    router.push({ name: 'search', query: { q: searchQuery.value.trim() } });
+  if (filtersStore.searchQuery.trim()) {
+    router.push({ name: 'search', query: { q: filtersStore.searchQuery.trim() } });
   }
 };
 
@@ -40,46 +68,15 @@ const onSearchSubmit = () => {
 type ModalType = 'login' | 'register' | 'reset' | null;
 const activeModal = ref<ModalType>(null);
 
-// ── Filters ─────────────────────────────────────────
-const genres: string[] = [
-  'Комедія',
-  'Драма',
-  'Фантастика',
-  'Фентезі',
-  'Жахи',
-  'Детектив',
-  'Кримінал',
-  'Пригоди',
-  'Історичні',
-  'Біографічні',
-  'Документальні',
-];
+// ── Mobile filters drawer ──────────────────────────
+// На мобільному фільтри ховаються у "шторку". Кнопка біля пошуку — її відкриває.
+const isMobileFiltersOpen = ref(false);
 
-const countries: string[] = [
-  'Україна',
-  'США',
-  'Велика Британія',
-  'Канада',
-  'Греція',
-  'Італія',
-  'Туреччина',
-  'Іспанія',
-  'Німеччина',
-  'Японія',
-  'Швеція',
-];
-
-const selectedGenre = ref<string | null>(null);
-const selectedCountry = ref<string | null>(null);
-
-provide('searchQuery', searchQuery);
-provide('selectedGenre', selectedGenre);
-provide('selectedCountry', selectedCountry);
-
-// ── Auth button click ───────────────────────────────
+// ── Auth ─────────────────────────────────────────────
 const handleAuthClick = () => {
-  if (userStore.isAuthenticated) {
-    userStore.logout();
+  if (isAuthenticated.value) {
+    // Залогінений → переходить у профіль
+    router.push({ name: 'profile' });
   } else {
     activeModal.value = 'login';
   }
@@ -88,62 +85,94 @@ const handleAuthClick = () => {
 
 <template>
   <div class="app-wrapper">
-    <!-- Банер статусу бекенду (показується тільки якщо сервер не відповідає) -->
+    <!-- Банер статусу бекенду -->
     <div v-if="backendStatus === 'down'" class="backend-status-banner">
       ⚠ Backend недоступний. Дані не завантажуються.
     </div>
 
     <header class="header">
-      <RouterLink to="/" class="logo">
-        <img :src="logoImg" alt="Book2Screen" class="logo-img" />
+      <RouterLink to="/" class="logo-link" aria-label="Book2Screen — на головну">
+        <Logo size="md" />
       </RouterLink>
 
-      <div class="search-bar">
-        <input v-model="searchQuery" type="text" placeholder="Пошук..." @keyup.enter="onSearchSubmit" />
-        <span class="search-icon">🔍</span>
+      <!-- Навігаційні кнопки -->
+      <nav class="header-nav" aria-label="Основна навігація">
+        <RouterLink to="/" class="nav-link" active-class="nav-link--active" exact>Головна</RouterLink>
+        <RouterLink to="/top" class="nav-link" active-class="nav-link--active">ТОП</RouterLink>
+        <RouterLink
+          v-if="isAuthenticated"
+          to="/profile"
+          class="nav-link"
+          active-class="nav-link--active"
+        >Профіль</RouterLink>
+        <RouterLink
+          v-if="isAdmin"
+          to="/admin"
+          class="nav-link nav-link--admin"
+          active-class="nav-link--active"
+        >Адмін</RouterLink>
+      </nav>
+
+      <div class="search-bar header-search">
+        <input v-model="filtersStore.searchQuery" type="text" placeholder="Пошук..." @keyup.enter="onSearchSubmit" />
+        <button class="search-submit" aria-label="Шукати" @click="onSearchSubmit">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
+            <path d="M21 21L16.5 16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
       </div>
 
       <button
         class="login-btn"
-        :title="userStore.isAuthenticated ? `Вийти (${userStore.email})` : 'Вхід'"
+        :title="isAuthenticated ? `Профіль (${email})` : 'Увійти'"
+        :aria-label="isAuthenticated ? 'Перейти в профіль' : 'Увійти'"
         @click="handleAuthClick"
       >
-        {{ userStore.isAuthenticated ? '✕' : '→' }}
+        <IconUser :size="28" />
       </button>
     </header>
 
-    <div class="main-layout">
-      <aside class="sidebar">
-        <div class="filter-box">
-          <h3 class="filter-title">Жанри</h3>
-          <ul class="filter-list">
-            <li
-              v-for="genre in genres"
-              :key="genre"
-              class="filter-item"
-              :class="{ active: selectedGenre === genre }"
-              @click="selectedGenre = selectedGenre === genre ? null : genre"
-            >
-              {{ genre }}
-            </li>
-          </ul>
-        </div>
+    <!-- Mobile-only search-bar -->
+    <div class="mobile-search">
+      <div class="search-bar">
+        <input v-model="filtersStore.searchQuery" type="text" placeholder="Пошук..." @keyup.enter="onSearchSubmit" />
+        <span class="search-icon">🔍</span>
+      </div>
+      <!-- Mobile-кнопка для відкриття фільтрів -->
+      <button class="mobile-filters-btn" @click="isMobileFiltersOpen = true">⚙ Фільтри</button>
+    </div>
 
-        <div class="filter-box">
-          <h3 class="filter-title">Країна</h3>
-          <ul class="filter-list">
-            <li
-              v-for="country in countries"
-              :key="country"
-              class="filter-item"
-              :class="{ active: selectedCountry === country }"
-              @click="selectedCountry = selectedCountry === country ? null : country"
-            >
-              {{ country }}
-            </li>
-          </ul>
-        </div>
-      </aside>
+    <!-- Mobile-only nav bar (під рядком пошуку) -->
+    <nav class="mobile-nav" aria-label="Мобільна навігація">
+      <RouterLink to="/" class="mobile-nav__link" active-class="mobile-nav__link--active" exact>🏠 Головна</RouterLink>
+      <RouterLink to="/top" class="mobile-nav__link" active-class="mobile-nav__link--active">🏆 ТОП</RouterLink>
+      <RouterLink
+        v-if="isAuthenticated"
+        to="/profile"
+        class="mobile-nav__link"
+        active-class="mobile-nav__link--active"
+      >👤 Профіль</RouterLink>
+      <RouterLink
+        v-if="isAdmin"
+        to="/admin"
+        class="mobile-nav__link mobile-nav__link--admin"
+        active-class="mobile-nav__link--active"
+      >⚙ Адмін</RouterLink>
+      <button
+        v-if="!isAuthenticated"
+        class="mobile-nav__link mobile-nav__link--login"
+        @click="activeModal = 'login'"
+      >↩ Увійти</button>
+    </nav>
+
+    <div class="main-layout">
+      <FilterPanel
+        v-if="filterPanelConfig.visible"
+        :sections="filterPanelConfig.sections"
+        :mobile-open="isMobileFiltersOpen"
+        @close-mobile="isMobileFiltersOpen = false"
+      />
 
       <main class="content">
         <RouterView />
@@ -158,31 +187,13 @@ const handleAuthClick = () => {
     />
     <RegisterModal v-if="activeModal === 'register'" @close="activeModal = null" @success="activeModal = null" />
     <ResetPasswordModal v-if="activeModal === 'reset'" @close="activeModal = null" />
+
+    <ToastContainer />
   </div>
 </template>
 
 <style>
-:root {
-  --pink-light: #f7cccc;
-  --pink-mid: #e4afaf;
-  --dark-bg: #ffffff;
-  --dark-card: #3d0000;
-  --accent: #8e182f;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  font-family: 'Georgia', serif;
-  background-color: var(--dark-bg);
-  color: var(--pink-light);
-}
+/* :root токени винесено у src/style.css — глобально для всього застосунку. */
 
 .app-wrapper {
   display: flex;
@@ -192,49 +203,90 @@ body {
 
 /* ── Backend status banner ── */
 .backend-status-banner {
-  background: #cc0000;
+  background: var(--text-error);
   color: white;
   text-align: center;
   padding: 8px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-display);
   font-size: 14px;
 }
 
 /* ── Header ── */
 .header {
-  background-color: #311620;
-  height: 80px; /* Трохи вище для пропорційності */
+  background-color: var(--color-header);
+  height: var(--header-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  position: relative; /* Важливо для абсолютного центрування пошуку */
+  gap: 16px;
+  position: relative;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-header);
+}
+
+/* ── Header nav ── */
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
 }
 
-.logo {
-  background-color: #f7cccc;
-  color: black;
+.nav-link {
+  color: var(--text-on-dark);
   text-decoration: none;
-  padding: 4px 8px;
-  border-radius: 8px;
-  font-family: 'Ink Free', cursive;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 72px; /* Зменшено, щоб не вилазило за межі шапки */
-  width: 195px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+  white-space: nowrap;
 }
 
-.logo-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.nav-link--active {
+  background: var(--color-primary);
+  border-color: var(--color-primary-dark);
+  color: var(--text-on-primary);
+}
+
+.nav-link--admin {
+  color: #ffd700;
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+.nav-link--admin:hover {
+  background: rgba(255, 215, 0, 0.15);
+  border-color: rgba(255, 215, 0, 0.5);
+}
+
+.nav-link--admin.nav-link--active {
+  background: #b8860b;
+  border-color: #8b6914;
+  color: #fff;
+}
+
+.logo-link {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 4px 6px;
 }
 
 .search-bar {
   width: 700px;
-  flex-shrink: 0;
+  max-width: 100%;
+  flex-shrink: 1;
   position: relative;
   display: flex;
   align-items: center;
@@ -243,151 +295,222 @@ body {
 .search-bar input {
   width: 100%;
   padding: 9px 40px 9px 16px;
-  border-radius: 15px;
-  border: 1px black solid;
-  background-color: #f7cccc;
-  color: var(--dark-card);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-input);
+  background-color: var(--color-input-bg);
+  color: var(--text-on-light);
   font-size: 14px;
-  font-family: 'Georgia', serif;
+  font-family: var(--font-body);
   outline: none;
 }
 
 .search-bar input::placeholder {
-  color: var(--accent);
+  color: var(--text-muted);
 }
 
-.search-icon {
+.search-bar input:focus {
+  border-color: var(--color-primary);
+}
+
+.search-submit {
   position: absolute;
-  right: 12px;
-  font-size: 16px;
-  pointer-events: none;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-on-light);
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-submit:hover {
+  color: var(--color-primary);
 }
 
 .login-btn {
-  color: var(--pink-light);
+  color: var(--text-on-dark);
   background: none;
   border: none;
   cursor: pointer;
-  text-decoration: none;
-  font-size: 26px;
+  padding: 4px 12px;
   flex-shrink: 0;
-  transition: color 0.2s;
+  line-height: 0;
+  display: inline-flex;
+  align-items: center;
 }
+
 .login-btn:hover {
-  color: #fff;
+  color: var(--color-panel-box);
 }
 
 /* ── Layout ── */
 .main-layout {
   display: flex;
   flex: 1;
-  padding: 10px; /* Створює ту саму білу рамку навколо всього, як у Фігмі */
-  margin: 0 auto; /* Центрує контент на дуже широких екранах */
-  width: 100%;
+  gap: 16px;
+  padding: 16px;
+  min-height: 0;
+  background-color: var(--color-page);
 }
 
-/* ── Sidebar ── */
-.sidebar {
-  width: 250px;
-  flex-shrink: 0;
-  background-color: #f7cccc;
-  border: 1px black solid;
-  border-radius: 5px;
-  padding: 20px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  overflow-y: auto;
-}
-
-.filter-box {
-  background-color: #e4afaf;
-  border: 1px black solid;
-  border-radius: 10px;
-  padding: 5px 15px;
-  box-shadow: 3px 4px 4px rgba(0, 0, 0, 0.25);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 4px;
-}
-
-.filter-title {
-  font-size: 25px;
-  font-family: 'JetBrains Mono', monospace;
-  color: #311620;
-  margin: 0 0 4px;
-  align-self: stretch;
-  padding-left: 2px;
-}
-
-.filter-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
-.filter-item {
-  font-size: 20px;
-  font-family: 'JetBrains Mono', monospace;
-  color: #311620;
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 4px;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-
-.filter-item:hover {
-  background: #8e182f;
-  color: #f7cccc;
-}
-
-.filter-item.active {
-  background: #8e182f;
-  color: #f7cccc;
-  font-weight: 600;
-}
-
-/* ── Content ── */
 .content {
   flex: 1;
   overflow-y: auto;
   min-width: 0;
-  background-color: var(--dark-bg);
+}
+
+/* ── Mobile-only search-bar (під хедером, видно тільки ≤768px) ── */
+.mobile-search {
+  display: none;
+  background-color: var(--color-header);
+  padding: 8px 12px;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+}
+
+.mobile-search .search-bar {
+  width: 100%;
+}
+
+.mobile-filters-btn {
+  background: var(--color-input-bg);
+  color: var(--color-header);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Mobile nav bar (bottom strip, видно тільки ≤768px) ── */
+.mobile-nav {
+  display: none;
+  background-color: var(--color-header);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 8px;
+  flex-shrink: 0;
+  gap: 4px;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.mobile-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-on-dark);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: none;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.mobile-nav__link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.mobile-nav__link--active {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary-dark) !important;
+  color: var(--text-on-primary) !important;
+}
+
+.mobile-nav__link--admin {
+  color: #ffd700;
+}
+
+.mobile-nav__link--login {
+  color: var(--text-on-dark);
+  opacity: 0.8;
 }
 
 /* ── Адаптив ── */
 @media (max-width: 1280px) {
   .header {
-    gap: 80px;
+    gap: 12px;
     padding: 0 16px;
   }
-
-  .search-bar {
-    width: 500px;
+  .header-search {
+    width: 400px;
   }
+}
 
-  .sidebar {
-    width: 200px;
+@media (max-width: 1024px) {
+  .header {
+    gap: 8px;
+    padding: 0 12px;
   }
-
-  .filter-title {
-    font-size: 22px;
+  .header-search {
+    width: auto;
+    flex: 1;
+    max-width: 300px;
   }
-
-  .filter-item {
-    font-size: 18px;
+  .nav-link {
+    font-size: 13px;
+    padding: 5px 10px;
   }
+}
 
-  .logo-img {
-    width: 160px;
-    height: 65px;
+@media (max-width: 768px) {
+  .header {
+    gap: 8px;
+    padding: 0 12px;
+  }
+  .header-search {
+    display: none;
+  }
+  .header-nav {
+    display: none; /* на мобільному навігацію виносимо в mobile-nav */
+  }
+  .mobile-search {
+    display: flex;
+  }
+  .mobile-nav {
+    display: flex;
+  }
+  .mobile-search .search-bar input {
+    padding: 7px 36px 7px 14px;
+    border-radius: var(--radius-sm);
+  }
+  .main-layout {
+    padding: 8px;
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .header {
+    height: 72px;
+    padding: 0 12px;
+  }
+  .mobile-search {
+    padding: 8px 10px;
+  }
+  .backend-status-banner {
+    padding: 6px;
+    font-size: 12px;
   }
 }
 </style>
