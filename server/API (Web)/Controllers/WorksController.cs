@@ -5,6 +5,7 @@
 namespace Book2Screen.API__Web_.Controllers;
 
 using Book2Screen.Application.DTOs;
+using Book2Screen.Application.Filters;
 using Book2Screen.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -30,13 +31,14 @@ public class WorksController : ControllerBase
     /// <summary>
     /// Отримати список усіх творів у форматі для головної сторінки.
     /// </summary>
+    /// <param name="filter">Фільтри (пошук, жанр, країна).</param>
     /// <returns>Список об'єктів BookScreenItemDto.</returns>
     /// <response code="200">Успішне отримання списку.</response>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<BookScreenItemDto>))]
-    public async Task<IActionResult> GetWorks()
+    public async Task<IActionResult> GetWorks([FromQuery] WorkFilter filter)
     {
-        var result = await this.workService.GetAllWorksAsync();
+        var result = await this.workService.GetAllWorksAsync(filter);
         return this.Ok(result);
     }
 

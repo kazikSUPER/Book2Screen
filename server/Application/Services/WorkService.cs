@@ -5,6 +5,7 @@
 namespace Book2Screen.Application.Services;
 
 using Book2Screen.Application.DTOs;
+using Book2Screen.Application.Filters;
 using Book2Screen.Application.Interfaces;
 using Book2Screen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -26,17 +27,39 @@ public class WorkService : IWorkService
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<BookScreenItemDto>> GetAllWorksAsync()
+    public async Task<IEnumerable<BookScreenItemDto>> GetAllWorksAsync(WorkFilter? filter = null)
     {
-        return await this.context.Works
+        var query = this.context.Works
+            .Include(w => w.Book)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
+            .AsQueryable();
+
+        if (filter != null)
+        {
+            if (!string.IsNullOrEmpty(filter.Search))
+            {
+                query = query.Where(w => w.Title.ToLower().Contains(filter.Search.ToLower()));
+            }
+
+            if (!string.IsNullOrEmpty(filter.Genre))
+            {
+                query = query.Where(w => w.Book.Genre != null && w.Book.Genre.ToLower() == filter.Genre.ToLower());
+            }
+
+            if (!string.IsNullOrEmpty(filter.Country))
+            {
+                query = query.Where(w => w.Adaptation.Country != null && w.Adaptation.Country.ToLower() == filter.Country.ToLower());
+            }
+        }
+
+        return await query
             .Select(w => new BookScreenItemDto
             {
                 Id = w.Id,
                 Title = w.Title,
                 Year = w.Adaptation.ReleaseYear ?? 0,
-                Genre = "Драма", // Placeholder, ideally should come from Adaptation or Book
+                Genre = w.Book.Genre ?? "Драма",
                 Country = w.Adaptation.Country ?? "Unknown",
                 Poster = w.Adaptation.PosterUrl ?? "https://via.placeholder.com/300x450",
                 BookRating = w.Reviews.Any(r => r.TargetType == "book")
@@ -45,7 +68,7 @@ public class WorkService : IWorkService
                 FilmRating = w.Reviews.Any(r => r.TargetType == "adaptation")
                     ? w.Reviews.Where(r => r.TargetType == "adaptation").Average(r => r.Rating)
                     : 0,
-                Description = w.Summary ?? string.Empty,
+                Description = w.Summary ?? w.Book.Description ?? string.Empty,
             })
             .ToListAsync();
     }
@@ -54,6 +77,7 @@ public class WorkService : IWorkService
     public async Task<BookScreenItemDto?> GetWorkByIdAsync(Guid id)
     {
         return await this.context.Works
+            .Include(w => w.Book)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
             .Where(w => w.Id == id)
@@ -62,7 +86,7 @@ public class WorkService : IWorkService
                 Id = w.Id,
                 Title = w.Title,
                 Year = w.Adaptation.ReleaseYear ?? 0,
-                Genre = "Драма",
+                Genre = w.Book.Genre ?? "Драма",
                 Country = w.Adaptation.Country ?? "Unknown",
                 Poster = w.Adaptation.PosterUrl ?? "https://via.placeholder.com/300x450",
                 BookRating = w.Reviews.Any(r => r.TargetType == "book")
@@ -71,7 +95,7 @@ public class WorkService : IWorkService
                 FilmRating = w.Reviews.Any(r => r.TargetType == "adaptation")
                     ? w.Reviews.Where(r => r.TargetType == "adaptation").Average(r => r.Rating)
                     : 0,
-                Description = w.Summary ?? string.Empty,
+                Description = w.Summary ?? w.Book.Description ?? string.Empty,
             })
             .FirstOrDefaultAsync();
     }
@@ -80,6 +104,7 @@ public class WorkService : IWorkService
     public async Task<IEnumerable<BookScreenItemDto>> GetTopWorksAsync(int count)
     {
         return await this.context.Works
+            .Include(w => w.Book)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
             .Select(w => new BookScreenItemDto
@@ -87,7 +112,7 @@ public class WorkService : IWorkService
                 Id = w.Id,
                 Title = w.Title,
                 Year = w.Adaptation.ReleaseYear ?? 0,
-                Genre = "Драма",
+                Genre = w.Book.Genre ?? "Драма",
                 Country = w.Adaptation.Country ?? "Unknown",
                 Poster = w.Adaptation.PosterUrl ?? "https://via.placeholder.com/300x450",
                 BookRating = w.Reviews.Any(r => r.TargetType == "book")
@@ -96,7 +121,7 @@ public class WorkService : IWorkService
                 FilmRating = w.Reviews.Any(r => r.TargetType == "adaptation")
                     ? w.Reviews.Where(r => r.TargetType == "adaptation").Average(r => r.Rating)
                     : 0,
-                Description = w.Summary ?? string.Empty,
+                Description = w.Summary ?? w.Book.Description ?? string.Empty,
             })
             .OrderByDescending(w => w.FilmRating)
             .Take(count)

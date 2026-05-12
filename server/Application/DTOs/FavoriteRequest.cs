@@ -15,5 +15,5 @@ public class FavoriteRequest
     /// Gets or sets iD твору.
     /// </summary>
     [Required]
-    public Guid WorkId { get; set; }
+    public Guid? WorkId { get; set; }
 }

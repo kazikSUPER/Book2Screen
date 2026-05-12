@@ -23,12 +23,13 @@ export interface RegisterRequest {
   password: string;
 }
 
-// Відповідь на успішну реєстрацію.
+// Відповідь на успішну реєстрацію або вхід.
 export interface RegisterResponse {
+  token: string;
   userId: string;
   email: string;
   nickname: string;
-  createdAt: string;
+  role: string;
 }
 
 // Запит на авторизацію.
@@ -39,13 +40,25 @@ export interface LoginRequest {
 }
 
 /**
- * Відповідь із JWT-токеном.
+ * Відповідь із JWT-токеном (така ж як при реєстрації).
  */
-export interface LoginResponse {
-  token: string;
-  userId: string;
+export interface LoginResponse extends RegisterResponse {}
+
+// ===== Password Reset DTOs =====
+
+export interface ForgotPasswordRequest {
   email: string;
-  nickname: string;
+}
+
+export interface VerifyCodeRequest {
+  email: string;
+  code: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  code: string;
+  newPassword: string;
 }
 
 // ===== Vote DTO (UC-04) =====

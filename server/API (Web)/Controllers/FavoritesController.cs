@@ -65,7 +65,12 @@ public class FavoritesController : ControllerBase
             return this.Unauthorized();
         }
 
-        var success = await this.favoriteService.AddToFavoritesAsync(userId, request.WorkId);
+        if (!request.WorkId.HasValue)
+        {
+            return this.BadRequest("WorkId is required.");
+        }
+
+        var success = await this.favoriteService.AddToFavoritesAsync(userId, request.WorkId.Value);
         if (!success)
         {
             return this.BadRequest("Failed to add to favorites.");

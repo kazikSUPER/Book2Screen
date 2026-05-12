@@ -1,10 +1,12 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
-
-#nullable disable
+// <copyright file="20260512073329_AddFavoritesAndPasswordReset.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
 
 namespace Book2Screen.Migrations
 {
+    using System;
+    using Microsoft.EntityFrameworkCore.Migrations;
+
     /// <inheritdoc />
     public partial class AddFavoritesAndPasswordReset : Migration
     {
@@ -19,7 +21,7 @@ namespace Book2Screen.Migrations
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     WorkId = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                 },
                 constraints: table =>
                 {
@@ -48,7 +50,7 @@ namespace Book2Screen.Migrations
                     ExpiryTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     IsUsed = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                 },
                 constraints: table =>
                 {

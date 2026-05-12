@@ -5,6 +5,7 @@
 namespace Book2Screen.Application.Interfaces;
 
 using Book2Screen.Application.DTOs;
+using Book2Screen.Application.Filters;
 
 /// <summary>
 /// Інтерфейс сервісу для роботи з творами (Works).
@@ -12,10 +13,11 @@ using Book2Screen.Application.DTOs;
 public interface IWorkService
 {
     /// <summary>
-    /// Отримує список усіх творів.
+    /// Отримує список усіх творів з можливістю фільтрації.
     /// </summary>
+    /// <param name="filter">Фільтри (пошук, жанр, країна).</param>
     /// <returns>Список DTO творів.</returns>
-    Task<IEnumerable<BookScreenItemDto>> GetAllWorksAsync();
+    Task<IEnumerable<BookScreenItemDto>> GetAllWorksAsync(WorkFilter? filter = null);
 
     /// <summary>
     /// Отримує деталі твору за ID.

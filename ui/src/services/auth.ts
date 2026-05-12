@@ -23,3 +23,17 @@ export async function login(payload: LoginRequest): Promise<LoginResponse> {
 export async function requestPasswordReset(email: string): Promise<void> {
   await apiClient.post('/api/v1/auth/password-reset', { email });
 }
+
+// POST /api/v1/auth/verify-code
+// Перевірка коду відновлення.
+
+export async function verifyCode(email: string, code: string): Promise<void> {
+  await apiClient.post('/api/v1/auth/verify-code', { email, code });
+}
+
+// POST /api/v1/auth/reset-password
+// Встановлення нового пароля.
+
+export async function resetPassword(payload: { email: string; code: string; newPassword: string }): Promise<void> {
+  await apiClient.post('/api/v1/auth/reset-password', payload);
+}

@@ -15,16 +15,16 @@ using Book2Screen.Infrastructure.ExternalServices;
 using Book2Screen.Infrastructure.Persistence;
 using Book2Screen.Infrastructure.Persistence.Seed;
 using FluentValidation;
+using HealthChecks.UI.Client;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Extensions.Logging;
-using HealthChecks.UI.Client;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 if (File.Exists("../.env"))
 {
