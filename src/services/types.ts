@@ -1,9 +1,32 @@
 // ===== Доменні сутності (Domain Entities) =====
 
-// Твір (книга + її екранізація) — основна сутність Book2Screen.
-export interface BookScreenItem {
-  id: number;
+/**
+ * Точка інтерактивної карти відмінностей між книгою і екранізацією.
+ * SCRUM-68 (US 3.2 Book Details).
+ */
+export interface DifferencePoint {
+  id: string;
+  // Заголовок сцени, наприклад "Перше знайомство з Драко Малфоєм".
   title: string;
+  // Текст для колонки "Книга".
+  bookText: string;
+  // Текст для колонки "Екранізація".
+  filmText: string;
+  // Чи позначена точка як спойлер. Тоді текст показуємо blur'ом.
+  isSpoiler?: boolean;
+}
+
+/**
+ * Твір (книга + її екранізація) — основна сутність Book2Screen.
+ *
+ * Більшість полів описують саму книгу (year, country тощо).
+ * Поля з префіксом film* — атрибути екранізації, коли вони відрізняються.
+ * Якщо filmYear/filmCountry не задані — на UI вживаємо year/country.
+ */
+export interface BookScreenItem {
+  id: string;
+  title: string;
+  // Рік видання книги
   year: number;
   genre: string;
   country: string;
@@ -11,36 +34,48 @@ export interface BookScreenItem {
   bookRating: number;
   filmRating: number;
   description: string;
+
+  // Автор книги (для картки книги).
+  author?: string;
+
+  // Атрибути екранізації, якщо відрізняються від книги.
+  filmYear?: number;
+  filmCountry?: string;
+  filmPoster?: string;
+  director?: string;
+
+  // Окремі короткі описи (book/film). Якщо не задано — fallback на description.
+  bookSummary?: string;
+  filmSummary?: string;
+
+  // SCRUM-67: фільтр "Лише з картою відмінностей" (true якщо differences не пустий).
+  hasMap?: boolean;
+
+  // SCRUM-68: інтерактивна карта відмінностей (опційно).
+  differences?: DifferencePoint[];
 }
 
 // ===== Auth DTO =====
 
-// Запит на реєстрацію нового користувача.
-// Endpoint: POST /api/v1/auth/register
 export interface RegisterRequest {
   email: string;
   nickname: string;
   password: string;
 }
 
-// Відповідь на успішну реєстрацію.
 export interface RegisterResponse {
+  token: string;
   userId: string;
   email: string;
   nickname: string;
   createdAt: string;
 }
 
-// Запит на авторизацію.
-// Endpoint: POST /api/v1/auth/login
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
-/**
- * Відповідь із JWT-токеном.
- */
 export interface LoginResponse {
   token: string;
   userId: string;
@@ -52,16 +87,13 @@ export interface LoginResponse {
 
 export type VoteType = 'BOOK' | 'MOVIE';
 
-// Голос користувача за твір.
-// Endpoint: POST /api/v1/votes
 export interface VoteRequest {
-  workId: number;
+  workId: string;
   voteType: VoteType;
 }
 
-// Актуальний розподіл голосів за твір.
 export interface VoteResponse {
-  workId: number;
+  workId: string;
   totalVotes: number;
   bookVotes: number;
   movieVotes: number;
@@ -71,20 +103,18 @@ export interface VoteResponse {
 
 // ===== Review DTO (UC-05) =====
 
-// Запит на створення відгуку.
-// Endpoint: POST /api/v1/reviews
 export interface ReviewRequest {
-  workId: number;
+  workId: string;
   text: string;
   isSpoiler: boolean;
   rating: number;
 }
 
-// Відповідь зі збереженим відгуком.
 export interface ReviewResponse {
   reviewId: string;
-  workId: number;
+  workId: string;
   userId: string;
+  userNickname?: string;
   text: string;
   isSpoiler: boolean;
   rating: number;
@@ -93,7 +123,6 @@ export interface ReviewResponse {
 
 // ===== Global Error Schema =====
 
-//форома помилок
 export interface ApiError {
   timestamp: string;
   errorCode: string;

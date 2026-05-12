@@ -1,21 +1,21 @@
 import { computed, type Ref } from 'vue';
 import type { BookScreenItem } from '../services/types';
+import { useFiltersStore, type SortOption } from '../state/filters';
 
-// Composable для клієнтської фільтрації списку творів.
-// Приймає `items` як Ref, тому коректно оновлюється після
-// асинхронного завантаження з API.
+/**
+ * Client-side фільтрація + сортування списку творів.
+ *
+ * Параметри читаються з useFiltersStore (Pinia). Компонент передає лише
+ * сам список items.
+ */
+export function useFilter(items: Ref<BookScreenItem[]> | BookScreenItem[]) {
+  const filters = useFiltersStore();
 
-export function useFilter(
-  items: Ref<BookScreenItem[]> | BookScreenItem[],
-  searchQuery: Ref<string>,
-  selectedGenre: Ref<string | null>,
-  selectedCountry: Ref<string | null>
-) {
   const filteredItems = computed(() => {
     const list = Array.isArray(items) ? items : items.value;
-    const query = searchQuery.value.toLowerCase().trim();
+    const query = filters.searchQuery.toLowerCase().trim();
 
-    return list.filter((item) => {
+    const matched = list.filter((item) => {
       const matchesSearch =
         !query ||
         item.title.toLowerCase().includes(query) ||
@@ -24,13 +24,52 @@ export function useFilter(
         String(item.year).includes(query) ||
         item.description.toLowerCase().includes(query);
 
-      const matchesGenre = !selectedGenre.value || item.genre.toLowerCase().includes(selectedGenre.value.toLowerCase());
+      const matchesGenre =
+        !filters.genre || item.genre.toLowerCase().includes(filters.genre.toLowerCase());
 
-      const matchesCountry = !selectedCountry.value || item.country === selectedCountry.value;
+      const matchesCountry = !filters.country || item.country === filters.country;
 
-      return matchesSearch && matchesGenre && matchesCountry;
+      const matchesYearMin = filters.yearMin === null || item.year >= filters.yearMin;
+      const matchesYearMax = filters.yearMax === null || item.year <= filters.yearMax;
+
+      const matchesRating =
+        filters.minRating === null ||
+        Math.max(item.bookRating, item.filmRating) >= filters.minRating;
+
+      // SCRUM-67: "Лише з картою відмінностей".
+      const matchesMap = !filters.onlyWithMap || item.hasMap === true;
+
+      return (
+        matchesSearch &&
+        matchesGenre &&
+        matchesCountry &&
+        matchesYearMin &&
+        matchesYearMax &&
+        matchesRating &&
+        matchesMap
+      );
     });
+
+    return sortItems(matched, filters.sortBy);
   });
 
   return { filteredItems };
+}
+
+function sortItems(list: BookScreenItem[], sort: SortOption): BookScreenItem[] {
+  const sorted = [...list];
+  switch (sort) {
+    case 'rating-desc':
+      return sorted.sort(
+        (a, b) =>
+          Math.max(b.bookRating, b.filmRating) - Math.max(a.bookRating, a.filmRating)
+      );
+    case 'year-desc':
+      return sorted.sort((a, b) => b.year - a.year);
+    case 'year-asc':
+      return sorted.sort((a, b) => a.year - b.year);
+    case 'popular':
+    default:
+      return sorted;
+  }
 }
