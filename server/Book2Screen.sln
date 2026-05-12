@@ -4,7 +4,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Book2Screen", "Book2Screen.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{72C18FF6-E4E1-4126-928E-1633390E3448}"
 	ProjectSection(SolutionItems) = preProject
-		compose.yaml = compose.yaml
+		..\compose.yaml = ..\compose.yaml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Book2Screen.Tests", "..\Book2Screen.Test\Book2Screen.Tests.csproj", "{756D1CDE-E588-4711-BBA7-5061D0C11F57}"
