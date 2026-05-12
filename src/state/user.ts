@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed } from 'vue';
 import * as authApi from '../services/auth';
-import type { LoginRequest, RegisterRequest } from '../services/types';
+import type { LoginRequest, RegisterRequest, PasswordResetConfirmRequest } from '../services/types';
 import { usePersistedRef } from '../composables/usePersistedRef';
 
 /**
@@ -47,6 +47,12 @@ export const useUserStore = defineStore('user', () => {
     });
   }
 
+  async function resetPassword(payload: PasswordResetConfirmRequest): Promise<void> {
+    // Підтверджуємо код + новий пароль. Бекенд повертає токен → авто-логін.
+    const res = await authApi.confirmPasswordReset(payload);
+    setSession(res);
+  }
+
   function logout(): void {
     token.value = '';
     email.value = '';
@@ -74,6 +80,7 @@ export const useUserStore = defineStore('user', () => {
     token,
     login,
     register,
+    resetPassword,
     logout,
     // profile
     fullName,

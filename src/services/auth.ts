@@ -1,5 +1,12 @@
 import { apiClient } from './api';
-import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from './types';
+import type {
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+  RegisterResponse,
+  PasswordResetConfirmRequest,
+  PasswordResetConfirmResponse,
+} from './types';
 
 // POST /api/v1/auth/register
 // Реєстрація нового користувача.
@@ -22,4 +29,18 @@ export async function login(payload: LoginRequest): Promise<LoginResponse> {
 
 export async function requestPasswordReset(email: string): Promise<void> {
   await apiClient.post('/api/v1/auth/password-reset', { email });
+}
+
+// POST /api/v1/auth/password-reset/confirm
+// Підтвердження коду + встановлення нового паролю.
+// Повертає дані сесії → одразу авторизує користувача.
+
+export async function confirmPasswordReset(
+  payload: PasswordResetConfirmRequest,
+): Promise<PasswordResetConfirmResponse> {
+  const response = await apiClient.post<PasswordResetConfirmResponse>(
+    '/api/v1/auth/password-reset/confirm',
+    payload,
+  );
+  return response.data;
 }

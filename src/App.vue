@@ -135,7 +135,7 @@ const handleAuthClick = () => {
       @open-reset="activeModal = 'reset'"
     />
     <RegisterModal v-if="activeModal === 'register'" @close="activeModal = null" @success="activeModal = null" />
-    <ResetPasswordModal v-if="activeModal === 'reset'" @close="activeModal = null" />
+    <ResetPasswordModal v-if="activeModal === 'reset'" @close="activeModal = null" @success="activeModal = null" />
 
     <ToastContainer />
   </div>
