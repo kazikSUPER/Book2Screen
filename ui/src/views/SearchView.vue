@@ -1,65 +1,105 @@
 <script lang="ts">
-import { defineComponent, ref, computed, watch, type Ref } from 'vue';
+import { defineComponent, ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useFilter } from '../hooks/useFilter';
-import { ALL_ITEMS } from '../services/items';
+import type { BookScreenItem } from '../services/types';
+import { fetchWorks } from '../services/works';
+import { extractErrorMessage } from '../services/error';
+import { useFiltersStore } from '../state/filters';
 
 export default defineComponent({
   name: 'SearchView',
   setup() {
     const route = useRoute();
     const router = useRouter();
+    const filters = useFiltersStore();
 
-    const searchQuery = ref((route.query.q as string) || '');
-    const selectedGenre: Ref<string | null> = ref(null);
-    const selectedCountry: Ref<string | null> = ref(null);
+    const items = ref<BookScreenItem[]>([]);
+    const isLoading = ref(false);
+    const errorMessage = ref('');
 
-    const { filteredItems } = useFilter(ALL_ITEMS, searchQuery, selectedGenre, selectedCountry);
+    const { filteredItems } = useFilter(items);
 
-    // Якщо URL змінився (новий пошук) — оновити query
+    // Якщо у URL прийшов ?q= (наприклад, після Enter у пошуку з шапки) —
+    // синхронізуємо його зі стором фільтрів, щоб панель і сторінка показували те ж саме.
+    if (route.query.q) {
+      filters.searchQuery = route.query.q as string;
+    }
+
+    const loadItems = async (): Promise<void> => {
+      isLoading.value = true;
+      errorMessage.value = '';
+      try {
+        // Шлемо search-параметр одразу в API; локальна фільтрація — як fallback,
+        // якщо backend не вміє фільтрувати або повертає більше ніж потрібно.
+        items.value = await fetchWorks({ search: filters.searchQuery || null });
+      } catch (err) {
+        errorMessage.value = extractErrorMessage(err);
+        items.value = [];
+      } finally {
+        isLoading.value = false;
+      }
+    };
+
+    onMounted(loadItems);
+
+    // URL змінився (новий пошук з шапки) → оновити query і перезавантажити.
     watch(
       () => route.query.q,
       (newQuery) => {
-        searchQuery.value = (newQuery as string) || '';
+        filters.searchQuery = (newQuery as string) || '';
+        loadItems();
       }
     );
 
     const resultsCount = computed(() => filteredItems.value.length);
 
-    const goToItem = (id: string) => {
+    const goToItem = (id: string): void => {
       router.push({ name: 'detail', params: { id } });
     };
 
-    return { searchQuery, filteredItems, resultsCount, goToItem };
+    return {
+      searchQuery: computed(() => filters.searchQuery),
+      filteredItems,
+      isLoading,
+      errorMessage,
+      resultsCount,
+      loadItems,
+      goToItem,
+    };
   },
 });
 </script>
 
 <template>
   <div class="search-page">
-    <div class="search-header">
-      <h1 class="search-title">Результати пошуку</h1>
-      <p class="search-info">
-        За запитом <strong>"{{ searchQuery }}"</strong> знайдено:
-        <strong>{{ resultsCount }}</strong>
-      </p>
+    <h1 class="page-title">Результати пошуку</h1>
+
+    <p v-if="searchQuery" class="search-info">
+      Запит: <strong>"{{ searchQuery }}"</strong>
+      <span v-if="!isLoading"> · Знайдено: {{ resultsCount }}</span>
+    </p>
+
+    <p v-if="isLoading" class="status">Завантаження...</p>
+
+    <div v-else-if="errorMessage" class="status">
+      <p>⚠ {{ errorMessage }}</p>
+      <button class="retry-btn" @click="loadItems">Повторити</button>
     </div>
 
-    <div v-if="resultsCount === 0" class="no-results">
-      <p>Нічого не знайдено 😔</p>
-      <p class="hint">Спробуй інший запит</p>
-    </div>
+    <p v-else-if="filteredItems.length === 0" class="status">Нічого не знайдено 😔</p>
 
     <div v-else class="results-grid">
       <div v-for="item in filteredItems" :key="item.id" class="result-card" @click="goToItem(item.id)">
-        <div class="result-poster">
-          <img :src="item.poster" :alt="item.title" />
-        </div>
+        <img :src="item.poster" :alt="item.title" class="result-poster" />
         <div class="result-info">
           <h3 class="result-title">{{ item.title }}</h3>
-          <p class="result-meta">Рік: {{ item.year }}</p>
-          <p class="result-meta">Жанр: {{ item.genre }}</p>
-          <p class="result-meta">Країна: {{ item.country }}</p>
+          <p class="result-meta">{{ item.year }} · {{ item.genre }} · {{ item.country }}</p>
+          <p class="result-desc">{{ item.description }}</p>
+          <div class="result-ratings">
+            <span class="rating book">📖 {{ item.bookRating }}</span>
+            <span class="rating film">🎬 {{ item.filmRating }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -69,101 +109,111 @@ export default defineComponent({
 <style scoped>
 .search-page {
   padding: 24px;
-  font-family: 'Inter', sans-serif;
-  color: white;
+  font-family: 'Georgia', serif;
 }
 
-.search-header {
-  margin-bottom: 24px;
-}
-
-.search-title {
+.page-title {
   font-size: 28px;
-  font-weight: 400;
-  font-family: 'JetBrains Mono', monospace;
-  color: #000;
+  color: var(--dark-card);
   margin: 0 0 8px;
 }
 
 .search-info {
+  color: var(--accent);
   font-size: 16px;
-  color: #311620;
-  margin: 0;
+  margin: 0 0 24px;
 }
 
-.no-results {
+.status {
   text-align: center;
-  padding: 60px 20px;
-  color: #311620;
+  padding: 60px 0;
+  color: var(--accent);
+  font-size: 16px;
 }
 
-.no-results p {
-  margin: 4px 0;
-  font-size: 18px;
-}
-
-.hint {
-  font-size: 14px !important;
-  color: #8e182f;
+.retry-btn {
+  margin-top: 12px;
+  padding: 10px 24px;
+  background: var(--accent);
+  color: var(--pink-light);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
 .results-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
+  gap: 16px;
 }
 
 .result-card {
-  background-color: #3d0000;
-  border: 1px white solid;
-  border-radius: 10px;
-  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3);
-  padding: 12px;
-  cursor: pointer;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  transition: transform 0.2s;
+  gap: 16px;
+  background: var(--dark-card);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: transform 0.15s;
 }
 
 .result-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
 }
 
 .result-poster {
-  width: 160px;
-  height: 220px;
-  overflow: hidden;
-  background: #311620;
-  border: 1px white solid;
-}
-
-.result-poster img {
-  width: 100%;
-  height: 100%;
+  width: 120px;
+  height: 180px;
   object-fit: cover;
-  display: block;
+  border-radius: 6px;
+  flex-shrink: 0;
 }
 
 .result-info {
-  width: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  color: var(--pink-light);
 }
 
 .result-title {
-  font-size: 14px;
-  color: white;
-  margin: 0 0 4px;
-  text-align: center;
-  line-height: 1.3;
+  font-size: 20px;
+  margin: 0;
 }
 
 .result-meta {
-  font-size: 12px;
-  color: #e0e0e0;
+  color: var(--pink-mid);
+  font-size: 14px;
   margin: 0;
+}
+
+.result-desc {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  flex: 1;
+}
+
+.result-ratings {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.rating {
+  background: var(--accent);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .result-card {
+    flex-direction: column;
+  }
+  .result-poster {
+    width: 100%;
+    height: 240px;
+  }
 }
 </style>
