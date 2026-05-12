@@ -64,17 +64,17 @@ public class AuthController : ControllerBase
     /// <param name="registerRequest">Дані для реєстрації (логін, пошта, пароль).</param>
     /// <returns>Повертає JWT токен для нового користувача.</returns>
     /// <response code="200">Користувача успішно створено. Повертає токен.</response>
-    /// <response code="401">Користувач з таким логіном або поштою вже існує.</response>
+    /// <response code="409">Користувач з таким логіном або поштою вже існує.</response>
     [HttpPost("register")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AuthResponse))]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest registerRequest)
     {
         var response = await this.authService.RegisterAsync(registerRequest);
 
         if (response == null)
         {
-            return this.Unauthorized("User with this username or email already exists.");
+            return this.Conflict("User with this username or email already exists.");
         }
 
         return this.Ok(response);
