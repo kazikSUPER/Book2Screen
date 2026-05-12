@@ -86,6 +86,21 @@ export interface LoginResponse {
   nickname: string;
 }
 
+// POST /api/v1/auth/password-reset/confirm
+export interface PasswordResetConfirmRequest {
+  email: string;
+  code: string;
+}
+
+// Якщо бекенд повертає токен після підтвердження — відразу авторизуємо.
+// Якщо ні (тільки 200 OK) — треба явно викликати login() після.
+export interface PasswordResetConfirmResponse {
+  token: string;
+  userId: string;
+  email: string;
+  nickname: string;
+}
+
 // ===== Vote DTO (UC-04) =====
 
 export type VoteType = 'BOOK' | 'MOVIE';

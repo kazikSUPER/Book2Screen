@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useUserStore } from '../state/user';
 import * as authApi from '../services/auth';
 import { extractErrorMessage } from '../services/error';
 
 const emit = defineEmits<{
   close: [];
+  success: [];
 }>();
+
+const userStore = useUserStore();
 
 const email = ref('');
 const code = ref('');
@@ -14,6 +18,7 @@ const emailError = ref('');
 const codeError = ref('');
 const apiError = ref('');
 const isSendingCode = ref(false);
+const isSubmitting = ref(false);
 
 const isEmailValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value));
 
@@ -29,21 +34,32 @@ const handleSendCode = async () => {
     await authApi.requestPasswordReset(email.value);
     codeSent.value = true;
   } catch (err) {
-    // Замість тихого console.warn — показуємо inline-помилку (Етап 4: Error Handling).
     apiError.value = extractErrorMessage(err);
   } finally {
     isSendingCode.value = false;
   }
 };
 
-const handleReset = () => {
+const handleReset = async () => {
+  codeError.value = '';
   if (!code.value) {
     codeError.value = 'Введіть код';
     return;
   }
-  codeError.value = '';
-  // TODO: справжній POST /api/v1/auth/password-reset/confirm з { email, code, newPassword }.
-  emit('close');
+
+  apiError.value = '';
+  isSubmitting.value = true;
+  try {
+    await userStore.resetPassword({
+      email: email.value,
+      code: code.value.trim(),
+    });
+    emit('success');
+  } catch (err) {
+    apiError.value = extractErrorMessage(err);
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 </script>
 
@@ -64,10 +80,11 @@ const handleReset = () => {
               class="field-input"
               :class="{ error: emailError }"
               placeholder="Введіть Email"
+              :disabled="codeSent || isSendingCode"
             />
             <button
               class="send-btn"
-              :disabled="!isEmailValid || isSendingCode"
+              :disabled="!isEmailValid || isSendingCode || codeSent"
               @click="handleSendCode"
             >
               {{ isSendingCode ? '...' : 'Надіслати код' }}
@@ -75,7 +92,7 @@ const handleReset = () => {
           </div>
           <span v-if="emailError" class="error-text">{{ emailError }}</span>
           <span v-if="codeSent" class="success-text">Код надіслано на {{ email }}</span>
-          <span v-if="apiError" class="error-text">{{ apiError }}</span>
+          <span v-if="apiError && !codeSent" class="error-text">{{ apiError }}</span>
         </div>
 
         <div class="field">
@@ -86,11 +103,18 @@ const handleReset = () => {
             class="field-input"
             :class="{ error: codeError }"
             placeholder="Введіть код"
+            :disabled="isSubmitting"
+            autocomplete="one-time-code"
           />
           <span v-if="codeError" class="error-text">{{ codeError }}</span>
         </div>
 
-        <button class="reset-btn" @click="handleReset">Відновити</button>
+
+        <p v-if="apiError && codeSent" class="api-error">{{ apiError }}</p>
+
+        <button class="reset-btn" :disabled="isSubmitting" @click="handleReset">
+          {{ isSubmitting ? 'Відновлення...' : 'Відновити' }}
+        </button>
       </div>
     </div>
   </div>
@@ -189,6 +213,11 @@ const handleReset = () => {
   border-color: #ff6b6b;
 }
 
+.field-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .send-btn {
   background-color: var(--accent);
   color: var(--pink-light);
@@ -200,6 +229,7 @@ const handleReset = () => {
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.2s;
+  flex-shrink: 0;
 }
 
 .send-btn:hover:not(:disabled) {
@@ -221,6 +251,16 @@ const handleReset = () => {
   font-size: 12px;
 }
 
+.api-error {
+  color: #cc0000;
+  font-size: 13px;
+  text-align: center;
+  padding: 6px 8px;
+  background: rgba(204, 0, 0, 0.08);
+  border-radius: 4px;
+  margin: 0;
+}
+
 .reset-btn {
   background-color: var(--accent);
   color: var(--pink-light);
@@ -238,8 +278,26 @@ const handleReset = () => {
     transform 0.15s;
 }
 
-.reset-btn:hover {
+.reset-btn:hover:not(:disabled) {
   background-color: #a82040;
   transform: translateY(-1px);
+}
+
+.reset-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Адаптив ── */
+@media (max-width: 480px) {
+  .modal {
+    max-width: calc(100vw - 24px);
+    padding: 24px 20px;
+  }
+
+  .modal-title {
+    font-size: 18px;
+    margin-bottom: 18px;
+  }
 }
 </style>
