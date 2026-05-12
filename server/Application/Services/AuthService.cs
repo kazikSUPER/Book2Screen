@@ -46,6 +46,7 @@ public class AuthService : IAuthService
             UserId = user.Id.ToString(),
             Email = user.Email,
             Nickname = user.Username,
+            Role = user.Role,
         };
     }
 
@@ -65,6 +66,7 @@ public class AuthService : IAuthService
             Username = registerRequest.Nickname,
             Email = registerRequest.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password),
+            Role = "user", // Default role
         };
 
         await this.context.Users.AddAsync(user);
@@ -76,6 +78,7 @@ public class AuthService : IAuthService
             UserId = user.Id.ToString(),
             Email = user.Email,
             Nickname = user.Username,
+            Role = user.Role,
         };
     }
 }

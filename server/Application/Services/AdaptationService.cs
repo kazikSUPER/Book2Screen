@@ -68,4 +68,49 @@ public class AdaptationService : IAdaptationService
             .ProjectTo<AdaptationDto>(this.mapper.ConfigurationProvider)
             .ToListAsync();
     }
+
+    /// <inheritdoc/>
+    public async Task<AdaptationDto> CreateAdaptationAsync(AdaptationDto adaptationDto)
+    {
+        var adaptation = this.mapper.Map<Domain.Entities.Adaptation>(adaptationDto);
+        adaptation.Id = Guid.NewGuid();
+
+        await this.context.Adaptations.AddAsync(adaptation);
+        await this.context.SaveChangesAsync();
+
+        return this.mapper.Map<AdaptationDto>(adaptation);
+    }
+
+    /// <inheritdoc/>
+    public async Task<AdaptationDto?> UpdateAdaptationAsync(Guid id, AdaptationDto adaptationDto)
+    {
+        var adaptation = await this.context.Adaptations.FindAsync(id);
+        if (adaptation == null)
+        {
+            return null;
+        }
+
+        this.mapper.Map(adaptationDto, adaptation);
+        adaptation.Id = id; // Ensure ID is not changed
+
+        this.context.Adaptations.Update(adaptation);
+        await this.context.SaveChangesAsync();
+
+        return this.mapper.Map<AdaptationDto>(adaptation);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> DeleteAdaptationAsync(Guid id)
+    {
+        var adaptation = await this.context.Adaptations.FindAsync(id);
+        if (adaptation == null)
+        {
+            return false;
+        }
+
+        this.context.Adaptations.Remove(adaptation);
+        await this.context.SaveChangesAsync();
+
+        return true;
+    }
 }
