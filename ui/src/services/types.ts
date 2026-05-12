@@ -53,6 +53,9 @@ export interface BookScreenItem {
 
   // SCRUM-68: інтерактивна карта відмінностей (опційно).
   differences?: DifferencePoint[];
+
+  // Статистика голосувань (UC-04).
+  voteStats?: VoteResponse;
 }
 
 // ===== Auth DTO =====
