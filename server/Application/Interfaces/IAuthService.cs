@@ -43,6 +43,6 @@ public interface IAuthService
     /// Скидає пароль на новий.
     /// </summary>
     /// <param name="request">Запит з Email, кодом та новим паролем.</param>
-    /// <returns>True, якщо успішно.</returns>
-    Task<bool> ResetPasswordAsync(ResetPasswordRequest request);
+    /// <returns>Дані сесії, якщо успішно.</returns>
+    Task<AuthResponse?> ResetPasswordAsync(ResetPasswordRequest request);
 }

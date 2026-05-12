@@ -133,20 +133,20 @@ public class AuthService : IAuthService
     }
 
     /// <inheritdoc/>
-    public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request)
+    public async Task<AuthResponse?> ResetPasswordAsync(ResetPasswordRequest request)
     {
         var token = await this.context.PasswordResetTokens
             .FirstOrDefaultAsync(t => t.Email == request.Email && t.Code == request.Code && !t.IsUsed);
 
         if (token == null || token.ExpiryTime < DateTime.UtcNow)
         {
-            return false;
+            return null;
         }
 
         var user = await this.context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
         if (user == null)
         {
-            return false;
+            return null;
         }
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
@@ -156,6 +156,14 @@ public class AuthService : IAuthService
         this.context.PasswordResetTokens.Update(token);
         await this.context.SaveChangesAsync();
 
-        return true;
+        return new AuthResponse
+        {
+            Token = this.tokenService.CreateToken(user),
+            UserId = user.Id.ToString(),
+            Email = user.Email,
+            Nickname = user.Username,
+            Role = user.Role,
+        };
     }
+
 }

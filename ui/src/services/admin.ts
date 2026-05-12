@@ -55,7 +55,7 @@ export async function createBook(book: Omit<BookScreenItem, 'id'>): Promise<Book
     id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   };
   try {
-    const response = await apiClient.post<BookScreenItem>('/api/v1/works', book);
+    const response = await apiClient.post<BookScreenItem>('/api/v1/admin/adaptations', book);
     localBooks.push(response.data);
     return response.data;
   } catch (err) {
@@ -73,7 +73,7 @@ export async function updateBook(
   patch: Partial<Omit<BookScreenItem, 'id'>>
 ): Promise<BookScreenItem> {
   try {
-    const response = await apiClient.put<BookScreenItem>(`/api/v1/works/${id}`, patch);
+    const response = await apiClient.put<BookScreenItem>(`/api/v1/admin/adaptations/${id}`, patch);
     const idx = localBooks.findIndex((b) => b.id === id);
     if (idx >= 0) localBooks[idx] = response.data;
     return response.data;
@@ -93,7 +93,7 @@ export async function updateBook(
 
 export async function deleteBook(id: string): Promise<void> {
   try {
-    await apiClient.delete(`/api/v1/works/${id}`);
+    await apiClient.delete(`/api/v1/admin/adaptations/${id}`);
   } catch (err) {
     if (!USE_MOCK_FALLBACK) throw err;
     console.warn('[admin] Mock delete:', id);

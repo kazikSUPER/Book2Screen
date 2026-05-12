@@ -8,6 +8,8 @@ import type {
   PasswordResetConfirmResponse,
 } from './types';
 
+export type { PasswordResetConfirmRequest, PasswordResetConfirmResponse };
+
 // POST /api/v1/auth/register
 // Реєстрація нового користувача.
 
@@ -31,7 +33,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
   await apiClient.post('/api/v1/auth/password-reset', { email });
 }
 
-// POST /api/v1/auth/password-reset/confirm
+// POST /api/v1/auth/reset-password
 // Підтвердження коду + встановлення нового паролю.
 // Повертає дані сесії → одразу авторизує користувача.
 
@@ -39,7 +41,7 @@ export async function confirmPasswordReset(
   payload: PasswordResetConfirmRequest,
 ): Promise<PasswordResetConfirmResponse> {
   const response = await apiClient.post<PasswordResetConfirmResponse>(
-    '/api/v1/auth/password-reset/confirm',
+    '/api/v1/auth/reset-password',
     payload,
   );
   return response.data;

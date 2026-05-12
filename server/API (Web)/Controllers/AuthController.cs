@@ -113,16 +113,18 @@ public class AuthController : ControllerBase
     /// Скидання паролю на новий.
     /// </summary>
     /// <param name="request">Запит з Email, кодом та новим паролем.</param>
-    /// <returns>Повертає 200 OK у разі успіху.</returns>
+    /// <returns>Повертає 200 OK з даними сесії у разі успіху.</returns>
     [HttpPost("reset-password")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AuthResponse))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
     {
-        var success = await this.authService.ResetPasswordAsync(request);
-        if (!success)
+        var response = await this.authService.ResetPasswordAsync(request);
+        if (response == null)
         {
             return this.BadRequest("Invalid code or email.");
         }
 
-        return this.Ok(new { message = "Password has been reset successfully." });
+        return this.Ok(response);
     }
 }

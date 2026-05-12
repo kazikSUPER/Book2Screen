@@ -71,7 +71,7 @@ export interface RegisterResponse {
   userId: string;
   email: string;
   nickname: string;
-  createdAt: string;
+  role: string;
 }
 
 export interface LoginRequest {
@@ -84,12 +84,14 @@ export interface LoginResponse {
   userId: string;
   email: string;
   nickname: string;
+  role: string;
 }
 
 // POST /api/v1/auth/password-reset/confirm
 export interface PasswordResetConfirmRequest {
   email: string;
   code: string;
+  newPassword: string;
 }
 
 // Якщо бекенд повертає токен після підтвердження — відразу авторизуємо.
@@ -99,6 +101,7 @@ export interface PasswordResetConfirmResponse {
   userId: string;
   email: string;
   nickname: string;
+  role: string;
 }
 
 // ===== Vote DTO (UC-04) =====

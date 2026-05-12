@@ -47,6 +47,12 @@ export const useUserStore = defineStore('user', () => {
     });
   }
 
+  // SCRUM-24 тФА Підтвердження зміни паролю.
+  async function resetPassword(payload: authApi.PasswordResetConfirmRequest): Promise<void> {
+    const response = await authApi.confirmPasswordReset(payload);
+    setSession(response);
+  }
+
   function logout(): void {
     token.value = '';
     email.value = '';
@@ -74,6 +80,7 @@ export const useUserStore = defineStore('user', () => {
     token,
     login,
     register,
+    resetPassword,
     logout,
     // profile
     fullName,

@@ -13,9 +13,11 @@ const userStore = useUserStore();
 
 const email = ref('');
 const code = ref('');
+const newPassword = ref('');
 const codeSent = ref(false);
 const emailError = ref('');
 const codeError = ref('');
+const passwordError = ref('');
 const apiError = ref('');
 const isSendingCode = ref(false);
 const isSubmitting = ref(false);
@@ -41,11 +43,23 @@ const handleSendCode = async () => {
 };
 
 const handleReset = async () => {
-  codeError.value = '';
+  let hasError = false;
+
   if (!code.value) {
     codeError.value = 'Введіть код';
-    return;
+    hasError = true;
+  } else {
+    codeError.value = '';
   }
+
+  if (!newPassword.value || newPassword.value.length < 6) {
+    passwordError.value = 'Пароль має бути не менше 6 символів';
+    hasError = true;
+  } else {
+    passwordError.value = '';
+  }
+
+  if (hasError) return;
 
   apiError.value = '';
   isSubmitting.value = true;
@@ -53,6 +67,7 @@ const handleReset = async () => {
     await userStore.resetPassword({
       email: email.value,
       code: code.value.trim(),
+      newPassword: newPassword.value,
     });
     emit('success');
   } catch (err) {
@@ -96,19 +111,31 @@ const handleReset = async () => {
         </div>
 
         <div class="field">
-          <label class="field-label">Код</label>
+          <label class="field-label">Код підтвердження</label>
           <input
             v-model="code"
             type="text"
             class="field-input"
             :class="{ error: codeError }"
-            placeholder="Введіть код"
+            placeholder="Введіть код з пошти"
             :disabled="isSubmitting"
             autocomplete="one-time-code"
           />
           <span v-if="codeError" class="error-text">{{ codeError }}</span>
         </div>
 
+        <div class="field">
+          <label class="field-label">Новий пароль</label>
+          <input
+            v-model="newPassword"
+            type="password"
+            class="field-input"
+            :class="{ error: passwordError }"
+            placeholder="Мінімум 6 символів"
+            :disabled="isSubmitting"
+          />
+          <span v-if="passwordError" class="error-text">{{ passwordError }}</span>
+        </div>
 
         <p v-if="apiError && codeSent" class="api-error">{{ apiError }}</p>
 
