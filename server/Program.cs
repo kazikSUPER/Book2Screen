@@ -75,6 +75,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IFavoriteService, FavoriteService>();
 builder.Services.AddScoped<IAdaptationService, AdaptationService>();
+builder.Services.AddScoped<IWorkService, WorkService>();
 builder.Services.AddScoped<IVoteService, VoteService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 

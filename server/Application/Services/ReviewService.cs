@@ -37,7 +37,7 @@ public class ReviewService : IReviewService
             Text = request.Text,
             IsSpoiler = request.IsSpoiler,
             Rating = request.Rating,
-            TargetType = "comparison",
+            TargetType = request.TargetType.ToLower(),
         };
 
         await this.context.Reviews.AddAsync(review);
