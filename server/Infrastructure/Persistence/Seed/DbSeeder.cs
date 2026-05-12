@@ -12,7 +12,8 @@ using Microsoft.EntityFrameworkCore;
 /// </summary>
 public static class DbSeeder
 {
-    private const string DunePosterUrl = "https://upload.wikimedia.org/wikipedia/uk/7/71/%D0%94%D1%8E%D0%BD%D0%B0_%282021%29_%D0%BF%D0%BE%D1%81%D1%82%D0%B5%D1%80.jpg";
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarLint", "S1075:URIs should not be hardcoded", Justification = "Seed data requires hardcoded URLs for development posters.")]
+    private static readonly string DunePosterUrl = "https://upload.wikimedia.org/wikipedia/uk/7/71/%D0%94%D1%8E%D0%BD%D0%B0_%282021%29_%D0%BF%D0%BE%D1%81%D1%82%D0%B5%D1%80.jpg";
 
     /// <summary>
     /// Наповнює базу даних, якщо вона порожня.

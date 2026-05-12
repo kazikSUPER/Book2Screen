@@ -41,7 +41,7 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> CreateAdaptation([FromBody] AdaptationDto adaptationDto)
     {
         var result = await this.adaptationService.CreateAdaptationAsync(adaptationDto);
-        return this.CreatedAtAction(nameof(GetAdaptationById), new { id = result.Id }, result);
+        return this.CreatedAtAction(nameof(this.GetAdaptationById), new { id = result.Id }, result);
     }
 
     /// <summary>
