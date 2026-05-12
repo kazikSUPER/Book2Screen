@@ -267,4 +267,28 @@ const handleLogin = async () => {
 .btn-register:hover:not(:disabled) {
   background-color: #5a0000;
 }
+
+/* ── Адаптив ── */
+@media (max-width: 480px) {
+  .modal {
+    max-width: calc(100vw - 24px);
+    padding: 24px 20px;
+  }
+
+  .modal-title {
+    font-size: 18px;
+    margin-bottom: 18px;
+  }
+
+  .btn-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-login,
+  .btn-register {
+    flex: none;
+    width: 100%;
+  }
+}
 </style>

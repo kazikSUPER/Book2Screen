@@ -1,305 +1,490 @@
-<script lang="ts">
-import { defineComponent, computed, ref, onMounted, watch } from 'vue';
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import type { BookScreenItem } from '../services/types';
 import { fetchWorkById } from '../services/works';
 import { extractErrorMessage } from '../services/error';
+import { useWishlistStore } from '../state/wishlist';
+import { useUserRatingsStore } from '../state/userRatings';
+import { useUserStore } from '../state/user';
+import { useNotificationsStore } from '../state/notifications';
+import StarRating from '../components/StarRating.vue';
+import DifferencesMap from '../components/DifferencesMap.vue';
+import VotingBlock from '../components/VotingBlock.vue';
+import ReviewsBlock from '../components/ReviewsBlock.vue';
 
-export default defineComponent({
-  name: 'DetailView',
-  setup() {
-    const route = useRoute();
-    const router = useRouter();
+/**
+ * SCRUM-68 (US 3.2) — Book Details.
+ *
+ * Сторінка деталей твору, повна за дизайном Figma:
+ *  - брейкрумна стрічка з категорією/назвою
+ *  - дві картки порівняння (книга / екранізація) з постерами, метою, summary
+ *  - кнопки "+ Хочу прочитати / переглянути" (через wishlist store)
+ *  - зіркові оцінки (інтерактивні — userRatings store)
+ *  - інтерактивна карта відмінностей (компонент DifferencesMap)
+ *  - блоки голосування і коментарів — заглушки під SCRUM-70/71/72
+ */
 
-    const item = ref<BookScreenItem | null>(null);
-    const isLoading = ref(false);
-    const errorMessage = ref('');
+const route = useRoute();
+const router = useRouter();
 
-    const loadItem = async (): Promise<void> => {
-      isLoading.value = true;
-      errorMessage.value = '';
-      try {
-        item.value = await fetchWorkById(Number(route.params.id));
-      } catch (err) {
-        errorMessage.value = extractErrorMessage(err);
-        item.value = null;
-      } finally {
-        isLoading.value = false;
-      }
-    };
+const item = ref<BookScreenItem | null>(null);
+const isLoading = ref(false);
+const errorMessage = ref('');
 
-    onMounted(loadItem);
-    watch(() => route.params.id, loadItem);
+const wishlist = useWishlistStore();
+const userRatings = useUserRatingsStore();
+const userStore = useUserStore();
+const notifications = useNotificationsStore();
 
-    const winner = computed(() => {
-      if (!item.value) return null;
-      if (item.value.bookRating > item.value.filmRating) return 'book';
-      if (item.value.filmRating > item.value.bookRating) return 'film';
-      return 'draw';
-    });
+async function loadItem(): Promise<void> {
+  isLoading.value = true;
+  errorMessage.value = '';
+  try {
+    item.value = await fetchWorkById(route.params.id as string);
+  } catch (err) {
+    errorMessage.value = extractErrorMessage(err);
+    item.value = null;
+  } finally {
+    isLoading.value = false;
+  }
+}
 
-    const goBack = () => router.push({ name: 'home' });
+onMounted(loadItem);
+watch(() => route.params.id, loadItem);
 
-    return { item, winner, isLoading, errorMessage, loadItem, goBack };
+// ── Wishlist (хочу прочитати / переглянути) ─────────────────
+const inReadList = computed(() =>
+  item.value ? wishlist.isInWishlist(item.value.id, 'read') : false
+);
+const inWatchList = computed(() =>
+  item.value ? wishlist.isInWishlist(item.value.id, 'watch') : false
+);
+
+function toggleRead(): void {
+  if (!item.value) return;
+  if (!userStore.isAuthenticated) {
+    notifications.pushWarning('Увійдіть, щоб додавати до списку');
+    return;
+  }
+  wishlist.toggle(item.value.id, 'read');
+}
+
+function toggleWatch(): void {
+  if (!item.value) return;
+  if (!userStore.isAuthenticated) {
+    notifications.pushWarning('Увійдіть, щоб додавати до списку');
+    return;
+  }
+  wishlist.toggle(item.value.id, 'watch');
+}
+
+// ── User-ratings (зіркова оцінка) ───────────────────────────
+const myBookRating = computed({
+  get: () => (item.value ? userRatings.getRating(item.value.id, 'book') : 0),
+  set: (v: number) => {
+    if (!item.value) return;
+    if (!userStore.isAuthenticated) {
+      notifications.pushWarning('Увійдіть, щоб ставити оцінку');
+      return;
+    }
+    userRatings.setRating(item.value.id, 'book', v);
   },
 });
+
+const myFilmRating = computed({
+  get: () => (item.value ? userRatings.getRating(item.value.id, 'film') : 0),
+  set: (v: number) => {
+    if (!item.value) return;
+    if (!userStore.isAuthenticated) {
+      notifications.pushWarning('Увійдіть, щоб ставити оцінку');
+      return;
+    }
+    userRatings.setRating(item.value.id, 'film', v);
+  },
+});
+
+// ── Помічники для двокарткового layout ──────────────────────
+const filmYearLabel = computed(() => item.value?.filmYear ?? item.value?.year ?? '');
+const filmCountryLabel = computed(() => item.value?.filmCountry ?? item.value?.country ?? '');
+const bookSummary = computed(() => item.value?.bookSummary ?? item.value?.description ?? '');
+const filmSummary = computed(() => item.value?.filmSummary ?? item.value?.description ?? '');
+
+const goBack = () => router.push({ name: 'home' });
 </script>
 
 <template>
   <div class="detail">
-    <button class="back-btn" @click="goBack">← Назад</button>
+    <!-- Брейкрумна стрічка під шапкою (з Figma) -->
+    <div v-if="item" class="detail__crumb">
+      <button class="detail__crumb-back" type="button" aria-label="Назад" @click="goBack">←</button>
+      <span class="detail__crumb-text">{{ item.genre }} / {{ item.title }}</span>
+    </div>
 
-    <p v-if="isLoading" class="not-found">Завантаження...</p>
+    <p v-if="isLoading" class="detail__status">Завантаження…</p>
 
-    <div v-else-if="errorMessage" class="not-found">
+    <div v-else-if="errorMessage" class="detail__status">
       <p>⚠ {{ errorMessage }}</p>
-      <button class="retry-btn" @click="loadItem">Повторити</button>
+      <button class="detail__retry" type="button" @click="loadItem">Повторити</button>
     </div>
 
-    <div v-else-if="!item" class="not-found">
-      <p>Елемент не знайдено 😔</p>
-    </div>
+    <p v-else-if="!item" class="detail__status">Елемент не знайдено</p>
 
-    <div v-else class="detail-content">
-      <h1 class="detail-title">{{ item.title }}</h1>
-      <p class="detail-meta">{{ item.year }} · {{ item.genre }} · {{ item.country }}</p>
-      <p class="detail-description">{{ item.description }}</p>
-
-      <div class="compare-grid">
+    <template v-else>
+      <!-- ── Дві картки порівняння ─────────────────────────── -->
+      <section class="detail__compare">
         <!-- Книга -->
-        <div class="compare-card" :class="{ winner: winner === 'book' }">
-          <div class="compare-header">
-            <span class="compare-icon">📖</span>
-            <h2 class="compare-label">Книга</h2>
-            <span v-if="winner === 'book'" class="winner-badge">Переможець</span>
+        <article class="compare-card">
+          <h2 class="compare-card__title">{{ item.title }}</h2>
+          <div class="compare-card__row">
+            <div class="compare-card__poster">
+              <img :src="item.poster" :alt="item.title" />
+            </div>
+            <dl class="compare-card__meta">
+              <div class="compare-card__meta-row"><dt>Рік:</dt><dd>{{ item.year }}</dd></div>
+              <div class="compare-card__meta-row"><dt>Жанр:</dt><dd>{{ item.genre }}</dd></div>
+              <div class="compare-card__meta-row"><dt>Країна:</dt><dd>{{ item.country }}</dd></div>
+              <div v-if="item.author" class="compare-card__meta-row"><dt>Автор:</dt><dd>{{ item.author }}</dd></div>
+              <div class="compare-card__meta-row"><dt>Рейтинг:</dt><dd>{{ item.bookRating }} / 10</dd></div>
+            </dl>
           </div>
-          <img :src="item.poster" :alt="item.title" class="compare-poster" />
-          <div class="compare-rating">
-            <span class="rating-value">{{ item.bookRating }}</span>
-            <span class="rating-max">/10</span>
-          </div>
-          <div class="rating-bar">
-            <div class="rating-fill book-fill" :style="{ width: item.bookRating * 10 + '%' }"></div>
-          </div>
+          <button
+            class="compare-card__wish"
+            :class="{ 'compare-card__wish--active': inReadList }"
+            type="button"
+            @click="toggleRead"
+          >
+            <span class="compare-card__wish-icon">{{ inReadList ? '✓' : '+' }}</span>
+            {{ inReadList ? 'У списку' : 'Хочу прочитати' }}
+          </button>
+          <p class="compare-card__summary">
+            <strong>Коротка анотація</strong><br />
+            {{ bookSummary }}
+          </p>
+        </article>
+
+        <!-- VS / Екранізовано -->
+        <div class="detail__vs" aria-hidden="true">
+          <span class="detail__vs-text">Екранізовано</span>
+          <svg width="40" height="20" viewBox="0 0 40 20" fill="none">
+            <path d="M0 10H35M35 10L26 2M35 10L26 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
         </div>
 
-        <!-- VS -->
-        <div class="vs-block">
-          <span class="vs-text">VS</span>
-          <p v-if="winner === 'draw'" class="draw-text">Нічия!</p>
-        </div>
+        <!-- Екранізація -->
+        <article class="compare-card">
+          <h2 class="compare-card__title">{{ item.title }}</h2>
+          <div class="compare-card__row">
+            <div class="compare-card__poster">
+              <img :src="item.filmPoster ?? item.poster" :alt="item.title" />
+            </div>
+            <dl class="compare-card__meta">
+              <div class="compare-card__meta-row"><dt>Рік:</dt><dd>{{ filmYearLabel }}</dd></div>
+              <div class="compare-card__meta-row"><dt>Жанр:</dt><dd>{{ item.genre }}</dd></div>
+              <div class="compare-card__meta-row"><dt>Країна:</dt><dd>{{ filmCountryLabel }}</dd></div>
+              <div v-if="item.director" class="compare-card__meta-row"><dt>Режисер:</dt><dd>{{ item.director }}</dd></div>
+              <div class="compare-card__meta-row"><dt>Рейтинг:</dt><dd>{{ item.filmRating }} / 10</dd></div>
+            </dl>
+          </div>
+          <button
+            class="compare-card__wish"
+            :class="{ 'compare-card__wish--active': inWatchList }"
+            type="button"
+            @click="toggleWatch"
+          >
+            <span class="compare-card__wish-icon">{{ inWatchList ? '✓' : '+' }}</span>
+            {{ inWatchList ? 'У списку' : 'Хочу переглянути' }}
+          </button>
+          <p class="compare-card__summary">
+            <strong>Коротка анотація</strong><br />
+            {{ filmSummary }}
+          </p>
+        </article>
+      </section>
 
-        <!-- Фільм -->
-        <div class="compare-card" :class="{ winner: winner === 'film' }">
-          <div class="compare-header">
-            <span class="compare-icon">🎬</span>
-            <h2 class="compare-label">Фільм</h2>
-            <span v-if="winner === 'film'" class="winner-badge">Переможець</span>
-          </div>
-          <img :src="item.poster" :alt="item.title" class="compare-poster" />
-          <div class="compare-rating">
-            <span class="rating-value">{{ item.filmRating }}</span>
-            <span class="rating-max">/10</span>
-          </div>
-          <div class="rating-bar">
-            <div class="rating-fill film-fill" :style="{ width: item.filmRating * 10 + '%' }"></div>
-          </div>
+      <!-- ── Зіркові оцінки користувача ─────────────────────── -->
+      <section class="detail__user-ratings">
+        <div class="user-rating">
+          <span class="user-rating__label">Оцінка книги</span>
+          <StarRating v-model="myBookRating" :size="32" />
         </div>
-      </div>
-    </div>
+        <div class="user-rating">
+          <span class="user-rating__label">Оцінка екранізації</span>
+          <StarRating v-model="myFilmRating" :size="32" />
+        </div>
+      </section>
+
+      <!-- ── Карта відмінностей (інтерактивна) ─────────────── -->
+      <DifferencesMap v-if="item.differences && item.differences.length" :points="item.differences" />
+
+      <!-- ── Голосування (SCRUM-70 / SCRUM-71) ─────────────── -->
+      <VotingBlock :work-id="item.id" />
+
+      <!-- ── Коментарі (SCRUM-72) ──────────────────────────── -->
+      <ReviewsBlock :work-id="item.id" />
+    </template>
   </div>
 </template>
 
 <style scoped>
 .detail {
-  padding: 24px;
-  font-family: 'Georgia', serif;
-  color: var(--pink-light);
-  max-width: 900px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  font-family: var(--font-body);
+  color: var(--text-on-light);
+  padding-bottom: 32px;
 }
 
-.back-btn {
-  background: none;
-  border: 1px solid var(--accent);
-  color: var(--pink-light);
-  font-family: 'Georgia', serif;
-  font-size: 14px;
-  padding: 6px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-bottom: 24px;
-  transition: background 0.2s;
-}
-
-.back-btn:hover {
-  background-color: var(--accent);
-}
-
-.not-found {
-  text-align: center;
-  padding: 60px 0;
-  color: var(--pink-mid);
-  font-size: 16px;
-}
-
-.retry-btn {
-  margin-top: 12px;
-  padding: 8px 20px;
-  background: var(--accent);
-  color: var(--pink-light);
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-family: 'Georgia', serif;
-}
-
-.retry-btn:hover {
-  background: #a82040;
-}
-
-.detail-title {
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--pink-light);
-  margin: 0 0 8px;
-}
-
-.detail-meta {
-  font-size: 14px;
-  color: var(--pink-mid);
-  margin: 0 0 12px;
-}
-
-.detail-description {
-  font-size: 15px;
-  color: var(--pink-light);
-  line-height: 1.7;
-  margin: 0 0 32px;
-  max-width: 620px;
-}
-
-.compare-grid {
+/* ── Брейкрумна стрічка ─────────────────────────────────── */
+.detail__crumb {
+  background: var(--color-card);
+  color: var(--text-on-dark);
+  padding: 10px 20px;
   display: flex;
   align-items: center;
+  gap: 12px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  margin: -16px -16px 0 -16px;
+}
+
+.detail__crumb-back {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+.detail__crumb-back:hover {
+  color: var(--color-panel-box);
+}
+
+/* ── Двокартковий блок ──────────────────────────────────── */
+.detail__compare {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   gap: 16px;
+  align-items: stretch;
+  padding: 16px;
 }
 
 .compare-card {
-  flex: 1;
-  background-color: var(--dark-card);
-  border: 2px solid var(--accent);
-  border-radius: 12px;
-  padding: 20px;
+  background: var(--color-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--text-on-dark);
+}
+
+.compare-card__title {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 16px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.compare-card__row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.compare-card__poster {
+  width: 110px;
+  height: 160px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xs);
+}
+
+.compare-card__poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.compare-card__meta {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-family: var(--font-body);
+}
+
+.compare-card__meta-row {
+  display: flex;
+  gap: 6px;
+}
+
+.compare-card__meta-row dt {
+  font-weight: 500;
+}
+
+.compare-card__meta-row dd {
+  margin: 0;
+}
+
+.compare-card__wish {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid var(--text-on-dark);
+  color: var(--text-on-dark);
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.compare-card__wish:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.compare-card__wish--active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.compare-card__wish-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.compare-card__summary {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-on-dark);
+}
+
+.compare-card__summary strong {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ── VS блок між картками ───────────────────────────────── */
+.detail__vs {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-}
-
-.compare-card.winner {
-  border-color: #f0c040;
-  box-shadow: 0 0 20px rgba(240, 192, 64, 0.3);
-}
-
-.compare-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
   justify-content: center;
+  gap: 8px;
+  color: var(--text-on-light);
+  font-family: var(--font-display);
+  font-size: 14px;
+}
+
+.detail__vs-text {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+/* ── Зіркові оцінки ─────────────────────────────────────── */
+.detail__user-ratings {
+  display: flex;
+  justify-content: space-around;
+  gap: 16px;
+  padding: 0 16px;
   flex-wrap: wrap;
 }
 
-.compare-icon {
-  font-size: 24px;
-}
-
-.compare-label {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--pink-light);
-  margin: 0;
-}
-
-.winner-badge {
-  background-color: #f0c040;
-  color: #311620;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
-.compare-poster {
-  width: 140px;
-  height: 200px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 1px solid var(--accent);
-}
-
-.compare-rating {
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-}
-
-.rating-value {
-  font-size: 36px;
-  font-weight: 700;
-  color: var(--pink-light);
-}
-
-.rating-max {
-  font-size: 16px;
-  color: var(--pink-mid);
-}
-
-.rating-bar {
-  width: 100%;
-  height: 6px;
-  background-color: #311620;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.rating-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
-
-.book-fill {
-  background-color: var(--pink-mid);
-}
-
-.film-fill {
-  background-color: var(--accent);
-}
-
-.vs-block {
+.user-rating {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  flex-shrink: 0;
 }
 
-.vs-text {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--accent);
+.user-rating__label {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--text-on-light);
 }
 
-.draw-text {
-  font-size: 12px;
-  color: var(--pink-mid);
-  margin: 0;
+/* ── Заглушки голосування + коментарі ───────────────────── */
+.detail__placeholder {
+  background: var(--color-panel-box);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin: 0 16px;
   text-align: center;
+  border: 1px dashed var(--color-card);
+}
+
+.detail__placeholder-title {
+  margin: 0 0 8px 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--text-on-light);
+}
+
+.detail__placeholder-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+}
+
+/* ── Status ─────────────────────────────────────────────── */
+.detail__status {
+  text-align: center;
+  padding: 60px 0;
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+.detail__retry {
+  margin-top: 12px;
+  padding: 8px 20px;
+  background: var(--color-primary);
+  color: var(--text-on-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 14px;
+  font-family: var(--font-display);
+}
+
+.detail__retry:hover {
+  background: var(--color-primary-hover);
+}
+
+/* ── Адаптив ────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .detail__compare {
+    grid-template-columns: 1fr;
+  }
+  .detail__vs {
+    flex-direction: row;
+  }
+  .detail__vs svg {
+    transform: rotate(90deg);
+  }
+}
+
+@media (max-width: 600px) {
+  .compare-card__row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
 }
 </style>

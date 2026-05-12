@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import * as authApi from '../services/auth';
+import { extractErrorMessage } from '../services/error';
 
 const emit = defineEmits<{
   close: [];
@@ -11,6 +12,8 @@ const code = ref('');
 const codeSent = ref(false);
 const emailError = ref('');
 const codeError = ref('');
+const apiError = ref('');
+const isSendingCode = ref(false);
 
 const isEmailValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value));
 
@@ -20,13 +23,17 @@ const handleSendCode = async () => {
     return;
   }
   emailError.value = '';
+  apiError.value = '';
+  isSendingCode.value = true;
   try {
     await authApi.requestPasswordReset(email.value);
+    codeSent.value = true;
   } catch (err) {
-    // Якщо бекенд лежить — все одно показуємо UI "код надіслано"
-    console.warn('[reset] Backend недоступний:', err);
+    // Замість тихого console.warn — показуємо inline-помилку (Етап 4: Error Handling).
+    apiError.value = extractErrorMessage(err);
+  } finally {
+    isSendingCode.value = false;
   }
-  codeSent.value = true;
 };
 
 const handleReset = () => {
@@ -35,7 +42,7 @@ const handleReset = () => {
     return;
   }
   codeError.value = '';
-  // тут буде реальний API-виклик
+  // TODO: справжній POST /api/v1/auth/password-reset/confirm з { email, code, newPassword }.
   emit('close');
 };
 </script>
@@ -58,10 +65,17 @@ const handleReset = () => {
               :class="{ error: emailError }"
               placeholder="Введіть Email"
             />
-            <button class="send-btn" :disabled="!isEmailValid" @click="handleSendCode">Надіслати код</button>
+            <button
+              class="send-btn"
+              :disabled="!isEmailValid || isSendingCode"
+              @click="handleSendCode"
+            >
+              {{ isSendingCode ? '...' : 'Надіслати код' }}
+            </button>
           </div>
           <span v-if="emailError" class="error-text">{{ emailError }}</span>
           <span v-if="codeSent" class="success-text">Код надіслано на {{ email }}</span>
+          <span v-if="apiError" class="error-text">{{ apiError }}</span>
         </div>
 
         <div class="field">
