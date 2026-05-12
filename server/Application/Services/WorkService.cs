@@ -7,6 +7,7 @@ namespace Book2Screen.Application.Services;
 using Book2Screen.Application.DTOs;
 using Book2Screen.Application.Filters;
 using Book2Screen.Application.Interfaces;
+using Book2Screen.Domain.Entities;
 using Book2Screen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,14 +17,17 @@ using Microsoft.EntityFrameworkCore;
 public class WorkService : IWorkService
 {
     private readonly ApplicationDbContext context;
+    private readonly IVoteService voteService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkService"/> class.
     /// </summary>
     /// <param name="context">Контекст бази даних.</param>
-    public WorkService(ApplicationDbContext context)
+    /// <param name="voteService">Сервіс голосування.</param>
+    public WorkService(ApplicationDbContext context, IVoteService voteService)
     {
         this.context = context;
+        this.voteService = voteService;
     }
 
     /// <inheritdoc/>
@@ -53,78 +57,75 @@ public class WorkService : IWorkService
             }
         }
 
-        return await query
-            .Select(w => new BookScreenItemDto
-            {
-                Id = w.Id,
-                Title = w.Title,
-                Year = w.Adaptation.ReleaseYear ?? 0,
-                Genre = w.Book.Genre ?? "Драма",
-                Country = w.Adaptation.Country ?? "Unknown",
-                Poster = w.Adaptation.PosterUrl ?? "https://via.placeholder.com/300x450",
-                BookRating = w.Reviews.Any(r => r.TargetType == "book")
-                    ? w.Reviews.Where(r => r.TargetType == "book").Average(r => r.Rating)
-                    : 0,
-                FilmRating = w.Reviews.Any(r => r.TargetType == "adaptation")
-                    ? w.Reviews.Where(r => r.TargetType == "adaptation").Average(r => r.Rating)
-                    : 0,
-                Description = w.Summary ?? w.Book.Description ?? string.Empty,
-            })
-            .ToListAsync();
+        var works = await query.ToListAsync();
+        var dtos = new List<BookScreenItemDto>();
+
+        foreach (var w in works)
+        {
+            var dto = this.MapToDto(w);
+            dto.VoteStats = await this.voteService.GetVoteStatsAsync(w.Id);
+            dtos.Add(dto);
+        }
+
+        return dtos;
     }
 
     /// <inheritdoc/>
     public async Task<BookScreenItemDto?> GetWorkByIdAsync(Guid id)
     {
-        return await this.context.Works
+        var work = await this.context.Works
             .Include(w => w.Book)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
-            .Where(w => w.Id == id)
-            .Select(w => new BookScreenItemDto
-            {
-                Id = w.Id,
-                Title = w.Title,
-                Year = w.Adaptation.ReleaseYear ?? 0,
-                Genre = w.Book.Genre ?? "Драма",
-                Country = w.Adaptation.Country ?? "Unknown",
-                Poster = w.Adaptation.PosterUrl ?? "https://via.placeholder.com/300x450",
-                BookRating = w.Reviews.Any(r => r.TargetType == "book")
-                    ? w.Reviews.Where(r => r.TargetType == "book").Average(r => r.Rating)
-                    : 0,
-                FilmRating = w.Reviews.Any(r => r.TargetType == "adaptation")
-                    ? w.Reviews.Where(r => r.TargetType == "adaptation").Average(r => r.Rating)
-                    : 0,
-                Description = w.Summary ?? w.Book.Description ?? string.Empty,
-            })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(w => w.Id == id);
+
+        if (work == null)
+        {
+            return null;
+        }
+
+        var dto = this.MapToDto(work);
+        dto.VoteStats = await this.voteService.GetVoteStatsAsync(work.Id);
+        return dto;
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<BookScreenItemDto>> GetTopWorksAsync(int count)
     {
-        return await this.context.Works
+        var works = await this.context.Works
             .Include(w => w.Book)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
-            .Select(w => new BookScreenItemDto
-            {
-                Id = w.Id,
-                Title = w.Title,
-                Year = w.Adaptation.ReleaseYear ?? 0,
-                Genre = w.Book.Genre ?? "Драма",
-                Country = w.Adaptation.Country ?? "Unknown",
-                Poster = w.Adaptation.PosterUrl ?? "https://via.placeholder.com/300x450",
-                BookRating = w.Reviews.Any(r => r.TargetType == "book")
-                    ? w.Reviews.Where(r => r.TargetType == "book").Average(r => r.Rating)
-                    : 0,
-                FilmRating = w.Reviews.Any(r => r.TargetType == "adaptation")
-                    ? w.Reviews.Where(r => r.TargetType == "adaptation").Average(r => r.Rating)
-                    : 0,
-                Description = w.Summary ?? w.Book.Description ?? string.Empty,
-            })
-            .OrderByDescending(w => w.FilmRating)
-            .Take(count)
             .ToListAsync();
+
+        var dtos = new List<BookScreenItemDto>();
+        foreach (var w in works)
+        {
+            var dto = this.MapToDto(w);
+            dto.VoteStats = await this.voteService.GetVoteStatsAsync(w.Id);
+            dtos.Add(dto);
+        }
+
+        return dtos.OrderByDescending(d => d.FilmRating).Take(count);
+    }
+
+    private BookScreenItemDto MapToDto(Work w)
+    {
+        return new BookScreenItemDto
+        {
+            Id = w.Id,
+            Title = w.Title,
+            Year = w.Adaptation.ReleaseYear ?? 0,
+            Genre = w.Book.Genre ?? "Драма",
+            Country = w.Adaptation.Country ?? "Unknown",
+            Poster = w.Adaptation.PosterUrl ?? "https://via.placeholder.com/300x450",
+            BookRating = w.Reviews.Any(r => r.TargetType == "book")
+                ? w.Reviews.Where(r => r.TargetType == "book").Average(r => r.Rating)
+                : 0,
+            FilmRating = w.Reviews.Any(r => r.TargetType == "adaptation")
+                ? w.Reviews.Where(r => r.TargetType == "adaptation").Average(r => r.Rating)
+                : 0,
+            Description = w.Summary ?? w.Book.Description ?? string.Empty,
+        };
     }
 }

@@ -30,6 +30,12 @@ public class ReviewService : IReviewService
     /// <inheritdoc/>
     public async Task<ReviewResponse> AddReviewAsync(Guid userId, ReviewRequest request)
     {
+        var workExists = await this.context.Works.AnyAsync(w => w.Id == request.WorkId);
+        if (!workExists)
+        {
+            throw new KeyNotFoundException($"Work with ID {request.WorkId} not found.");
+        }
+
         var review = new Review
         {
             UserId = userId,
@@ -51,6 +57,7 @@ public class ReviewService : IReviewService
             Text = review.Text,
             IsSpoiler = review.IsSpoiler,
             Rating = review.Rating,
+            TargetType = review.TargetType,
             CreatedAt = review.CreatedAt,
         };
     }
@@ -69,6 +76,7 @@ public class ReviewService : IReviewService
                 Text = r.Text,
                 IsSpoiler = r.IsSpoiler,
                 Rating = r.Rating,
+                TargetType = r.TargetType,
                 CreatedAt = r.CreatedAt,
             })
             .ToListAsync();

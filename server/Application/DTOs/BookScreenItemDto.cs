@@ -53,4 +53,9 @@ public class BookScreenItemDto
     /// Gets or sets короткий опис сюжету.
     /// </summary>
     public string Description { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets статистику голосування (Book vs Film).
+    /// </summary>
+    public VoteResponse? VoteStats { get; set; }
 }
