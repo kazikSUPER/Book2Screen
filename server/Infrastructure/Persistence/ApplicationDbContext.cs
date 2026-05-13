@@ -77,6 +77,16 @@ public class ApplicationDbContext : DbContext
     /// </summary>
     public DbSet<PasswordResetToken> PasswordResetTokens => this.Set<PasswordResetToken>();
 
+    /// <summary>
+    /// Gets the set of difference maps.
+    /// </summary>
+    public DbSet<DifferenceMap> DifferenceMaps => this.Set<DifferenceMap>();
+
+    /// <summary>
+    /// Gets the set of differences.
+    /// </summary>
+    public DbSet<Difference> Differences => this.Set<Difference>();
+
     /// <inheritdoc/>
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -117,6 +127,7 @@ public class ApplicationDbContext : DbContext
         {
             entity.HasIndex(w => w.BookId).IsUnique();
             entity.HasIndex(w => w.AdaptationId).IsUnique();
+            entity.HasIndex(w => w.Title); // Індекс для пошуку за назвою
 
             entity.HasOne(w => w.Book)
                 .WithOne(b => b.Work)
@@ -127,6 +138,18 @@ public class ApplicationDbContext : DbContext
                 .WithOne(a => a.Work)
                 .HasForeignKey<Work>(w => w.AdaptationId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Налаштування Book (Індекс для жанру)
+        modelBuilder.Entity<Book>(entity =>
+        {
+            entity.HasIndex(b => b.Genre);
+        });
+
+        // Налаштування Adaptation (Індекс для країни)
+        modelBuilder.Entity<Adaptation>(entity =>
+        {
+            entity.HasIndex(a => a.Country);
         });
 
         // Налаштування Review

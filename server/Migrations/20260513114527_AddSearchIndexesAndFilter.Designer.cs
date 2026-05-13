@@ -3,6 +3,7 @@ using System;
 using Book2Screen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Book2Screen.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260513114527_AddSearchIndexesAndFilter")]
+    partial class AddSearchIndexesAndFilter
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -110,8 +113,6 @@ namespace Book2Screen.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Country");
-
                     b.ToTable("Adaptations");
                 });
 
@@ -207,8 +208,6 @@ namespace Book2Screen.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Genre");
 
                     b.ToTable("Books");
                 });
@@ -587,8 +586,6 @@ namespace Book2Screen.Migrations
 
                     b.HasIndex("BookId")
                         .IsUnique();
-
-                    b.HasIndex("Title");
 
                     b.ToTable("Works");
                 });
