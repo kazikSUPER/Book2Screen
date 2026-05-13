@@ -1,9 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
-
-#nullable disable
+// <copyright file="20260513114527_AddSearchIndexesAndFilter.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
 
 namespace Book2Screen.Migrations
 {
+    using Microsoft.EntityFrameworkCore.Migrations;
+
+    #nullable disable
+
     /// <inheritdoc />
     public partial class AddSearchIndexesAndFilter : Migration
     {
