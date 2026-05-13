@@ -34,6 +34,7 @@ public class PasswordResetTests
 
         this.context = new ApplicationDbContext(options);
         this.tokenServiceMock = new Mock<ITokenService>();
+        this.tokenServiceMock.Setup(t => t.CreateToken(It.IsAny<User>())).Returns("fake-jwt-token");
         this.emailServiceMock = new Mock<IEmailService>();
 
         this.authService = new AuthService(this.context, this.tokenServiceMock.Object, this.emailServiceMock.Object);
@@ -159,7 +160,8 @@ public class PasswordResetTests
         var result = await this.authService.ResetPasswordAsync(request);
 
         // Assert
-        Assert.True(result);
+        Assert.NotNull(result);
+        Assert.NotNull(result.Token);
         var updatedUser = await this.context.Users.FirstOrDefaultAsync(u => u.Email == "test@example.com");
         Assert.True(BCrypt.Net.BCrypt.Verify("NewPass123!", updatedUser!.PasswordHash));
         var updatedToken = await this.context.PasswordResetTokens.FirstOrDefaultAsync(t => t.Id == token.Id);
