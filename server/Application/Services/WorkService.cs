@@ -55,6 +55,11 @@ public class WorkService : IWorkService
             {
                 query = query.Where(w => w.Adaptation.Country != null && w.Adaptation.Country.ToLower() == filter.Country.ToLower());
             }
+
+            if (filter.OnlyWithMap == true)
+            {
+                query = query.Where(w => w.DifferenceMap != null);
+            }
         }
 
         var works = await query.ToListAsync();
@@ -77,6 +82,8 @@ public class WorkService : IWorkService
             .Include(w => w.Book)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
+            .Include(w => w.DifferenceMap)
+                .ThenInclude(dm => dm!.Differences)
             .FirstOrDefaultAsync(w => w.Id == id);
 
         if (work == null)
@@ -86,6 +93,20 @@ public class WorkService : IWorkService
 
         var dto = this.MapToDto(work);
         dto.VoteStats = await this.voteService.GetVoteStatsAsync(work.Id);
+
+        if (work.DifferenceMap != null)
+        {
+            dto.HasMap = true;
+            dto.Differences = work.DifferenceMap.Differences.Select(d => new DifferenceDto
+            {
+                Id = d.Id,
+                Title = d.DifferenceType, // Поки використовуємо тип як заголовок, або можна додати поле Title в ентіті
+                BookText = d.Description, // Логіку розділення тексту книги/фільму можна уточнити
+                FilmText = d.Description, // Наразі в БД лише один Description
+                IsSpoiler = d.ImportanceLevel == "high",
+            }).ToList();
+        }
+
         return dto;
     }
 
@@ -96,6 +117,7 @@ public class WorkService : IWorkService
             .Include(w => w.Book)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
+            .Include(w => w.DifferenceMap)
             .ToListAsync();
 
         var dtos = new List<BookScreenItemDto>();
@@ -103,6 +125,7 @@ public class WorkService : IWorkService
         {
             var dto = this.MapToDto(w);
             dto.VoteStats = await this.voteService.GetVoteStatsAsync(w.Id);
+            dto.HasMap = w.DifferenceMap != null;
             dtos.Add(dto);
         }
 
@@ -120,12 +143,16 @@ public class WorkService : IWorkService
             Country = w.Adaptation.Country ?? "Unknown",
             Poster = w.Adaptation.PosterUrl ?? "https://via.placeholder.com/300x450",
             BookRating = w.Reviews.Any(r => r.TargetType == "book")
-                ? w.Reviews.Where(r => r.TargetType == "book").Average(r => r.Rating)
+                ? Math.Round(w.Reviews.Where(r => r.TargetType == "book").Average(r => r.Rating), 1)
                 : 0,
             FilmRating = w.Reviews.Any(r => r.TargetType == "adaptation")
-                ? w.Reviews.Where(r => r.TargetType == "adaptation").Average(r => r.Rating)
+                ? Math.Round(w.Reviews.Where(r => r.TargetType == "adaptation").Average(r => r.Rating), 1)
                 : 0,
             Description = w.Summary ?? w.Book.Description ?? string.Empty,
+            FilmYear = w.Adaptation.ReleaseYear,
+            FilmCountry = w.Adaptation.Country,
+            FilmPoster = w.Adaptation.PosterUrl,
+            HasMap = w.DifferenceMap != null,
         };
     }
 }

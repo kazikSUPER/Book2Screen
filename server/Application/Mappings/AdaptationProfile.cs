@@ -28,7 +28,7 @@ public class AdaptationProfile : Profile
             .ForMember(dest => dest.Poster, opt => opt.MapFrom(src => src.Adaptation.PosterUrl ?? "https://via.placeholder.com/300x450"))
             .ForMember(dest => dest.BookRating, opt => opt.MapFrom(src => src.Rating != null ? src.Rating.BookRating : 0))
             .ForMember(dest => dest.FilmRating, opt => opt.MapFrom(src => src.Rating != null ? src.Rating.AdaptationRating : 0))
-            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Summary ?? string.Empty))        
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Summary ?? string.Empty))
             .ForMember(dest => dest.Genre, opt => opt.MapFrom(src => src.Book.Genre ?? "Drama"));
     }
 }

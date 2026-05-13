@@ -55,6 +55,51 @@ public class BookScreenItemDto
     public string Description { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets ім'я автора книги.
+    /// </summary>
+    public string? Author { get; set; }
+
+    /// <summary>
+    /// Gets or sets рік виходу фільму (якщо відрізняється від книги).
+    /// </summary>
+    public int? FilmYear { get; set; }
+
+    /// <summary>
+    /// Gets or sets країну фільму.
+    /// </summary>
+    public string? FilmCountry { get; set; }
+
+    /// <summary>
+    /// Gets or sets постер фільму.
+    /// </summary>
+    public string? FilmPoster { get; set; }
+
+    /// <summary>
+    /// Gets or sets режисера.
+    /// </summary>
+    public string? Director { get; set; }
+
+    /// <summary>
+    /// Gets or sets короткий опис книги.
+    /// </summary>
+    public string? BookSummary { get; set; }
+
+    /// <summary>
+    /// Gets or sets короткий опис фільму.
+    /// </summary>
+    public string? FilmSummary { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether чи має твір карту розбіжностей.
+    /// </summary>
+    public bool HasMap { get; set; }
+
+    /// <summary>
+    /// Gets or sets список розбіжностей.
+    /// </summary>
+    public List<DifferenceDto> Differences { get; set; } = new();
+
+    /// <summary>
     /// Gets or sets статистику голосування (Book vs Film).
     /// </summary>
     public VoteResponse? VoteStats { get; set; }

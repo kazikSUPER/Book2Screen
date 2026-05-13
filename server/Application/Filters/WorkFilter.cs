@@ -23,4 +23,9 @@ public class WorkFilter
     /// Gets or sets країну.
     /// </summary>
     public string? Country { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether фільтрувати лише твори з картою розбіжностей.
+    /// </summary>
+    public bool? OnlyWithMap { get; set; }
 }
