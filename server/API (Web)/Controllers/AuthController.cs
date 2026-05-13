@@ -86,7 +86,7 @@ public class AuthController : ControllerBase
     /// <param name="request">Запит з Email.</param>
     /// <returns>Повертає 200 OK.</returns>
     [HttpPost("password-reset")]
-    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    public async Task<IActionResult> PasswordReset([FromBody] ForgotPasswordRequest request)
     {
         await this.authService.ForgotPasswordAsync(request);
         return this.Ok(new { message = "If the email exists, a reset code has been sent." });

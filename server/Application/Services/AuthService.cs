@@ -165,5 +165,4 @@ public class AuthService : IAuthService
             Role = user.Role,
         };
     }
-
 }
