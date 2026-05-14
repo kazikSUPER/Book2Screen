@@ -114,6 +114,24 @@ public static class SeedDataExtensions
             CreatedAt = DateTime.UtcNow
         };
 
+        var favorite = new Favorite
+{
+    Id = Guid.Parse("abababab-abab-abab-abab-abababababab"),
+    UserId = user2.Id,
+    WorkId = work.Id
+};
+
+        var passwordResetToken = new PasswordResetToken
+{
+    Id = Guid.Parse("cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd"),
+    Email = user2.Email,
+    Code = "123456",
+    ExpiryTime = DateTime.UtcNow.AddMinutes(15),
+    IsUsed = false,
+    CreatedAt = DateTime.UtcNow,
+    UpdatedAt = DateTime.UtcNow
+};
+
         var differenceMap = new DifferenceMap
         {
             Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
@@ -184,9 +202,12 @@ public static class SeedDataExtensions
         await context.Ratings.AddAsync(rating, cancellationToken);
         await context.Reviews.AddAsync(review, cancellationToken);
         await context.Votes.AddAsync(vote, cancellationToken);
+        await context.Favorites.AddAsync(favorite, cancellationToken);
+        await context.PasswordResetTokens.AddAsync(passwordResetToken, cancellationToken);
         await context.DifferenceMaps.AddAsync(differenceMap, cancellationToken);
         await context.PlotEvents.AddRangeAsync(bookEvent, adaptationEvent, cancellationToken);
         await context.Differences.AddAsync(difference, cancellationToken);
+        
 
         await context.SaveChangesAsync(cancellationToken);
     }
