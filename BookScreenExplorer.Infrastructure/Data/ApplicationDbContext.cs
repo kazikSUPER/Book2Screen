@@ -21,6 +21,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<PlotEvent> PlotEvents => Set<PlotEvent>();
     public DbSet<DifferenceMap> DifferenceMaps => Set<DifferenceMap>();
     public DbSet<Difference> Differences => Set<Difference>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<Favorite> Favorites => Set<Favorite>();
+    public DbSet<Difference> Differences => Set<Difference>();
+    
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,6 +44,8 @@ public class ApplicationDbContext : DbContext
         ConfigurePlotEvents(modelBuilder);
         ConfigureDifferenceMaps(modelBuilder);
         ConfigureDifferences(modelBuilder);
+        ConfigurePasswordResetTokens(modelBuilder);
+        ConfigureFavorites(modelBuilder);
     }
 
     private static void ConfigureUsers(ModelBuilder modelBuilder)
@@ -251,4 +257,53 @@ public class ApplicationDbContext : DbContext
             t.HasCheckConstraint("CK_differences_events", "book_event_id IS NOT NULL OR adaptation_event_id IS NOT NULL");
         });
     }
+}
+
+
+private static void ConfigurePasswordResetTokens(ModelBuilder modelBuilder)
+{
+    var e = modelBuilder.Entity<PasswordResetToken>();
+
+    e.ToTable("password_reset_tokens");
+
+    e.HasKey(x => x.Id);
+
+    e.Property(x => x.Email)
+        .HasMaxLength(255)
+        .IsRequired();
+
+    e.Property(x => x.Code)
+        .HasMaxLength(10)
+        .IsRequired();
+
+    e.Property(x => x.CreatedAt)
+        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+    e.Property(x => x.UpdatedAt)
+        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+    e.Property(x => x.IsUsed)
+        .HasDefaultValue(false);
+}
+
+private static void ConfigureFavorites(ModelBuilder modelBuilder)
+{
+    var e = modelBuilder.Entity<Favorite>();
+
+    e.ToTable("favorites");
+
+    e.HasKey(x => x.Id);
+
+    e.HasIndex(x => new { x.UserId, x.WorkId })
+        .IsUnique();
+
+    e.HasOne(x => x.User)
+        .WithMany()
+        .HasForeignKey(x => x.UserId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+    e.HasOne(x => x.Work)
+        .WithMany()
+        .HasForeignKey(x => x.WorkId)
+        .OnDelete(DeleteBehavior.Cascade);
 }
