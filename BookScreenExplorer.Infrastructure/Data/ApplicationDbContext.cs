@@ -83,6 +83,7 @@ public class ApplicationDbContext : DbContext
         e.Property(x => x.Language).HasMaxLength(50);
         e.Property(x => x.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         e.Property(x => x.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        e.HasIndex(x => x.Genre);
         e.ToTable(t => t.HasCheckConstraint("CK_books_publication_year", "publication_year IS NULL OR publication_year > 0"));
     }
 
@@ -96,6 +97,7 @@ public class ApplicationDbContext : DbContext
         e.Property(x => x.Studio).HasMaxLength(150);
         e.Property(x => x.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         e.Property(x => x.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        e.HasIndex(x => x.Country);
         e.ToTable(t =>
         {
             t.HasCheckConstraint("CK_adaptations_type", "type IN ('movie', 'series')");
@@ -121,6 +123,7 @@ public class ApplicationDbContext : DbContext
         e.Property(x => x.Title).HasMaxLength(255).IsRequired();
         e.Property(x => x.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         e.Property(x => x.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        e.HasIndex(x => x.Title);
         e.HasIndex(x => x.BookId).IsUnique();
         e.HasIndex(x => x.AdaptationId).IsUnique();
 
