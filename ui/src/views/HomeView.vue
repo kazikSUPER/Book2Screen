@@ -2,7 +2,7 @@
   <div class="home">
     <section class="hero">
       <img :src="heroImg" alt="Книга чи фільм – що краще?" class="hero-image" />
-      <button class="hero-btn">Переглянути <strong>ТОП</strong></button>
+      <button class="hero-btn" @click="goToTop">Переглянути ТОП</button>
     </section>
 
     <section class="popular">
@@ -28,11 +28,7 @@
               <p class="card-meta">Рік: {{ item.year }}</p>
               <p class="card-meta">Жанр: {{ item.genre }}</p>
               <p class="card-meta">Країна: {{ item.country }}</p>
-              <div class="card-ratings">
-                <span class="rating book">📖 {{ item.bookRating }}</span>
-                <span class="rating film">🎬 {{ item.filmRating }}</span>
-              </div>
-              <button class="card-btn">Переглянути</button>
+              <button class="card-btn" @click.stop="goToItem(item)">Переглянути</button>
             </div>
           </div>
         </div>
@@ -43,7 +39,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, onMounted, type Ref } from 'vue';
+import { defineComponent, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useFilter } from '../hooks/useFilter';
 import type { BookScreenItem } from '../services/types';
@@ -57,16 +53,11 @@ export default defineComponent({
     const router = useRouter();
     const cardsRef = ref<HTMLElement | null>(null);
 
-    const searchQuery = inject<Ref<string>>('searchQuery', ref(''));
-    const selectedGenre = inject<Ref<string | null>>('selectedGenre', ref(null));
-    const selectedCountry = inject<Ref<string | null>>('selectedCountry', ref(null));
-
     const items = ref<BookScreenItem[]>([]);
     const isLoading = ref(false);
     const errorMessage = ref('');
 
-    const { filteredItems } = useFilter(items, searchQuery, selectedGenre, selectedCountry);
-
+    const { filteredItems } = useFilter(items);
     const loadItems = async (): Promise<void> => {
       isLoading.value = true;
       errorMessage.value = '';
@@ -86,6 +77,10 @@ export default defineComponent({
       if (cardsRef.value) cardsRef.value.scrollBy({ left: 380, behavior: 'smooth' });
     };
 
+    const goToTop = (): void => {
+      router.push({ name: 'top' });
+    };
+
     const goToItem = (item: BookScreenItem): void => {
       router.push({ name: 'detail', params: { id: item.id } });
     };
@@ -98,6 +93,7 @@ export default defineComponent({
       loadItems,
       scrollRight,
       goToItem,
+      goToTop,
       heroImg,
     };
   },
@@ -110,13 +106,13 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 24px;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-body);
 }
 
 /* ── Hero ── */
 .hero {
   width: 100%;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   position: relative;
 }
@@ -125,7 +121,7 @@ export default defineComponent({
   width: 100%;
   height: auto;
   display: block;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 .hero-btn {
@@ -133,38 +129,34 @@ export default defineComponent({
   bottom: 5%;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #311620;
-  color: #f7cccc;
-  border: 2px black solid;
-  border-radius: 10px;
+  background-color: var(--color-header);
+  color: var(--text-on-dark);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-md);
   padding: 20px 54px;
   font-size: 26px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-display);
   cursor: pointer;
-  box-shadow: 5px 4px 4px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-md);
   transition: background 0.2s;
   white-space: nowrap;
 }
 
-.hero-btn strong {
-  font-size: 22px;
-}
-
-.hero-btn strong {
-  font-size: 27px;
+.hero-btn:hover {
+  background-color: var(--color-primary);
 }
 
 /* ── Popular ── */
 .section-title {
   font-size: 32px;
   font-weight: 400;
-  font-family: 'JetBrains Mono', monospace;
-  color: #000;
+  font-family: var(--font-display);
+  color: var(--text-on-light);
   margin: 0 0 16px;
 }
 
 .no-results {
-  color: var(--pink-mid);
+  color: var(--text-muted);
   font-size: 15px;
   text-align: center;
   padding: 40px 0;
@@ -173,17 +165,17 @@ export default defineComponent({
 .retry-btn {
   margin-top: 12px;
   padding: 8px 20px;
-  background: var(--accent);
-  color: var(--pink-light);
+  background: var(--color-primary);
+  color: var(--text-on-primary);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 14px;
-  font-family: 'Georgia', serif;
+  font-family: var(--font-display);
 }
 
 .retry-btn:hover {
-  background: #a82040;
+  background: var(--color-primary-hover);
 }
 
 .cards-wrapper {
@@ -200,25 +192,25 @@ export default defineComponent({
   padding: 5px;
   flex: 1;
   scrollbar-width: thin;
-  scrollbar-color: #8e182f transparent;
+  scrollbar-color: var(--color-primary) transparent;
 }
 
 .cards-scroll::-webkit-scrollbar {
   height: 4px;
 }
 .cards-scroll::-webkit-scrollbar-thumb {
-  background: #8e182f;
+  background: var(--color-primary);
   border-radius: 2px;
 }
 
 /* ── Card ── */
 .card {
-  background-color: #3d0000;
-  border: 1px white solid;
-  border-radius: 12px;
-  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3);
-  width: 300px; /* Фіксована ширина замість max-width */
-  height: 500px; /* Збільшена висота */
+  background-color: var(--color-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  width: 300px;
+  height: 500px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -229,12 +221,16 @@ export default defineComponent({
   box-sizing: border-box;
 }
 
+.card:hover {
+  transform: translateY(-2px);
+}
+
 .card-poster {
   width: 200px;
   height: 260px;
   overflow: hidden;
-  background: #311620;
-  border: 1px white solid;
+  background: var(--color-header);
+  border: 1px solid var(--border-card);
   flex-shrink: 0;
 }
 
@@ -259,53 +255,53 @@ export default defineComponent({
 .card-title {
   font-size: 18px;
   font-weight: 400;
-  font-family: 'Inter', sans-serif;
-  color: white;
+  font-family: var(--font-body);
+  color: var(--text-on-dark);
   margin: 0;
   line-height: 1.3;
   text-align: center;
 }
 
 .card-meta {
-  font-size: 16px;
-  color: #e0e0e0;
+  font-size: 14px;
+  color: var(--text-on-dark);
   margin: 0 0 4px 0;
-  align-self: flex-start; /* Вирівнювання по лівому краю, як на макеті */
+  align-self: flex-start;
+  font-family: var(--font-body);
 }
-.card-ratings {
-  display: none;
-}
+
+/* card-ratings — мертвий код видалено */
 
 .card-btn {
   width: 200px;
   height: 50px;
-  background-color: #8e182f;
-  color: white;
-  border: 0px #3d0000 solid;
-  border-radius: 10px;
+  background-color: var(--color-primary);
+  color: var(--text-on-primary);
+  border: 2px solid var(--color-primary-dark);
+  border-radius: var(--radius-md);
   padding: 0;
   font-size: 16px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-display);
   font-weight: 400;
   cursor: pointer;
-  box-shadow: 5px 4px 4px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-md);
   transition: background 0.2s;
   flex-shrink: 0;
 }
 
 .card-btn:hover {
-  background-color: #a82040;
+  background-color: var(--color-primary-hover);
 }
 
 /* ── Arrow ── */
 .scroll-btn {
-  background: #f7cccc;
-  color: black;
-  border: none;
-  border-radius: 50%;
-  width: 62px;
-  height: 63px;
-  font-size: 26px;
+  background: var(--color-input-bg);
+  color: var(--text-on-light);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  width: 44px;
+  height: 40px;
+  font-size: 22px;
   cursor: pointer;
   flex-shrink: 0;
   display: flex;
@@ -317,7 +313,83 @@ export default defineComponent({
 }
 
 .scroll-btn:hover {
-  background: #e4afaf;
+  background: var(--color-panel-box);
   transform: scale(1.1);
+}
+
+/* ── Адаптив до мобільного (за STYLE_GUIDE: w-44 h-72 ≈ 176×288) ── */
+@media (max-width: 768px) {
+  .home {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .hero-btn {
+    padding: 12px 28px;
+    font-size: 18px;
+  }
+
+  .section-title {
+    font-size: 22px;
+    margin: 0 0 10px;
+  }
+
+  .cards-scroll {
+    gap: 16px;
+    padding: 4px;
+  }
+
+  .card {
+    width: 176px;
+    height: 288px;
+    padding: 10px;
+  }
+
+  .card-poster {
+    width: 100px;
+    height: 130px;
+  }
+
+  .card-title {
+    font-size: 14px;
+  }
+
+  .card-meta {
+    font-size: 11px;
+  }
+
+  .card-btn {
+    width: 150px;
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .scroll-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 380px) {
+  .hero-btn {
+    padding: 10px 22px;
+    font-size: 15px;
+  }
+
+  .card {
+    width: 160px;
+    height: 264px;
+  }
+
+  .card-poster {
+    width: 90px;
+    height: 120px;
+  }
+
+  /* На зовсім малих ховаємо стрілку — горизонтальний скрол свайпом */
+  .scroll-btn {
+    display: none;
+  }
 }
 </style>

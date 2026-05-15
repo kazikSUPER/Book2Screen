@@ -31,4 +31,26 @@ public interface IAdaptationService
     /// <param name="filter">Об'єкт з параметрами фільтрації.</param>
     /// <returns>Відфільтрований список DTO.</returns>
     Task<IEnumerable<AdaptationDto>> GetFilteredAdaptationsAsync(AdaptationFilter filter);
+
+    /// <summary>
+    /// Створює нову адаптацію.
+    /// </summary>
+    /// <param name="adaptationDto">Дані для створення.</param>
+    /// <returns>Створена адаптація.</returns>
+    Task<AdaptationDto> CreateAdaptationAsync(AdaptationDto adaptationDto);
+
+    /// <summary>
+    /// Оновлює існуючу адаптацію.
+    /// </summary>
+    /// <param name="id">ID адаптації.</param>
+    /// <param name="adaptationDto">Нові дані.</param>
+    /// <returns>Оновлена адаптація або null.</returns>
+    Task<AdaptationDto?> UpdateAdaptationAsync(Guid id, AdaptationDto adaptationDto);
+
+    /// <summary>
+    /// Видаляє адаптацію.
+    /// </summary>
+    /// <param name="id">ID адаптації.</param>
+    /// <returns>True, якщо видалено успішно.</returns>
+    Task<bool> DeleteAdaptationAsync(Guid id);
 }

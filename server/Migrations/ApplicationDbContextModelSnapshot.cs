@@ -110,6 +110,8 @@ namespace Book2Screen.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Country");
+
                     b.ToTable("Adaptations");
                 });
 
@@ -206,6 +208,8 @@ namespace Book2Screen.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Genre");
+
                     b.ToTable("Books");
                 });
 
@@ -252,7 +256,7 @@ namespace Book2Screen.Migrations
 
                     b.HasIndex("MapId");
 
-                    b.ToTable("Difference");
+                    b.ToTable("Differences");
                 });
 
             modelBuilder.Entity("Book2Screen.Domain.Entities.DifferenceMap", b =>
@@ -283,7 +287,67 @@ namespace Book2Screen.Migrations
                     b.HasIndex("WorkId")
                         .IsUnique();
 
-                    b.ToTable("DifferenceMap");
+                    b.ToTable("DifferenceMaps");
+                });
+
+            modelBuilder.Entity("Book2Screen.Domain.Entities.Favorite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WorkId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkId");
+
+                    b.HasIndex("UserId", "WorkId")
+                        .IsUnique();
+
+                    b.ToTable("Favorites");
+                });
+
+            modelBuilder.Entity("Book2Screen.Domain.Entities.PasswordResetToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ExpiryTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PasswordResetTokens");
                 });
 
             modelBuilder.Entity("Book2Screen.Domain.Entities.PlotEvent", b =>
@@ -524,6 +588,8 @@ namespace Book2Screen.Migrations
                     b.HasIndex("BookId")
                         .IsUnique();
 
+                    b.HasIndex("Title");
+
                     b.ToTable("Works");
                 });
 
@@ -591,6 +657,25 @@ namespace Book2Screen.Migrations
                         .HasForeignKey("Book2Screen.Domain.Entities.DifferenceMap", "WorkId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Work");
+                });
+
+            modelBuilder.Entity("Book2Screen.Domain.Entities.Favorite", b =>
+                {
+                    b.HasOne("Book2Screen.Domain.Entities.User", "User")
+                        .WithMany("Favorites")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Book2Screen.Domain.Entities.Work", "Work")
+                        .WithMany("Favorites")
+                        .HasForeignKey("WorkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
 
                     b.Navigation("Work");
                 });
@@ -696,6 +781,8 @@ namespace Book2Screen.Migrations
 
             modelBuilder.Entity("Book2Screen.Domain.Entities.User", b =>
                 {
+                    b.Navigation("Favorites");
+
                     b.Navigation("Reviews");
 
                     b.Navigation("Votes");
@@ -704,6 +791,8 @@ namespace Book2Screen.Migrations
             modelBuilder.Entity("Book2Screen.Domain.Entities.Work", b =>
                 {
                     b.Navigation("DifferenceMap");
+
+                    b.Navigation("Favorites");
 
                     b.Navigation("PlotEvents");
 

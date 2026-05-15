@@ -67,6 +67,26 @@ public class ApplicationDbContext : DbContext
     /// </summary>
     public DbSet<Rating> Ratings => this.Set<Rating>();
 
+    /// <summary>
+    /// Gets the set of favorites.
+    /// </summary>
+    public DbSet<Favorite> Favorites => this.Set<Favorite>();
+
+    /// <summary>
+    /// Gets the set of password reset tokens.
+    /// </summary>
+    public DbSet<PasswordResetToken> PasswordResetTokens => this.Set<PasswordResetToken>();
+
+    /// <summary>
+    /// Gets the set of difference maps.
+    /// </summary>
+    public DbSet<DifferenceMap> DifferenceMaps => this.Set<DifferenceMap>();
+
+    /// <summary>
+    /// Gets the set of differences.
+    /// </summary>
+    public DbSet<Difference> Differences => this.Set<Difference>();
+
     /// <inheritdoc/>
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -107,6 +127,7 @@ public class ApplicationDbContext : DbContext
         {
             entity.HasIndex(w => w.BookId).IsUnique();
             entity.HasIndex(w => w.AdaptationId).IsUnique();
+            entity.HasIndex(w => w.Title); // Індекс для пошуку за назвою
 
             entity.HasOne(w => w.Book)
                 .WithOne(b => b.Work)
@@ -117,6 +138,18 @@ public class ApplicationDbContext : DbContext
                 .WithOne(a => a.Work)
                 .HasForeignKey<Work>(w => w.AdaptationId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Налаштування Book (Індекс для жанру)
+        modelBuilder.Entity<Book>(entity =>
+        {
+            entity.HasIndex(b => b.Genre);
+        });
+
+        // Налаштування Adaptation (Індекс для країни)
+        modelBuilder.Entity<Adaptation>(entity =>
+        {
+            entity.HasIndex(a => a.Country);
         });
 
         // Налаштування Review
@@ -179,6 +212,22 @@ public class ApplicationDbContext : DbContext
             // Додаємо екрановані лапки та виправляємо назви на ті, що у вашому C# класі
             entity.ToTable(t => t.HasCheckConstraint("CK_Rating_Book", "\"BookRating\" >= 0 AND \"BookRating\" <= 10"));
             entity.ToTable(t => t.HasCheckConstraint("CK_Rating_Adaptation", "\"AdaptationRating\" >= 0 AND \"AdaptationRating\" <= 10"));
+        });
+
+        // Налаштування Favorite
+        modelBuilder.Entity<Favorite>(entity =>
+        {
+            entity.HasIndex(f => new { f.UserId, f.WorkId }).IsUnique();
+
+            entity.HasOne(f => f.User)
+                .WithMany(u => u.Favorites)
+                .HasForeignKey(f => f.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(f => f.Work)
+                .WithMany(w => w.Favorites)
+                .HasForeignKey(f => f.WorkId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

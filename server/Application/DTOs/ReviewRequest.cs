@@ -28,4 +28,9 @@ public class ReviewRequest
     /// Gets or sets оцінка користувача (від 0 до 10).
     /// </summary>
     public required double Rating { get; set; }
+
+    /// <summary>
+    /// Gets or sets тип об'єкта відгуку (book, adaptation, comparison).
+    /// </summary>
+    public string TargetType { get; set; } = "comparison";
 }

@@ -1,3 +1,70 @@
+/* ============================================================
+   Book2Screen — Design Tokens
+   Усі візуальні константи (кольори, тіні, радіуси, шрифти)
+   живуть тут. Компоненти використовують CSS-змінні через var(--*).
+   ============================================================ */
+
+:root {
+  /* ── Surfaces / фони ───────────────────────────────────── */
+  --color-header: #311620; /* темно-винний — шапка */
+  --color-page: #f7cccc; /* рожевий — основний фон сторінки (з Figma) */
+  --color-card: #3d0f1a; /* винний — фон картки твору */
+  --color-panel: #f7cccc; /* фон фільтр-панелі (як сторінка) */
+  --color-panel-box: #e4afaf; /* блок усередині панелі */
+  --color-input-bg: #f7cccc; /* фон інпуту/пошуку */
+  --color-modal-bg: #f7cccc; /* фон модалок */
+  --color-stripe: #311620; /* стрічка під шапкою (заголовок розділу) */
+
+  /* ── Бренд / акценти ───────────────────────────────────── */
+  --color-primary: #8e182f; /* кнопки primary, активні стани */
+  --color-primary-hover: #a82040;
+  --color-primary-dark: #5c0f1f; /* бордер кнопок з Figma */
+  --color-accent: #311620; /* "темна" варіація кнопки primary */
+  --color-star: #f0c040; /* зірочки рейтингу */
+
+  /* ── Текст ─────────────────────────────────────────────── */
+  --text-on-dark: #f7cccc;
+  --text-on-light: #311620;
+  --text-muted: #8b5050;
+  --text-on-primary: #ffffff;
+  --text-error: #c62828;
+
+  /* ── Border / outline ──────────────────────────────────── */
+  --border-default: #311620;
+  --border-card: #ffffff;
+  --border-input: #311620;
+
+  /* ── Радіуси ──────────────────────────────────────────── */
+  --radius-xs: 4px;
+  --radius-sm: 5px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 15px;
+  --radius-pill: 9999px;
+
+  /* ── Тіні (з Figma — 5px 4px 4px rgba(0,0,0,0.25)) ──── */
+  --shadow-sm: 3px 4px 4px rgba(0, 0, 0, 0.25);
+  --shadow-md: 5px 4px 4px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 6px 20px rgba(0, 0, 0, 0.25);
+
+  /* ── Шрифти ──────────────────────────────────────────── */
+  --font-logo: 'Caveat', 'Patrick Hand', 'Bradley Hand', cursive;
+  --font-display: 'JetBrains Mono', ui-monospace, monospace;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* ── Розміри ─────────────────────────────────────────── */
+  --header-height: 80px;
+  --filter-panel-width: 220px;
+
+  /* ── Backward-compat aliases (TODO: видалити після рефактору всіх views) ── */
+  --pink-light: var(--text-on-dark);
+  --pink-mid: var(--color-panel-box);
+  --dark-bg: var(--color-page);
+  --dark-card: var(--text-on-light);
+  --accent: var(--color-primary);
+}
+
+/* ── Reset ────────────────────────────────────────────── */
 *,
 *::before,
 *::after {
@@ -11,4 +78,12 @@ body,
 #app {
   width: 100%;
   min-height: 100vh;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-page);
+  color: var(--text-on-light);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

@@ -7,6 +7,7 @@ namespace Book2Screen.API__Web_.Controllers;
 using System.Security.Claims;
 using Book2Screen.Application.DTOs;
 using Book2Screen.Application.Interfaces;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,14 +20,17 @@ using Microsoft.AspNetCore.Mvc;
 public class ReviewsController : ControllerBase
 {
     private readonly IReviewService reviewService;
+    private readonly IValidator<ReviewRequest> validator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReviewsController"/> class.
     /// </summary>
     /// <param name="reviewService">Сервіс відгуків.</param>
-    public ReviewsController(IReviewService reviewService)
+    /// <param name="validator">Валідатор для запитів відгуків.</param>
+    public ReviewsController(IReviewService reviewService, IValidator<ReviewRequest> validator)
     {
         this.reviewService = reviewService;
+        this.validator = validator;
     }
 
     /// <summary>
@@ -48,14 +52,22 @@ public class ReviewsController : ControllerBase
     /// </summary>
     /// <param name="request">Дані відгуку (текст, рейтинг, мітка спойлера).</param>
     /// <response code="200">Відгук успішно додано.</response>
+    /// <response code="400">Некоректні дані відгуку.</response>
     /// <response code="401">Користувач не авторизований.</response>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [HttpPost]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ReviewResponse))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> AddReview([FromBody] ReviewRequest request)
     {
+        var validationResult = await this.validator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            return this.BadRequest(validationResult.Errors);
+        }
+
         var userIdClaim = this.User.FindFirst(ClaimTypes.NameIdentifier);
         if (userIdClaim == null)
         {

@@ -17,6 +17,7 @@ public class AuthService : IAuthService
 {
     private readonly ApplicationDbContext context;
     private readonly ITokenService tokenService;
+    private readonly IEmailService emailService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AuthService"/> class.
@@ -24,10 +25,12 @@ public class AuthService : IAuthService
     /// </summary>
     /// <param name="context">Контекст бази даних.</param>
     /// <param name="tokenService">Сервіс для роботи з токенами.</param>
-    public AuthService(ApplicationDbContext context, ITokenService tokenService)
+    /// <param name="emailService">Сервіс для відправки пошти.</param>
+    public AuthService(ApplicationDbContext context, ITokenService tokenService, IEmailService emailService)
     {
         this.context = context;
         this.tokenService = tokenService;
+        this.emailService = emailService;
     }
 
     /// <inheritdoc/>
@@ -46,6 +49,7 @@ public class AuthService : IAuthService
             UserId = user.Id.ToString(),
             Email = user.Email,
             Nickname = user.Username,
+            Role = user.Role,
         };
     }
 
@@ -65,6 +69,7 @@ public class AuthService : IAuthService
             Username = registerRequest.Nickname,
             Email = registerRequest.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password),
+            Role = "user", // Default role
         };
 
         await this.context.Users.AddAsync(user);
@@ -76,6 +81,88 @@ public class AuthService : IAuthService
             UserId = user.Id.ToString(),
             Email = user.Email,
             Nickname = user.Username,
+            Role = user.Role,
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request)
+    {
+        var user = await this.context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        if (user == null)
+        {
+            return true;
+        }
+
+        var code = new Random().Next(100000, 999999).ToString();
+
+        var oldTokens = this.context.PasswordResetTokens.Where(t => t.Email == request.Email);
+        this.context.PasswordResetTokens.RemoveRange(oldTokens);
+
+        var resetToken = new PasswordResetToken
+        {
+            Email = request.Email,
+            Code = code,
+            ExpiryTime = DateTime.UtcNow.AddMinutes(15),
+            IsUsed = false,
+        };
+
+        await this.context.PasswordResetTokens.AddAsync(resetToken);
+        await this.context.SaveChangesAsync();
+
+        await this.emailService.SendEmailAsync(
+            request.Email,
+            "Код відновлення паролю — Book2Screen",
+            $"<p>Ваш код для відновлення паролю: <b>{code}</b></p><p>Код дійсний протягом 15 хвилин.</p>");
+
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> VerifyResetCodeAsync(VerifyCodeRequest request)
+    {
+        var token = await this.context.PasswordResetTokens
+            .FirstOrDefaultAsync(t => t.Email == request.Email && t.Code == request.Code && !t.IsUsed);
+
+        if (token == null || token.ExpiryTime < DateTime.UtcNow)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public async Task<AuthResponse?> ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        var token = await this.context.PasswordResetTokens
+            .FirstOrDefaultAsync(t => t.Email == request.Email && t.Code == request.Code && !t.IsUsed);
+
+        if (token == null || token.ExpiryTime < DateTime.UtcNow)
+        {
+            return null;
+        }
+
+        var user = await this.context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        if (user == null)
+        {
+            return null;
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        token.IsUsed = true;
+
+        this.context.Users.Update(user);
+        this.context.PasswordResetTokens.Update(token);
+        await this.context.SaveChangesAsync();
+
+        return new AuthResponse
+        {
+            Token = this.tokenService.CreateToken(user),
+            UserId = user.Id.ToString(),
+            Email = user.Email,
+            Nickname = user.Username,
+            Role = user.Role,
         };
     }
 }

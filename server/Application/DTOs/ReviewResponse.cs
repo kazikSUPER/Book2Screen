@@ -40,6 +40,11 @@ public class ReviewResponse
     public double Rating { get; set; }
 
     /// <summary>
+    /// Gets or sets тип об'єкта (book, adaptation, comparison).
+    /// </summary>
+    public string TargetType { get; set; } = "comparison";
+
+    /// <summary>
     /// Gets or sets дата створення.
     /// </summary>
     public DateTime CreatedAt { get; set; }

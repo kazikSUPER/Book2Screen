@@ -64,17 +64,65 @@ public class AuthController : ControllerBase
     /// <param name="registerRequest">Дані для реєстрації (логін, пошта, пароль).</param>
     /// <returns>Повертає JWT токен для нового користувача.</returns>
     /// <response code="200">Користувача успішно створено. Повертає токен.</response>
-    /// <response code="401">Користувач з таким логіном або поштою вже існує.</response>
+    /// <response code="409">Користувач з таким логіном або поштою вже існує.</response>
     [HttpPost("register")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AuthResponse))]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest registerRequest)
     {
         var response = await this.authService.RegisterAsync(registerRequest);
 
         if (response == null)
         {
-            return this.Unauthorized("User with this username or email already exists.");
+            return this.Conflict("User with this username or email already exists.");
+        }
+
+        return this.Ok(response);
+    }
+
+    /// <summary>
+    /// Запит на відновлення паролю.
+    /// </summary>
+    /// <param name="request">Запит з Email.</param>
+    /// <returns>Повертає 200 OK.</returns>
+    [HttpPost("password-reset")]
+    public async Task<IActionResult> PasswordReset([FromBody] ForgotPasswordRequest request)
+    {
+        await this.authService.ForgotPasswordAsync(request);
+        return this.Ok(new { message = "If the email exists, a reset code has been sent." });
+    }
+
+    /// <summary>
+    /// Перевірка коду відновлення.
+    /// </summary>
+    /// <param name="request">Запит з Email та кодом.</param>
+    /// <returns>Повертає 200 OK, якщо код вірний.</returns>
+    [HttpPost("verify-code")]
+    public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeRequest request)
+    {
+        var isValid = await this.authService.VerifyResetCodeAsync(request);
+        if (!isValid)
+        {
+            return this.BadRequest("Invalid or expired code.");
+        }
+
+        return this.Ok(new { message = "Code verified successfully." });
+    }
+
+    /// <summary>
+    /// Скидання паролю на новий.
+    /// </summary>
+    /// <param name="request">Запит з Email, кодом та новим паролем.</param>
+    /// <returns>Повертає 200 OK з даними сесії у разі успіху.</returns>
+    [HttpPost("reset-password")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AuthResponse))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        var response = await this.authService.ResetPasswordAsync(request);
+        if (response == null)
+        {
+            return this.BadRequest("Invalid code or email.");
         }
 
         return this.Ok(response);

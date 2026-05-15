@@ -15,12 +15,14 @@ using Book2Screen.Infrastructure.ExternalServices;
 using Book2Screen.Infrastructure.Persistence;
 using Book2Screen.Infrastructure.Persistence.Seed;
 using FluentValidation;
+using HealthChecks.UI.Client;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Extensions.Logging;
 
@@ -43,6 +45,8 @@ var jwtOptions = new JwtOptions
     ExpiryMinutes = Convert.ToInt32(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES")),
     Secret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? throw new InvalidOperationException("JWT secret not found."),
 };
+
+builder.Services.AddSingleton(jwtOptions);
 
 var mappingConfig = new MapperConfiguration(
 mc =>
@@ -69,9 +73,21 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddValidatorsFromAssemblyContaining<UserValidator>();
 
+builder.Services.Configure<EmailOptions>(options =>
+{
+    options.SmtpServer = Environment.GetEnvironmentVariable("SMTP_SERVER") ?? "smtp.gmail.com";
+    options.SmtpPort = int.TryParse(Environment.GetEnvironmentVariable("SMTP_PORT"), out var port) ? port : 587;
+    options.SenderEmail = Environment.GetEnvironmentVariable("SENDER_EMAIL") ?? string.Empty;
+    options.SenderPassword = Environment.GetEnvironmentVariable("SENDER_PASSWORD") ?? string.Empty;
+    options.SenderName = Environment.GetEnvironmentVariable("SENDER_NAME") ?? "Book2Screen";
+});
+
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IFavoriteService, FavoriteService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IAdaptationService, AdaptationService>();
+builder.Services.AddScoped<IWorkService, WorkService>();
 builder.Services.AddScoped<IVoteService, VoteService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 
@@ -122,9 +138,19 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Введіть JWT токен у форматі: Bearer {ваш_токен}",
     });
 
-    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
-        [new OpenApiSecuritySchemeReference("bearer", document)] = [],
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer",
+                },
+            },
+            Array.Empty<string>()
+        },
     });
 
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "Book2Screen API", Version = "v1" });
@@ -159,9 +185,9 @@ app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
-
 app.UseSerilogRequestLogging();
+
+app.MapControllers();
 
 app.UseExceptionHandler();
 
@@ -171,7 +197,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse,
+});
 
 using (var scope = app.Services.CreateScope())
 {

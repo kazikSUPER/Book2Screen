@@ -1,66 +1,78 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { computed } from 'vue';
 import * as authApi from '../services/auth';
 import type { LoginRequest, RegisterRequest } from '../services/types';
+import { usePersistedRef } from '../composables/usePersistedRef';
 
+/**
+ * Стор автентифікації + профіль користувача.
+ *
+ * Persistence через usePersistedRef — сесія і профіль автоматично
+ * зберігаються у localStorage між сесіями браузера.
+ */
 export const useUserStore = defineStore('user', () => {
-  const isAuthenticated = ref(false);
-  const email = ref('');
-  const nickname = ref('');
-  const userId = ref('');
-  const token = ref('');
+  // ── Auth ─────────────────────────────────────────────────
+  const token = usePersistedRef<string>('b2s_token', '');
+  const email = usePersistedRef<string>('b2s_email', '');
+  const nickname = usePersistedRef<string>('b2s_nickname', '');
+  const userId = usePersistedRef<string>('b2s_userId', '');
 
-  // Відновлюємо сесію з localStorage при завантаженні сторінки
-  const savedToken = localStorage.getItem('b2s_token');
-  const savedEmail = localStorage.getItem('b2s_email');
-  const savedNickname = localStorage.getItem('b2s_nickname');
-  const savedUserId = localStorage.getItem('b2s_userId');
-  if (savedToken && savedEmail) {
-    token.value = savedToken;
-    email.value = savedEmail;
-    nickname.value = savedNickname || '';
-    userId.value = savedUserId || '';
-    isAuthenticated.value = true;
+  // ── Profile (SCRUM-64) ───────────────────────────────────
+  // Опційні поля, що користувач може заповнити у ProfileView.
+  const fullName = usePersistedRef<string>('b2s_profile_name', '');
+  const birthDate = usePersistedRef<string>('b2s_profile_dob', ''); // ISO-формат YYYY-MM-DD
+  const avatarUrl = usePersistedRef<string>('b2s_profile_avatar', '');
+
+  const isAuthenticated = computed(() => !!token.value && !!email.value);
+
+  function setSession(payload: { token: string; userId: string; email: string; nickname: string }): void {
+    token.value = payload.token;
+    email.value = payload.email;
+    nickname.value = payload.nickname;
+    userId.value = payload.userId;
   }
 
-  // Реальний логін через backend API.
-  // Кидає помилку — модалка її перехопить і покаже користувачу.
   async function login(payload: LoginRequest): Promise<void> {
-    const data = await authApi.login(payload);
-    token.value = data.token;
-    email.value = data.email;
-    nickname.value = data.nickname;
-    userId.value = data.userId;
-    isAuthenticated.value = true;
-
-    localStorage.setItem('b2s_token', data.token);
-    localStorage.setItem('b2s_email', data.email);
-    localStorage.setItem('b2s_nickname', data.nickname);
-    localStorage.setItem('b2s_userId', data.userId);
+    const loginResponse = await authApi.login(payload);
+    setSession(loginResponse);
   }
-
-  // Реєстрація через backend API.
-  // Після успішної реєстрації автоматично логінимось.
 
   async function register(payload: RegisterRequest): Promise<void> {
-    await authApi.register(payload);
-    await login({ email: payload.email, password: payload.password });
+    const registerResponse = await authApi.register(payload);
+    setSession({
+      token: registerResponse.token,
+      userId: registerResponse.userId,
+      email: registerResponse.email,
+      nickname: registerResponse.nickname,
+    });
+  }
+
+  // SCRUM-24 тФА Підтвердження зміни паролю.
+  async function resetPassword(payload: authApi.PasswordResetConfirmRequest): Promise<void> {
+    const response = await authApi.confirmPasswordReset(payload);
+    setSession(response);
   }
 
   function logout(): void {
-    isAuthenticated.value = false;
+    token.value = '';
     email.value = '';
     nickname.value = '';
     userId.value = '';
-    token.value = '';
+    // Профіль (фото, ПІБ, ДН) — лишаємо: при наступному логіні людина
+    // не хоче знов заповнювати. Якщо треба — окрема дія "Видалити дані".
+  }
 
-    localStorage.removeItem('b2s_token');
-    localStorage.removeItem('b2s_email');
-    localStorage.removeItem('b2s_nickname');
-    localStorage.removeItem('b2s_userId');
+  // SCRUM-64 — методи для редагування профілю.
+  // Поки бекенд не готовий — пишемо тільки локально. TODO: PUT /api/v1/users/me.
+  function updateProfile(patch: { fullName?: string; nickname?: string; birthDate?: string; avatarUrl?: string }): void {
+    if (patch.fullName !== undefined) fullName.value = patch.fullName;
+    if (patch.nickname !== undefined) nickname.value = patch.nickname;
+    if (patch.birthDate !== undefined) birthDate.value = patch.birthDate;
+    if (patch.avatarUrl !== undefined) avatarUrl.value = patch.avatarUrl;
   }
 
   return {
+    // auth
     isAuthenticated,
     email,
     nickname,
@@ -68,6 +80,12 @@ export const useUserStore = defineStore('user', () => {
     token,
     login,
     register,
+    resetPassword,
     logout,
+    // profile
+    fullName,
+    birthDate,
+    avatarUrl,
+    updateProfile,
   };
 });

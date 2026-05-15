@@ -5,6 +5,7 @@
 namespace Book2Screen.API__Web_.Controllers;
 
 using Book2Screen.Application.DTOs;
+using Book2Screen.Application.Filters;
 using Book2Screen.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,41 +17,42 @@ using Microsoft.AspNetCore.Mvc;
 [Produces("application/json")]
 public class WorksController : ControllerBase
 {
-    private readonly IAdaptationService adaptationService;
+    private readonly IWorkService workService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorksController"/> class.
     /// </summary>
-    /// <param name="adaptationService">Сервіс адаптацій.</param>
-    public WorksController(IAdaptationService adaptationService)
+    /// <param name="workService">Сервіс творів.</param>
+    public WorksController(IWorkService workService)
     {
-        this.adaptationService = adaptationService;
+        this.workService = workService;
     }
 
     /// <summary>
-    /// Отримати список усіх творів (адаптацій) у форматі для головної сторінки.
+    /// Отримати список усіх творів у форматі для головної сторінки.
     /// </summary>
-    /// <returns>Список об'єктів BookScreenItem.</returns>
+    /// <param name="filter">Фільтри (пошук, жанр, країна).</param>
+    /// <returns>Список об'єктів BookScreenItemDto.</returns>
     /// <response code="200">Успішне отримання списку.</response>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<BookScreenItemDto>))]
-    public async Task<IActionResult> GetWorks()
+    public async Task<IActionResult> GetWorks([FromQuery] WorkFilter filter)
     {
-        var adaptations = await this.adaptationService.GetAllAdaptationsAsync();
+        var result = await this.workService.GetAllWorksAsync(filter);
+        return this.Ok(result);
+    }
 
-        var result = adaptations.Select(a => new BookScreenItemDto
-        {
-            Id = a.Id,
-            Title = a.Title,
-            Year = a.ReleaseYear ?? 0,
-            Genre = "Драма",
-            Country = a.Country ?? "Unknown",
-            Poster = a.PosterUrl ?? "https://via.placeholder.com/300x450",
-            BookRating = 4.5,
-            FilmRating = 4.2,
-            Description = a.Description ?? string.Empty,
-        });
-
+    /// <summary>
+    /// Отримати топ творів за рейтингом адаптації.
+    /// </summary>
+    /// <param name="count">Кількість творів (за замовчуванням 10).</param>
+    /// <returns>Список об'єктів BookScreenItemDto.</returns>
+    /// <response code="200">Успішне отримання списку.</response>
+    [HttpGet("top")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<BookScreenItemDto>))]
+    public async Task<IActionResult> GetTopWorks([FromQuery] int count = 10)
+    {
+        var result = await this.workService.GetTopWorksAsync(count);
         return this.Ok(result);
     }
 
@@ -58,32 +60,19 @@ public class WorksController : ControllerBase
     /// Отримати деталі твору за його ідентифікатором.
     /// </summary>
     /// <param name="id">GUID твору.</param>
-    /// <returns>Об'єкт BookScreenItem.</returns>
+    /// <returns>Об'єкт BookScreenItemDto.</returns>
     /// <response code="200">Твір знайдено.</response>
     /// <response code="404">Твір з таким ID не знайдено.</response>
-    [HttpGet("{id}")]
+    [HttpGet("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BookScreenItemDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetWorkById(Guid id)
     {
-        var a = await this.adaptationService.GetAdaptationByIdAsync(id);
-        if (a == null)
+        var result = await this.workService.GetWorkByIdAsync(id);
+        if (result == null)
         {
             return this.NotFound();
         }
-
-        var result = new BookScreenItemDto
-        {
-            Id = a.Id,
-            Title = a.Title,
-            Year = a.ReleaseYear ?? 0,
-            Genre = "Драма",
-            Country = a.Country ?? "Unknown",
-            Poster = a.PosterUrl ?? "https://via.placeholder.com/300x450",
-            BookRating = 4.5,
-            FilmRating = 4.2,
-            Description = a.Description ?? string.Empty,
-        };
 
         return this.Ok(result);
     }

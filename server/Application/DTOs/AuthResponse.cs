@@ -28,4 +28,9 @@ public class AuthResponse
     /// Gets or sets публічне ім'я (нікнейм) користувача.
     /// </summary>
     public string Nickname { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets роль користувача (user, admin, moderator).
+    /// </summary>
+    public string Role { get; set; } = null!;
 }
