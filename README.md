@@ -1,152 +1,207 @@
-# Book ↔ Screen Explorer — Крок 2 (Database Migrations)
+# DB Engineer Report — Stage 4
 
-Готовий шаблон для ролі **DB Developer** на стеку **C# 12 / .NET 8 / EF Core / PostgreSQL 16**.
+## Project
 
-## Що входить
-- `ApplicationDbContext` з усіма сутностями
-- Fluent API конфігурації для зв'язків, `CHECK`, `UNIQUE`, `CASCADE`, `SET NULL`
-- міграція `Init`
-- `down`-логіка через `Down()` у міграції
-- `SeedDataExtensions` для автоматичного заповнення початковими даними
-- `docker-compose.yml` для PostgreSQL 16
-- приклад `Program.cs`, де міграції та seed виконуються автоматично при старті
+Book2Screen / BookScreenExplorer
 
-## Команди
-```bash
-# 1. Підняти PostgreSQL у Docker
-docker compose up -d
+## Branch
 
-# 2. Встановити EF CLI (один раз)
-dotnet tool install --global dotnet-ef
+`DB-structure-optimization`
 
-# 3. Відновити пакети
-dotnet restore
+---
 
-# 4. Застосувати міграції
-# якщо ви інтегруєте ці файли у своє рішення:
-dotnet ef database update --project BookScreenExplorer.Infrastructure --startup-project BookScreenExplorer.Api
+# Етап 4 — Active Development
+
+## Виконані завдання DB Engineer
+
+У межах Етапу 4 було виконано оптимізацію структури бази даних, реалізовано нові сутності, створено складні SQL-запити, перевірено constraints та оновлено документацію.
+
+---
+
+# 1. DB Optimization
+
+Було виконано перевірку та оптимізацію SQL-запитів.
+
+## Додані індекси
+
+| Таблиця     | Поле               |
+| ----------- | ------------------ |
+| works       | title              |
+| books       | genre              |
+| adaptations | country            |
+| favorites   | (user_id, work_id) |
+
+## EXPLAIN Queries
+
+Було створено файл:
+
+```plaintext
+BookScreenExplorer.Infrastructure/Database/explain_queries.sql
 ```
 
-## Автоматичне застосування при старті
-У `Program.cs` уже показано, як виконати:
-1. `context.Database.Migrate()`
-2. `await context.SeedAsync()`
+У файлі реалізовано `EXPLAIN` для:
 
-Тобто після запуску API база:
-- створюється/оновлюється міграціями
-- наповнюється тестовими даними
+* пошуку;
+* фільтрації;
+* JOIN-запитів;
+* GROUP BY;
+* звітів;
+* favorites lookup.
 
-## Database Architecture
+Результат перевірки підтвердив коректне використання індексів для оптимізації запитів.
 
-База даних спроєктована на основі ER-діаграми та реалізована через ORM Entity Framework Core.
+---
 
-### Основні сутності:
+# 2. Complex Queries
 
-* **Users** – користувачі системи
-* **Authors** – автори книг
-* **Books** – книги
-* **Adaptations** – екранізації
-* **Actors** – актори
-* **Works** – узагальнена сутність твору
-* **Reviews** – відгуки користувачів
-* **Ratings** – оцінки
-* **Votes** – голоси за відгуки
-* **PlotEvents** – події сюжету
-* **DifferenceMaps / Differences** – відмінності між книгою та екранізацією
+Було створено файл:
 
-### Типи зв’язків:
-
-* One-to-Many (наприклад, User → Reviews)
-* Many-to-Many через проміжні таблиці (BookAuthors, AdaptationActors)
-
-### Політики видалення:
-
-* `ON DELETE CASCADE` – для залежних записів
-* `ON DELETE SET NULL` – для збереження історичних даних
-
-Це забезпечує цілісність даних відповідно до ACID-принципів.
-
-
-## Database Migrations
-
-У проєкті використовується **Entity Framework Core Migrations**.
-
-### Принцип роботи:
-
-* База даних **не створюється вручну**
-* Вся схема визначається через код (`ApplicationDbContext`)
-* Міграції версіонують структуру БД
-
-### Початкова міграція:
-
-* `Init` – створює всі таблиці відповідно до ER-діаграми
-* містить методи:
-
-  * `Up()` – створення таблиць
-  * `Down()` – rollback (видалення таблиць)
-
-### Команди:
-
-```bash
-dotnet ef migrations add Init
-dotnet ef database update
+```plaintext
+BookScreenExplorer.Infrastructure/Database/complex_queries.sql
 ```
 
+Реалізовано складні SQL-запити для:
 
+* JOIN;
+* GROUP BY;
+* COUNT;
+* AVG;
+* фільтрації;
+* пошуку;
+* звітів.
 
+## Реалізовані сценарії
 
-## Database Initialization
+* звіт по рейтингах;
+* статистика жанрів;
+* пошук творів;
+* звіт по favorites;
+* звіт по differences;
+* активність користувачів.
 
-База даних автоматично ініціалізується при запуску застосунку:
+---
 
-```csharp
-await context.Database.MigrateAsync();
-await context.SeedAsync();
+# 3. Incremental Migrations
+
+Було створено нову міграцію:
+
+```plaintext
+20260515000100_AddFavoritesPasswordResetAndDbOptimizations.cs
 ```
 
-### Що відбувається:
+Міграція включає:
 
-1. Якщо БД не існує — вона створюється
-2. Якщо є нові міграції — вони застосовуються
-3. БД наповнюється тестовими даними
+* таблицю `favorites`;
+* таблицю `password_reset_tokens`;
+* індекси;
+* foreign keys;
+* constraints.
 
-Це дозволяє повністю автоматизувати розгортання системи.
+---
 
+# 4. Data Integrity
 
+Було створено файл:
 
-## Seed Data
-
-Для тестування системи реалізовано початкове наповнення БД.
-
-### Додаються:
-
-* 3–10 користувачів
-* автори та книги
-* екранізації
-* відгуки та рейтинги
-
-Це дозволяє одразу тестувати API без ручного заповнення бази.
-
-
-
-
-## Run Database
-
-Запуск PostgreSQL через Docker:
-
-```bash
-docker-compose up -d
+```plaintext
+BookScreenExplorer.Infrastructure/Database/data_integrity_tests.sql
 ```
 
-Після цього:
+У файлі реалізовано перевірку:
 
-```bash
-dotnet run
+* CHECK constraints;
+* UNIQUE constraints;
+* Foreign Keys;
+* integrity rules.
+
+## Перевірені сценарії
+
+* неправильний рейтинг;
+* неправильне голосування;
+* дублювання favorites;
+* invalid foreign keys;
+* неправильний difference type;
+* неправильний importance level.
+
+Результат: constraints та foreign keys коректно блокують невалідні дані.
+
+---
+
+# 5. Backup / Seed Update
+
+Було оновлено `SeedDataExtensions.cs`.
+
+Додано seed-дані для:
+
+* Favorites;
+* DifferenceMaps;
+* Differences;
+* PasswordResetTokens.
+
+Це дозволило QA Engineer тестувати:
+
+* relationships;
+* search/filter logic;
+* favorites;
+* difference system.
+
+---
+
+# 6. Оновлення структури БД
+
+Було додано нові сутності:
+
+* PasswordResetTokens;
+* Favorites.
+
+Також було оновлено:
+
+* DifferenceMaps;
+* Differences;
+* ApplicationDbContext;
+* Fluent API configuration.
+
+Було реалізовано:
+
+* relationships;
+* constraints;
+* delete behaviors;
+* unique indexes.
+
+---
+
+# 7. Оновлена ER-діаграма
+
+Було створено файл:
+
+```plaintext
+docs/ERD.md
 ```
 
-База даних буде:
+ER-діаграма містить:
 
-* створена автоматично
-* змінена через міграції
-* наповнена seed-даними
+* усі таблиці системи;
+* primary keys;
+* foreign keys;
+* relationships;
+* нові сутності;
+* One-To-One;
+* One-To-Many;
+* Many-To-Many зв’язки.
 
+---
+
+# 8. Підсумковий результат
+
+У результаті виконання Етапу 4 було:
+
+* оптимізовано SQL-запити;
+* створено індекси;
+* реалізовано EXPLAIN-перевірки;
+* додано складні SQL-запити;
+* перевірено Data Integrity;
+* оновлено seed-дані;
+* створено нові міграції;
+* оновлено ER-діаграму.
+
+База даних підготовлена для стабільної інтеграції з Backend та Frontend частиною проєкту.
