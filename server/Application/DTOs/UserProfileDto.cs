@@ -12,12 +12,12 @@ public class UserProfileDto
     /// <summary>
     /// Gets or sets ім'я користувача.
     /// </summary>
-    public string Username { get; set; } = null!;
+    public required string Username { get; set; }
 
     /// <summary>
     /// Gets or sets електронна пошта.
     /// </summary>
-    public string Email { get; set; } = null!;
+    public required string Email { get; set; }
 
     /// <summary>
     /// Gets or sets URL аватара.
@@ -27,5 +27,5 @@ public class UserProfileDto
     /// <summary>
     /// Gets or sets дату приєднання.
     /// </summary>
-    public DateTime JoinedAt { get; set; }
+    public required DateTime JoinedAt { get; set; }
 }

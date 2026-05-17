@@ -14,7 +14,8 @@ using Microsoft.AspNetCore.Mvc;
 /// Контролер для керування даними профілю користувача.
 /// </summary>
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("api/v1/users")]
+[Authorize]
 [Produces("application/json")]
 public class UsersController : ControllerBase
 {
@@ -39,7 +40,6 @@ public class UsersController : ControllerBase
     /// <response code="401">Користувач не авторизований.</response>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [HttpGet("me")]
-    [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserProfileDto))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetMyProfile()
@@ -56,13 +56,33 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
+    /// Оновити аватар поточного користувача.
+    /// </summary>
+    /// <param name="avatarUrl">URL нового аватара.</param>
+    /// <response code="200">Аватар успішно оновлено.</response>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [HttpPost("me/avatar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateMyAvatar([FromBody] string avatarUrl)
+    {
+        var userIdClaim = this.User.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim == null)
+        {
+            return this.Unauthorized();
+        }
+
+        var userId = Guid.Parse(userIdClaim.Value);
+        await this.userService.UpdateAvatarAsync(userId, avatarUrl);
+        return this.Ok(new { message = "Avatar updated successfully." });
+    }
+
+    /// <summary>
     /// Оновити дані профілю поточного користувача.
     /// </summary>
     /// <param name="profileDto">Нові дані профілю.</param>
     /// <response code="200">Профіль успішно оновлено.</response>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [HttpPut("me")]
-    [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateMyProfile([FromBody] UserProfileDto profileDto)
     {
@@ -84,7 +104,6 @@ public class UsersController : ControllerBase
     /// <response code="401">Користувач не авторизований.</response>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [HttpGet("me/reviews")]
-    [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<ReviewResponse>))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetMyReviews()
