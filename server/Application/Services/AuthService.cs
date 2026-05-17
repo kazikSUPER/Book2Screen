@@ -64,25 +64,36 @@ public class AuthService : IAuthService
             return null;
         }
 
-        var user = new User
+        using var transaction = await this.context.Database.BeginTransactionAsync();
+        try
         {
-            Username = registerRequest.Nickname,
-            Email = registerRequest.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password),
-            Role = "user", // Default role
-        };
+            var user = new User
+            {
+                Username = registerRequest.Nickname,
+                Email = registerRequest.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password),
+                Role = "user", // Default role
+            };
 
-        await this.context.Users.AddAsync(user);
-        await this.context.SaveChangesAsync();
+            await this.context.Users.AddAsync(user);
+            await this.context.SaveChangesAsync();
 
-        return new AuthResponse
+            await transaction.CommitAsync();
+
+            return new AuthResponse
+            {
+                Token = this.tokenService.CreateToken(user),
+                UserId = user.Id.ToString(),
+                Email = user.Email,
+                Nickname = user.Username,
+                Role = user.Role,
+            };
+        }
+        catch
         {
-            Token = this.tokenService.CreateToken(user),
-            UserId = user.Id.ToString(),
-            Email = user.Email,
-            Nickname = user.Username,
-            Role = user.Role,
-        };
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     /// <inheritdoc/>
@@ -149,20 +160,31 @@ public class AuthService : IAuthService
             return null;
         }
 
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-        token.IsUsed = true;
-
-        this.context.Users.Update(user);
-        this.context.PasswordResetTokens.Update(token);
-        await this.context.SaveChangesAsync();
-
-        return new AuthResponse
+        using var transaction = await this.context.Database.BeginTransactionAsync();
+        try
         {
-            Token = this.tokenService.CreateToken(user),
-            UserId = user.Id.ToString(),
-            Email = user.Email,
-            Nickname = user.Username,
-            Role = user.Role,
-        };
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            token.IsUsed = true;
+
+            this.context.Users.Update(user);
+            this.context.PasswordResetTokens.Update(token);
+            await this.context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+
+            return new AuthResponse
+            {
+                Token = this.tokenService.CreateToken(user),
+                UserId = user.Id.ToString(),
+                Email = user.Email,
+                Nickname = user.Username,
+                Role = user.Role,
+            };
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }

@@ -180,31 +180,41 @@ public class ReviewService : IReviewService
             throw new KeyNotFoundException($"Report with ID {reportId} not found.");
         }
 
-        switch (action.ToLower())
+        using var transaction = await this.context.Database.BeginTransactionAsync();
+        try
         {
-            case "approve":
-                if (report.Review != null)
-                {
-                    this.context.Reviews.Remove(report.Review);
-                }
+            switch (action.ToLower())
+            {
+                case "approve":
+                    if (report.Review != null)
+                    {
+                        this.context.Reviews.Remove(report.Review);
+                    }
 
-                report.Status = "Resolved";
-                break;
-            case "reject":
-                report.Status = "Dismissed";
-                break;
-            case "spoiler":
-                if (report.Review != null)
-                {
-                    report.Review.IsSpoiler = true;
-                }
+                    report.Status = "Resolved";
+                    break;
+                case "reject":
+                    report.Status = "Dismissed";
+                    break;
+                case "spoiler":
+                    if (report.Review != null)
+                    {
+                        report.Review.IsSpoiler = true;
+                    }
 
-                report.Status = "Resolved";
-                break;
-            default:
-                throw new ArgumentException("Invalid action. Use approve, reject, or spoiler.");
+                    report.Status = "Resolved";
+                    break;
+                default:
+                    throw new ArgumentException("Invalid action. Use approve, reject, or spoiler.");
+            }
+
+            await this.context.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
-
-        await this.context.SaveChangesAsync();
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }
