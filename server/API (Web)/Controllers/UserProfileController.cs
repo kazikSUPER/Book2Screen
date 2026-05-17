@@ -1,4 +1,4 @@
-// <copyright file="UsersController.cs" company="Team 17">
+// <copyright file="UserProfileController.cs" company="Team 17">
 // Copyright (c) Team 17. All rights reserved.
 // </copyright>
 
@@ -14,22 +14,19 @@ using Microsoft.AspNetCore.Mvc;
 /// Контролер для керування даними профілю користувача.
 /// </summary>
 [ApiController]
-[Route("api/v1/users")]
+[Route("api/v1/users/me")]
 [Authorize]
 [Produces("application/json")]
-public class UsersController : ControllerBase
+public class UserProfileController : ControllerBase
 {
-    private readonly IReviewService reviewService;
     private readonly IUserService userService;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="UsersController"/> class.
+    /// Initializes a new instance of the <see cref="UserProfileController"/> class.
     /// </summary>
-    /// <param name="reviewService">Сервіс відгуків.</param>
     /// <param name="userService">Сервіс користувачів.</param>
-    public UsersController(IReviewService reviewService, IUserService userService)
+    public UserProfileController(IUserService userService)
     {
-        this.reviewService = reviewService;
         this.userService = userService;
     }
 
@@ -39,7 +36,7 @@ public class UsersController : ControllerBase
     /// <response code="200">Повертає дані профілю.</response>
     /// <response code="401">Користувач не авторизований.</response>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    [HttpGet("me")]
+    [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserProfileDto))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetMyProfile()
@@ -61,7 +58,7 @@ public class UsersController : ControllerBase
     /// <param name="avatarUrl">URL нового аватара.</param>
     /// <response code="200">Аватар успішно оновлено.</response>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    [HttpPost("me/avatar")]
+    [HttpPost("avatar")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateMyAvatar([FromBody] string avatarUrl)
     {
@@ -82,7 +79,7 @@ public class UsersController : ControllerBase
     /// <param name="profileDto">Нові дані профілю.</param>
     /// <response code="200">Профіль успішно оновлено.</response>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    [HttpPut("me")]
+    [HttpPut]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateMyProfile([FromBody] UserProfileDto profileDto)
     {
@@ -95,27 +92,5 @@ public class UsersController : ControllerBase
         var userId = Guid.Parse(userIdClaim.Value);
         await this.userService.UpdateProfileAsync(userId, profileDto);
         return this.Ok(new { message = "Profile updated successfully." });
-    }
-
-    /// <summary>
-    /// Отримати список відгуків поточного користувача.
-    /// </summary>
-    /// <response code="200">Повертає список відгуків.</response>
-    /// <response code="401">Користувач не авторизований.</response>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    [HttpGet("me/reviews")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<ReviewResponse>))]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetMyReviews()
-    {
-        var userIdClaim = this.User.FindFirst(ClaimTypes.NameIdentifier);
-        if (userIdClaim == null)
-        {
-            return this.Unauthorized();
-        }
-
-        var userId = Guid.Parse(userIdClaim.Value);
-        var reviews = await this.reviewService.GetUserReviewsAsync(userId);
-        return this.Ok(reviews);
     }
 }
