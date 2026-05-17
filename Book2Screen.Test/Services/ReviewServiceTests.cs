@@ -205,4 +205,67 @@ public class ReviewServiceTests : IDisposable
         Assert.Single(result);
         Assert.Equal("My Review", result[0].Text);
     }
+
+    [Fact]
+    public async Task ReportReviewAsync_CreatesReport()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var reviewId = Guid.NewGuid();
+        var reason = "Spam";
+
+        // Act
+        await _service.ReportReviewAsync(userId, reviewId, reason);
+
+        // Assert
+        var report = await _context.Reports.FirstOrDefaultAsync(r => r.ReviewId == reviewId);
+        Assert.NotNull(report);
+        Assert.Equal(reason, report.Reason);
+        Assert.Equal("Pending", report.Status);
+    }
+
+    [Fact]
+    public async Task ModerateReviewAsync_Approve_RemovesReview()
+    {
+        // Arrange
+        var reviewId = Guid.NewGuid();
+        var review = new Review { Id = reviewId, Text = "Bad text", TargetType = "book" };
+        var reportId = Guid.NewGuid();
+        var report = new Report { Id = reportId, ReviewId = reviewId, Status = "Pending", Reason = "X" };
+        
+        await _context.Reviews.AddAsync(review);
+        await _context.Reports.AddAsync(report);
+        await _context.SaveChangesAsync();
+
+        // Act
+        await _service.ModerateReviewAsync(reportId, "approve");
+
+        // Assert
+        Assert.Null(await _context.Reviews.FindAsync(reviewId));
+        var updatedReport = await _context.Reports.FindAsync(reportId);
+        Assert.Equal("Resolved", updatedReport!.Status);
+    }
+
+    [Fact]
+    public async Task ModerateReviewAsync_Spoiler_SetsIsSpoiler()
+    {
+        // Arrange
+        var reviewId = Guid.NewGuid();
+        var review = new Review { Id = reviewId, Text = "Plot twist inside", IsSpoiler = false, TargetType = "book" };
+        var reportId = Guid.NewGuid();
+        var report = new Report { Id = reportId, ReviewId = reviewId, Status = "Pending", Reason = "Spoiler" };
+        
+        await _context.Reviews.AddAsync(review);
+        await _context.Reports.AddAsync(report);
+        await _context.SaveChangesAsync();
+
+        // Act
+        await _service.ModerateReviewAsync(reportId, "spoiler");
+
+        // Assert
+        var updatedReview = await _context.Reviews.FindAsync(reviewId);
+        Assert.True(updatedReview!.IsSpoiler);
+        var updatedReport = await _context.Reports.FindAsync(reportId);
+        Assert.Equal("Resolved", updatedReport!.Status);
+    }
 }

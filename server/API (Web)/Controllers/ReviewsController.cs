@@ -151,4 +151,30 @@ public class ReviewsController : ControllerBase
 
         return this.Ok(new { message = "Review deleted successfully." });
     }
+
+    /// <summary>
+    /// Поскаржитись на відгук (потрібна авторизація).
+    /// </summary>
+    /// <param name="id">ID відгуку.</param>
+    /// <param name="reason">Причина скарги.</param>
+    /// <response code="200">Скаргу успішно надіслано.</response>
+    /// <response code="401">Не авторизований.</response>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [HttpPost("{id}/report")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ReportReview(Guid id, [FromBody] string reason)
+    {
+        var userIdClaim = this.User.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim == null)
+        {
+            return this.Unauthorized();
+        }
+
+        var userId = Guid.Parse(userIdClaim.Value);
+        await this.reviewService.ReportReviewAsync(userId, id, reason);
+
+        return this.Ok(new { message = "Report submitted successfully." });
+    }
 }

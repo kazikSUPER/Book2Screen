@@ -133,4 +133,78 @@ public class ReviewService : IReviewService
             })
             .ToListAsync();
     }
+
+    /// <inheritdoc/>
+    public async Task ReportReviewAsync(Guid userId, Guid reviewId, string reason)
+    {
+        var report = new Report
+        {
+            UserId = userId,
+            ReviewId = reviewId,
+            Reason = reason,
+            Status = "Pending",
+        };
+
+        await this.context.Reports.AddAsync(report);
+        await this.context.SaveChangesAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ReportResponse>> GetAllReportsAsync()
+    {
+        return await this.context.Reports
+            .Include(r => r.Review)
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new ReportResponse
+            {
+                ReportId = r.Id,
+                ReviewId = r.ReviewId ?? Guid.Empty,
+                UserId = r.UserId ?? Guid.Empty,
+                Reason = r.Reason,
+                Status = r.Status,
+                CreatedAt = r.CreatedAt,
+                ReviewText = r.Review != null ? r.Review.Text : "Review deleted",
+            })
+            .ToListAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task ModerateReviewAsync(Guid reportId, string action)
+    {
+        var report = await this.context.Reports
+            .Include(r => r.Review)
+            .FirstOrDefaultAsync(r => r.Id == reportId);
+
+        if (report == null)
+        {
+            throw new KeyNotFoundException($"Report with ID {reportId} not found.");
+        }
+
+        switch (action.ToLower())
+        {
+            case "approve":
+                if (report.Review != null)
+                {
+                    this.context.Reviews.Remove(report.Review);
+                }
+
+                report.Status = "Resolved";
+                break;
+            case "reject":
+                report.Status = "Dismissed";
+                break;
+            case "spoiler":
+                if (report.Review != null)
+                {
+                    report.Review.IsSpoiler = true;
+                }
+
+                report.Status = "Resolved";
+                break;
+            default:
+                throw new ArgumentException("Invalid action. Use approve, reject, or spoiler.");
+        }
+
+        await this.context.SaveChangesAsync();
+    }
 }

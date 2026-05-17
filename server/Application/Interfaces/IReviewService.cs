@@ -49,4 +49,27 @@ public interface IReviewService
     /// <param name="userId">ID користувача.</param>
     /// <returns>Колекція відгуків користувача.</returns>
     Task<IEnumerable<ReviewResponse>> GetUserReviewsAsync(Guid userId);
+
+    /// <summary>
+    /// Надсилає скаргу на відгук.
+    /// </summary>
+    /// <param name="userId">ID користувача, який скаржиться.</param>
+    /// <param name="reviewId">ID відгуку.</param>
+    /// <param name="reason">Причина скарги.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task ReportReviewAsync(Guid userId, Guid reviewId, string reason);
+
+    /// <summary>
+    /// Отримує список усіх скарг (для адміна).
+    /// </summary>
+    /// <returns>Колекція скарг.</returns>
+    Task<IEnumerable<ReportResponse>> GetAllReportsAsync();
+
+    /// <summary>
+    /// Модерація відгуку за скаргою.
+    /// </summary>
+    /// <param name="reportId">ID скарги.</param>
+    /// <param name="action">Дія (approve/reject/spoiler).</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task ModerateReviewAsync(Guid reportId, string action);
 }
