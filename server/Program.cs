@@ -90,6 +90,7 @@ builder.Services.AddScoped<IAdaptationService, AdaptationService>();
 builder.Services.AddScoped<IWorkService, WorkService>();
 builder.Services.AddScoped<IVoteService, VoteService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 builder.Services.AddAuthentication(options =>
     {
