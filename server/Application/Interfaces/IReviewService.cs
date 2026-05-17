@@ -25,4 +25,28 @@ public interface IReviewService
     /// <param name="workId">ID твору.</param>
     /// <returns>Колекція відгуків, відсортована за часом створення.</returns>
     Task<IEnumerable<ReviewResponse>> GetReviewsByWorkIdAsync(Guid workId);
+
+    /// <summary>
+    /// Оновлює існуючий відгук користувача.
+    /// </summary>
+    /// <param name="userId">ID користувача (для перевірки власності).</param>
+    /// <param name="reviewId">ID відгуку.</param>
+    /// <param name="request">Нові дані відгуку.</param>
+    /// <returns>True, якщо оновлення успішне.</returns>
+    Task<bool> UpdateReviewAsync(Guid userId, Guid reviewId, ReviewRequest request);
+
+    /// <summary>
+    /// Видаляє відгук користувача.
+    /// </summary>
+    /// <param name="userId">ID користувача (для перевірки власності).</param>
+    /// <param name="reviewId">ID відгуку.</param>
+    /// <returns>True, якщо видалення успішне.</returns>
+    Task<bool> DeleteReviewAsync(Guid userId, Guid reviewId);
+
+    /// <summary>
+    /// Отримує список відгуків конкретного користувача.
+    /// </summary>
+    /// <param name="userId">ID користувача.</param>
+    /// <returns>Колекція відгуків користувача.</returns>
+    Task<IEnumerable<ReviewResponse>> GetUserReviewsAsync(Guid userId);
 }

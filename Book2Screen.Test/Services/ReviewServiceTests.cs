@@ -98,4 +98,111 @@ public class ReviewServiceTests : IDisposable
         Assert.Equal("New Review", result[0].Text);
         Assert.Equal("Old Review", result[1].Text);
     }
+
+    [Fact]
+    public async Task UpdateReviewAsync_UpdatesReview_WhenUserIsOwner()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var reviewId = Guid.NewGuid();
+        var workId = Guid.NewGuid();
+        var review = new Review 
+        { 
+            Id = reviewId, 
+            UserId = userId, 
+            WorkId = workId,
+            Text = "Original Text", 
+            Rating = 5.0, 
+            TargetType = "book" 
+        };
+        await _context.Reviews.AddAsync(review);
+        await _context.SaveChangesAsync();
+
+        var request = new ReviewRequest 
+        { 
+            WorkId = workId,
+            Text = "Updated Text", 
+            Rating = 8.0, 
+            IsSpoiler = true, 
+            TargetType = "adaptation" 
+        };
+
+        // Act
+        var result = await _service.UpdateReviewAsync(userId, reviewId, request);
+
+        // Assert
+        Assert.True(result);
+        var updatedReview = await _context.Reviews.FindAsync(reviewId);
+        Assert.Equal("Updated Text", updatedReview!.Text);
+        Assert.Equal(8.0, updatedReview.Rating);
+        Assert.True(updatedReview.IsSpoiler);
+        Assert.Equal("adaptation", updatedReview.TargetType);
+    }
+
+    [Fact]
+    public async Task UpdateReviewAsync_ReturnsFalse_WhenUserIsNotOwner()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        var reviewId = Guid.NewGuid();
+        var workId = Guid.NewGuid();
+        var review = new Review { Id = reviewId, UserId = otherUserId, WorkId = workId, Text = "Original Text", TargetType = "book" };
+        await _context.Reviews.AddAsync(review);
+        await _context.SaveChangesAsync();
+
+        var request = new ReviewRequest 
+        { 
+            WorkId = workId, 
+            Text = "Updated Text", 
+            IsSpoiler = false, 
+            Rating = 5.0,
+            TargetType = "book" 
+        };
+
+        // Act
+        var result = await _service.UpdateReviewAsync(userId, reviewId, request);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task DeleteReviewAsync_DeletesReview_WhenUserIsOwner()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var reviewId = Guid.NewGuid();
+        var review = new Review { Id = reviewId, UserId = userId, WorkId = Guid.NewGuid(), Text = "To delete", TargetType = "book" };
+        await _context.Reviews.AddAsync(review);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.DeleteReviewAsync(userId, reviewId);
+
+        // Assert
+        Assert.True(result);
+        Assert.Null(await _context.Reviews.FindAsync(reviewId));
+    }
+
+    [Fact]
+    public async Task GetUserReviewsAsync_ReturnsOnlyUserReviews()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        
+        var r1 = new Review { UserId = userId, WorkId = Guid.NewGuid(), Text = "My Review", TargetType = "book" };
+        var r2 = new Review { UserId = otherUserId, WorkId = Guid.NewGuid(), Text = "Other Review", TargetType = "book" };
+        
+        await _context.Reviews.AddRangeAsync(r1, r2);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = (await _service.GetUserReviewsAsync(userId)).ToList();
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("My Review", result[0].Text);
+    }
 }

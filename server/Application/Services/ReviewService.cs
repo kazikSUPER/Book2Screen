@@ -81,4 +81,56 @@ public class ReviewService : IReviewService
             })
             .ToListAsync();
     }
+
+    /// <inheritdoc/>
+    public async Task<bool> UpdateReviewAsync(Guid userId, Guid reviewId, ReviewRequest request)
+    {
+        var review = await this.context.Reviews.FirstOrDefaultAsync(r => r.Id == reviewId);
+        if (review == null || review.UserId != userId)
+        {
+            return false;
+        }
+
+        review.Text = request.Text;
+        review.IsSpoiler = request.IsSpoiler;
+        review.Rating = request.Rating;
+        review.TargetType = request.TargetType.ToLower();
+
+        await this.context.SaveChangesAsync();
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> DeleteReviewAsync(Guid userId, Guid reviewId)
+    {
+        var review = await this.context.Reviews.FirstOrDefaultAsync(r => r.Id == reviewId);
+        if (review == null || review.UserId != userId)
+        {
+            return false;
+        }
+
+        this.context.Reviews.Remove(review);
+        await this.context.SaveChangesAsync();
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ReviewResponse>> GetUserReviewsAsync(Guid userId)
+    {
+        return await this.context.Reviews
+            .Where(r => r.UserId == userId)
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new ReviewResponse
+            {
+                ReviewId = r.Id,
+                WorkId = r.WorkId,
+                UserId = r.UserId ?? Guid.Empty,
+                Text = r.Text,
+                IsSpoiler = r.IsSpoiler,
+                Rating = r.Rating,
+                TargetType = r.TargetType,
+                CreatedAt = r.CreatedAt,
+            })
+            .ToListAsync();
+    }
 }

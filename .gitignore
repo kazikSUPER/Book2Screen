@@ -55,3 +55,4 @@ docker-compose.override.yml
 *.db-shm
 *.db-wal
 /pgdata/
+*.lscache
