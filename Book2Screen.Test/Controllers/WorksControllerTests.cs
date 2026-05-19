@@ -69,19 +69,16 @@ public class WorksControllerTests
     }
 
     /// <summary>
-    /// Перевіряє, що GetWorkById повертає NotFound, якщо твір не знайдено.
+    /// Перевіряє, що GetWorkById викидає KeyNotFoundException, якщо твір не знайдено.
     /// </summary>
     [Fact]
-    public async Task GetWorkById_ShouldReturnNotFound_WhenWorkDoesNotExist()
+    public async Task GetWorkById_ShouldThrowKeyNotFound_WhenWorkDoesNotExist()
     {
         // Arrange
         var id = Guid.NewGuid();
-        this.workServiceMock.Setup(s => s.GetWorkByIdAsync(id)).ReturnsAsync((BookScreenItemDto?)null);
+        this.workServiceMock.Setup(s => s.GetWorkByIdAsync(id)).ThrowsAsync(new KeyNotFoundException());
 
-        // Act
-        var result = await this.controller.GetWorkById(id);
-
-        // Assert
-        Assert.IsType<NotFoundResult>(result);
+        // Act & Assert
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => this.controller.GetWorkById(id));
     }
 }

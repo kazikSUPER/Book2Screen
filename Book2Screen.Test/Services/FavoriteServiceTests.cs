@@ -8,6 +8,7 @@ using Book2Screen.Application.Services;
 using Book2Screen.Domain.Entities;
 using Book2Screen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Serilog;
 using Serilog.Extensions.Logging;
 using Xunit;
@@ -22,6 +23,7 @@ public class FavoriteServiceTests
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(x => x.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         _context = new ApplicationDbContext(options);
@@ -42,6 +44,9 @@ public class FavoriteServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var workId = Guid.NewGuid();
+        var work = new Work { Id = workId, Title = "Test Work" };
+        await _context.Works.AddAsync(work);
+        await _context.SaveChangesAsync();
 
         // Act
         var result = await _service.AddToFavoritesAsync(userId, workId);
@@ -58,6 +63,10 @@ public class FavoriteServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var workId = Guid.NewGuid();
+        var work = new Work { Id = workId, Title = "Test Work" };
+        await _context.Works.AddAsync(work);
+        await _context.SaveChangesAsync();
+        
         await _service.AddToFavoritesAsync(userId, workId);
 
         // Act
@@ -70,11 +79,26 @@ public class FavoriteServiceTests
     }
 
     [Fact]
+    public async Task AddToFavoritesAsync_ShouldThrowKeyNotFound_WhenWorkDoesNotExist()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var workId = Guid.NewGuid();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.AddToFavoritesAsync(userId, workId));
+    }
+
+    [Fact]
     public async Task RemoveFromFavoritesAsync_ShouldRemoveFavorite_WhenExists()
     {
         // Arrange
         var userId = Guid.NewGuid();
         var workId = Guid.NewGuid();
+        var work = new Work { Id = workId, Title = "Test Work" };
+        await _context.Works.AddAsync(work);
+        await _context.SaveChangesAsync();
+        
         await _service.AddToFavoritesAsync(userId, workId);
 
         // Act
@@ -106,6 +130,10 @@ public class FavoriteServiceTests
         // Arrange
         var userId = Guid.NewGuid();
         var workId = Guid.NewGuid();
+        var work = new Work { Id = workId, Title = "Test Work" };
+        await _context.Works.AddAsync(work);
+        await _context.SaveChangesAsync();
+
         await _service.AddToFavoritesAsync(userId, workId);
 
         // Act

@@ -3,6 +3,7 @@ namespace Book2Screen.Tests.Services;
 using Book2Screen.Application.DTOs;
 using Book2Screen.Application.Services;
 using Book2Screen.Domain.Entities;
+using Book2Screen.Domain.Exceptions;
 using Book2Screen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -142,7 +143,7 @@ public class ReviewServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateReviewAsync_ReturnsFalse_WhenUserIsNotOwner()
+    public async Task UpdateReviewAsync_ThrowsForbidden_WhenUserIsNotOwner()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -162,11 +163,8 @@ public class ReviewServiceTests : IDisposable
             TargetType = "book" 
         };
 
-        // Act
-        var result = await _service.UpdateReviewAsync(userId, reviewId, request);
-
-        // Assert
-        Assert.False(result);
+        // Act & Assert
+        await Assert.ThrowsAsync<ForbiddenException>(() => _service.UpdateReviewAsync(userId, reviewId, request));
     }
 
     [Fact]
@@ -185,6 +183,21 @@ public class ReviewServiceTests : IDisposable
         // Assert
         Assert.True(result);
         Assert.Null(await _context.Reviews.FindAsync(reviewId));
+    }
+
+    [Fact]
+    public async Task DeleteReviewAsync_ThrowsForbidden_WhenUserIsNotOwner()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        var reviewId = Guid.NewGuid();
+        var review = new Review { Id = reviewId, UserId = otherUserId, WorkId = Guid.NewGuid(), Text = "To delete", TargetType = "book" };
+        await _context.Reviews.AddAsync(review);
+        await _context.SaveChangesAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ForbiddenException>(() => _service.DeleteReviewAsync(userId, reviewId));
     }
 
     [Fact]

@@ -7,6 +7,7 @@ namespace Book2Screen.Application.Services;
 using Book2Screen.Application.DTOs;
 using Book2Screen.Application.Interfaces;
 using Book2Screen.Domain.Entities;
+using Book2Screen.Domain.Exceptions;
 using Book2Screen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
