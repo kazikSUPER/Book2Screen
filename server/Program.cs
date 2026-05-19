@@ -269,4 +269,10 @@ finally
     await Log.CloseAndFlushAsync();
 }
 
-public partial class Program { }
+/// <summary>
+/// Partial class Program for integration tests.
+/// </summary>
+public partial class Program
+{
+}
+

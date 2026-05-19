@@ -12,8 +12,14 @@ using Microsoft.EntityFrameworkCore;
 /// </summary>
 public static class DbSeeder
 {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarLint", "S1075:URIs should not be hardcoded", Justification = "Seed data requires hardcoded URLs for development posters.")]
-    private static readonly string DunePosterUrl = "https://upload.wikimedia.org/wikipedia/uk/7/71/%D0%94%D1%8E%D0%BD%D0%B0_%282021%29_%D0%BF%D0%BE%D1%81%D1%82%D0%B5%D1%80.jpg";
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarLint", "S1075:URIs should not be hardcoded", Justification = "Seed data requires hardcoded URLs for development avatars and posters.")]
+    private const string DunePosterUrl = "https://m.media-amazon.com/images/M/MV5BMDQ0NjgyN2YtNWU4Ny00YjZlLWIzMTktMzljZWM2MTgzY2RhXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_.jpg";
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarLint", "S1075:URIs should not be hardcoded", Justification = "Seed data requires hardcoded URLs for development avatars.")]
+    private const string AdminAvatarUrl = "https://ui-avatars.com/api/?name=Admin&background=random";
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarLint", "S1075:URIs should not be hardcoded", Justification = "Seed data requires hardcoded URLs for development avatars.")]
+    private const string UserAvatarUrl = "https://ui-avatars.com/api/?name=John+Doe&background=random";
 
     /// <summary>
     /// Наповнює базу даних, якщо вона порожня.
@@ -32,7 +38,7 @@ public static class DbSeeder
                 Email = "admin@book2screen.com",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
                 Role = "admin",
-                AvatarUrl = "https://ui-avatars.com/api/?name=Admin&background=random",
+                AvatarUrl = AdminAvatarUrl,
                 IsActive = true,
             };
 
@@ -43,7 +49,7 @@ public static class DbSeeder
                 Email = "john@example.com",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("User123!"),
                 Role = "user",
-                AvatarUrl = "https://ui-avatars.com/api/?name=John+Doe&background=random",
+                AvatarUrl = UserAvatarUrl,
                 IsActive = true,
             };
 
