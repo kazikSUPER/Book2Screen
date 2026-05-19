@@ -36,30 +36,40 @@ public class ReviewService : IReviewService
             throw new KeyNotFoundException($"Work with ID {request.WorkId} not found.");
         }
 
-        var review = new Review
+        using var transaction = await this.context.Database.BeginTransactionAsync();
+        try
         {
-            UserId = userId,
-            WorkId = request.WorkId,
-            Text = request.Text,
-            IsSpoiler = request.IsSpoiler,
-            Rating = request.Rating,
-            TargetType = request.TargetType.ToLower(),
-        };
+            var review = new Review
+            {
+                UserId = userId,
+                WorkId = request.WorkId,
+                Text = request.Text,
+                IsSpoiler = request.IsSpoiler,
+                Rating = request.Rating,
+                TargetType = request.TargetType.ToLower(),
+            };
 
-        await this.context.Reviews.AddAsync(review);
-        await this.context.SaveChangesAsync();
+            await this.context.Reviews.AddAsync(review);
+            await this.context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
-        return new ReviewResponse
+            return new ReviewResponse
+            {
+                ReviewId = review.Id,
+                WorkId = review.WorkId,
+                UserId = review.UserId ?? Guid.Empty,
+                Text = review.Text,
+                IsSpoiler = review.IsSpoiler,
+                Rating = review.Rating,
+                TargetType = review.TargetType,
+                CreatedAt = review.CreatedAt,
+            };
+        }
+        catch
         {
-            ReviewId = review.Id,
-            WorkId = review.WorkId,
-            UserId = review.UserId ?? Guid.Empty,
-            Text = review.Text,
-            IsSpoiler = review.IsSpoiler,
-            Rating = review.Rating,
-            TargetType = review.TargetType,
-            CreatedAt = review.CreatedAt,
-        };
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     /// <inheritdoc/>

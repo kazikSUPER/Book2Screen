@@ -30,26 +30,37 @@ public class VoteService : IVoteService
     /// <inheritdoc/>
     public async Task<VoteResponse> VoteAsync(Guid userId, VoteRequest request)
     {
-        var existingVote = await this.context.Votes
-            .FirstOrDefaultAsync(v => v.UserId == userId && v.WorkId == request.WorkId);
+        using var transaction = await this.context.Database.BeginTransactionAsync();
+        try
+        {
+            var existingVote = await this.context.Votes
+                .FirstOrDefaultAsync(v => v.UserId == userId && v.WorkId == request.WorkId);
 
-        if (existingVote != null)
-        {
-            existingVote.SelectedOption = request.VoteType.ToLower();
-        }
-        else
-        {
-            var vote = new Vote
+            if (existingVote != null)
             {
-                UserId = userId,
-                WorkId = request.WorkId,
-                SelectedOption = request.VoteType.ToLower(),
-            };
-            await this.context.Votes.AddAsync(vote);
-        }
+                existingVote.SelectedOption = request.VoteType.ToLower();
+            }
+            else
+            {
+                var vote = new Vote
+                {
+                    UserId = userId,
+                    WorkId = request.WorkId,
+                    SelectedOption = request.VoteType.ToLower(),
+                };
+                await this.context.Votes.AddAsync(vote);
+            }
 
-        await this.context.SaveChangesAsync();
-        return await this.GetVoteStatsAsync(request.WorkId);
+            await this.context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return await this.GetVoteStatsAsync(request.WorkId);
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     /// <inheritdoc/>
