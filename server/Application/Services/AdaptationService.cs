@@ -49,11 +49,16 @@ public class AdaptationService : IAdaptationService
     /// Отримує адаптацію за її унікальним ідентифікатором.
     /// </summary>
     /// <param name="id">Унікальний ідентифікатор адаптації (GUID).</param>
-    /// <returns>DTO-об'єкт адаптації або null, якщо адаптацію не знайдено.</returns>
+    /// <returns>DTO-об'єкт адаптації.</returns>
     public async Task<AdaptationDto?> GetAdaptationByIdAsync(Guid id)
     {
         var adaptation = await this.context.Adaptations.FindAsync(id);
-        return adaptation == null ? null : this.mapper.Map<AdaptationDto>(adaptation);
+        if (adaptation == null)
+        {
+            throw new KeyNotFoundException($"Adaptation with ID {id} not found.");
+        }
+
+        return this.mapper.Map<AdaptationDto>(adaptation);
     }
 
     /// <summary>
@@ -87,7 +92,7 @@ public class AdaptationService : IAdaptationService
         var adaptation = await this.context.Adaptations.FindAsync(id);
         if (adaptation == null)
         {
-            return null;
+            throw new KeyNotFoundException($"Adaptation with ID {id} not found.");
         }
 
         this.mapper.Map(adaptationDto, adaptation);
@@ -105,7 +110,7 @@ public class AdaptationService : IAdaptationService
         var adaptation = await this.context.Adaptations.FindAsync(id);
         if (adaptation == null)
         {
-            return false;
+            throw new KeyNotFoundException($"Adaptation with ID {id} not found.");
         }
 
         this.context.Adaptations.Remove(adaptation);

@@ -35,27 +35,13 @@ public class AuthController : ControllerBase
     /// <returns>Повертає JWT токен у разі успіху.</returns>
     /// <response code="200">Успішний вхід. Повертає об'єкт з токеном.</response>
     /// <response code="401">Невірне ім'я користувача або пароль.</response>
-    /// <response code="400">Помилка при обробці запиту.</response>
     [HttpPost("login")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AuthResponse))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
     {
-        try
-        {
-            var response = await this.authService.LoginAsync(loginDto);
-            if (response == null)
-            {
-                return this.Unauthorized("Invalid username or password.");
-            }
-
-            return this.Ok(response);
-        }
-        catch (Exception ex)
-        {
-            return this.BadRequest(ex.Message);
-        }
+        var response = await this.authService.LoginAsync(loginDto);
+        return this.Ok(response);
     }
 
     /// <summary>
@@ -71,12 +57,6 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterRequest registerRequest)
     {
         var response = await this.authService.RegisterAsync(registerRequest);
-
-        if (response == null)
-        {
-            return this.Conflict("User with this username or email already exists.");
-        }
-
         return this.Ok(response);
     }
 

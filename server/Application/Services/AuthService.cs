@@ -40,7 +40,7 @@ public class AuthService : IAuthService
 
         if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
         {
-            return null;
+            throw new UnauthorizedException("Invalid email or password.");
         }
 
         return new AuthResponse
@@ -61,7 +61,7 @@ public class AuthService : IAuthService
 
         if (userExists)
         {
-            return null;
+            throw new ConflictException("User with this username or email already exists.");
         }
 
         using var transaction = await this.context.Database.BeginTransactionAsync();

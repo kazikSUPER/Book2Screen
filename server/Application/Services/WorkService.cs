@@ -88,7 +88,7 @@ public class WorkService : IWorkService
 
         if (work == null)
         {
-            return null;
+            throw new KeyNotFoundException($"Work with ID {id} not found.");
         }
 
         var dto = this.MapToDto(work);

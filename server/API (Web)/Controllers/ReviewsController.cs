@@ -110,13 +110,7 @@ public class ReviewsController : ControllerBase
         }
 
         var userId = Guid.Parse(userIdClaim.Value);
-        var success = await this.reviewService.UpdateReviewAsync(userId, id, request);
-
-        if (!success)
-        {
-            return this.Forbid();
-        }
-
+        await this.reviewService.UpdateReviewAsync(userId, id, request);
         return this.Ok(new { message = "Review updated successfully." });
     }
 
@@ -142,13 +136,7 @@ public class ReviewsController : ControllerBase
         }
 
         var userId = Guid.Parse(userIdClaim.Value);
-        var success = await this.reviewService.DeleteReviewAsync(userId, id);
-
-        if (!success)
-        {
-            return this.Forbid();
-        }
-
+        await this.reviewService.DeleteReviewAsync(userId, id);
         return this.Ok(new { message = "Review deleted successfully." });
     }
 

@@ -96,9 +96,14 @@ public class ReviewService : IReviewService
     public async Task<bool> UpdateReviewAsync(Guid userId, Guid reviewId, ReviewRequest request)
     {
         var review = await this.context.Reviews.FirstOrDefaultAsync(r => r.Id == reviewId);
-        if (review == null || review.UserId != userId)
+        if (review == null)
         {
-            return false;
+            throw new KeyNotFoundException($"Review with ID {reviewId} not found.");
+        }
+
+        if (review.UserId != userId)
+        {
+            throw new ForbiddenException("You can only update your own reviews.");
         }
 
         review.Text = request.Text;
@@ -114,9 +119,14 @@ public class ReviewService : IReviewService
     public async Task<bool> DeleteReviewAsync(Guid userId, Guid reviewId)
     {
         var review = await this.context.Reviews.FirstOrDefaultAsync(r => r.Id == reviewId);
-        if (review == null || review.UserId != userId)
+        if (review == null)
         {
-            return false;
+            throw new KeyNotFoundException($"Review with ID {reviewId} not found.");
+        }
+
+        if (review.UserId != userId)
+        {
+            throw new ForbiddenException("You can only delete your own reviews.");
         }
 
         this.context.Reviews.Remove(review);

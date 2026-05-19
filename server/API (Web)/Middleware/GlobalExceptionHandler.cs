@@ -49,7 +49,11 @@ public class GlobalExceptionHandler : IExceptionHandler
         {
             KeyNotFoundException => (int)HttpStatusCode.NotFound,
             UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
+            UnauthorizedException => (int)HttpStatusCode.Unauthorized,
+            ForbiddenException => (int)HttpStatusCode.Forbidden,
+            ConflictException => (int)HttpStatusCode.Conflict,
             BadHttpRequestException => (int)HttpStatusCode.BadRequest,
+            ArgumentException => (int)HttpStatusCode.BadRequest,
             _ => (int)HttpStatusCode.InternalServerError,
         };
 
@@ -58,7 +62,11 @@ public class GlobalExceptionHandler : IExceptionHandler
         {
             KeyNotFoundException => ("NOT_FOUND", exception.Message),
             UnauthorizedAccessException => ("UNAUTHORIZED", "You are not authorized to access this resource."),
+            UnauthorizedException => ("UNAUTHORIZED", exception.Message),
+            ForbiddenException => ("FORBIDDEN", exception.Message),
+            ConflictException => ("CONFLICT", exception.Message),
             BadHttpRequestException => ("BAD_REQUEST", "Invalid request parameters."),
+            ArgumentException => ("BAD_REQUEST", exception.Message),
             _ => ("INTERNAL_ERROR", "An unexpected error occurred on the server."),
         };
 

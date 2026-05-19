@@ -31,7 +31,7 @@ public class UserService : IUserService
         var user = await this.context.Users.FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null)
         {
-            return null;
+            throw new KeyNotFoundException($"User with ID {userId} not found.");
         }
 
         return new UserProfileDto

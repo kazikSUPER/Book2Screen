@@ -55,11 +55,6 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> GetAdaptationById(Guid id)
     {
         var result = await this.adaptationService.GetAdaptationByIdAsync(id);
-        if (result == null)
-        {
-            return this.NotFound();
-        }
-
         return this.Ok(result);
     }
 
@@ -75,11 +70,6 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UpdateAdaptation(Guid id, [FromBody] AdaptationDto adaptationDto)
     {
         var result = await this.adaptationService.UpdateAdaptationAsync(id, adaptationDto);
-        if (result == null)
-        {
-            return this.NotFound();
-        }
-
         return this.Ok(result);
     }
 
@@ -93,12 +83,7 @@ public class AdminController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteAdaptation(Guid id)
     {
-        var success = await this.adaptationService.DeleteAdaptationAsync(id);
-        if (!success)
-        {
-            return this.NotFound();
-        }
-
+        await this.adaptationService.DeleteAdaptationAsync(id);
         return this.NoContent();
     }
 }

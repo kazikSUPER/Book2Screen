@@ -33,6 +33,12 @@ public class FavoriteService : IFavoriteService
     /// <inheritdoc/>
     public async Task<bool> AddToFavoritesAsync(Guid userId, Guid workId)
     {
+        var workExists = await this.context.Works.AnyAsync(w => w.Id == workId);
+        if (!workExists)
+        {
+            throw new KeyNotFoundException($"Work with ID {workId} not found.");
+        }
+
         var alreadyFavorite = await this.context.Favorites
             .AnyAsync(f => f.UserId == userId && f.WorkId == workId);
 

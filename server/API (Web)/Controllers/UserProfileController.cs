@@ -35,19 +35,15 @@ public class UserProfileController : ControllerBase
     /// </summary>
     /// <response code="200">Повертає дані профілю.</response>
     /// <response code="401">Користувач не авторизований.</response>
+    /// <response code="404">Користувача не знайдено.</response>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserProfileDto))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMyProfile()
     {
-        var userIdClaim = this.User.FindFirst(ClaimTypes.NameIdentifier);
-        if (userIdClaim == null)
-        {
-            return this.Unauthorized();
-        }
-
-        var userId = Guid.Parse(userIdClaim.Value);
+        var userId = this.GetUserId();
         var profile = await this.userService.GetProfileAsync(userId);
         return this.Ok(profile);
     }
@@ -57,18 +53,14 @@ public class UserProfileController : ControllerBase
     /// </summary>
     /// <param name="avatarUrl">URL нового аватара.</param>
     /// <response code="200">Аватар успішно оновлено.</response>
+    /// <response code="404">Користувача не знайдено.</response>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [HttpPost("avatar")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateMyAvatar([FromBody] string avatarUrl)
     {
-        var userIdClaim = this.User.FindFirst(ClaimTypes.NameIdentifier);
-        if (userIdClaim == null)
-        {
-            return this.Unauthorized();
-        }
-
-        var userId = Guid.Parse(userIdClaim.Value);
+        var userId = this.GetUserId();
         await this.userService.UpdateAvatarAsync(userId, avatarUrl);
         return this.Ok(new { message = "Avatar updated successfully." });
     }
@@ -78,19 +70,21 @@ public class UserProfileController : ControllerBase
     /// </summary>
     /// <param name="profileDto">Нові дані профілю.</param>
     /// <response code="200">Профіль успішно оновлено.</response>
+    /// <response code="404">Користувача не знайдено.</response>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [HttpPut]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateMyProfile([FromBody] UserProfileDto profileDto)
     {
-        var userIdClaim = this.User.FindFirst(ClaimTypes.NameIdentifier);
-        if (userIdClaim == null)
-        {
-            return this.Unauthorized();
-        }
-
-        var userId = Guid.Parse(userIdClaim.Value);
+        var userId = this.GetUserId();
         await this.userService.UpdateProfileAsync(userId, profileDto);
         return this.Ok(new { message = "Profile updated successfully." });
+    }
+
+    private Guid GetUserId()
+    {
+        var userIdClaim = this.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(userIdClaim, out var userId) ? userId : Guid.Empty;
     }
 }
