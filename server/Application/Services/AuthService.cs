@@ -73,7 +73,7 @@ public class AuthService : IAuthService
                 Username = registerRequest.Nickname,
                 Email = registerRequest.Email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password),
-                Role = "user", // Default role
+                Role = "user",
             };
 
             await this.context.Users.AddAsync(user);
