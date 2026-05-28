@@ -4,6 +4,8 @@
 
 namespace Book2Screen.Application.DTOs;
 
+using System.ComponentModel.DataAnnotations;
+
 /// <summary>
 /// Запит на голосування.
 /// </summary>
@@ -12,10 +14,13 @@ public class VoteRequest
     /// <summary>
     /// Gets or sets iD твору (Work), за який проводиться голосування.
     /// </summary>
+    [Required]
     public required Guid WorkId { get; set; }
 
     /// <summary>
     /// Gets or sets тип голосу: "book" (книга краща) або "movie" (адаптація краща).
     /// </summary>
-    public string VoteType { get; set; } = null!; // "BOOK" or "MOVIE"
+    [Required]
+    [RegularExpression("^(book|movie)$", ErrorMessage = "VoteType must be 'book' or 'movie'")]
+    public string VoteType { get; set; } = null!;
 }

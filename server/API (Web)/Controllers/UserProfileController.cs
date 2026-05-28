@@ -53,10 +53,12 @@ public class UserProfileController : ControllerBase
     /// </summary>
     /// <param name="avatarUrl">URL нового аватара.</param>
     /// <response code="200">Аватар успішно оновлено.</response>
+    /// <response code="401">Не авторизований.</response>
     /// <response code="404">Користувача не знайдено.</response>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [HttpPost("avatar")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateMyAvatar([FromBody] string avatarUrl)
     {
@@ -70,10 +72,12 @@ public class UserProfileController : ControllerBase
     /// </summary>
     /// <param name="profileDto">Нові дані профілю.</param>
     /// <response code="200">Профіль успішно оновлено.</response>
+    /// <response code="401">Не авторизований.</response>
     /// <response code="404">Користувача не знайдено.</response>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [HttpPut]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateMyProfile([FromBody] UserProfileDto profileDto)
     {

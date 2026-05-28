@@ -65,7 +65,9 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <param name="request">Запит з Email.</param>
     /// <returns>Повертає 200 OK.</returns>
+    /// <response code="200">Лист з кодом успішно надіслано (якщо email існує).</response>
     [HttpPost("password-reset")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> PasswordReset([FromBody] ForgotPasswordRequest request)
     {
         await this.authService.ForgotPasswordAsync(request);
@@ -77,7 +79,11 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <param name="request">Запит з Email та кодом.</param>
     /// <returns>Повертає 200 OK, якщо код вірний.</returns>
+    /// <response code="200">Код вірний.</response>
+    /// <response code="400">Код невірний або термін дії вичерпано.</response>
     [HttpPost("verify-code")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeRequest request)
     {
         var isValid = await this.authService.VerifyResetCodeAsync(request);
@@ -94,6 +100,8 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <param name="request">Запит з Email, кодом та новим паролем.</param>
     /// <returns>Повертає 200 OK з даними сесії у разі успіху.</returns>
+    /// <response code="200">Пароль успішно змінено. Повертає нову сесію.</response>
+    /// <response code="400">Некоректні дані, код або email.</response>
     [HttpPost("reset-password")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AuthResponse))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
