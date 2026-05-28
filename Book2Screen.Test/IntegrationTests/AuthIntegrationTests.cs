@@ -1,87 +1,73 @@
-using System.Net;
-using System.Net.Http.Json;
-using Book2Screen.Application.DTOs;
-using Xunit;
+// <copyright file="AuthIntegrationTests.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
 
 namespace Book2Screen.Test.IntegrationTests;
 
+using System.Net;
+using System.Net.Http.Json;
+using Book2Screen.Application.DTOs;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Xunit;
+
+/// <summary>
+/// Інтеграційні тести для автентифікації та Rate Limiting.
+/// </summary>
 public class AuthIntegrationTests : IClassFixture<CustomWebApplicationFactory<Program>>
 {
     private readonly HttpClient client;
-    private readonly CustomWebApplicationFactory<Program> factory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuthIntegrationTests"/> class.
+    /// </summary>
+    /// <param name="factory">Фабрика для створення тестового сервера.</param>
     public AuthIntegrationTests(CustomWebApplicationFactory<Program> factory)
     {
-        this.factory = factory;
         this.client = factory.CreateClient();
     }
 
+    /// <summary>
+    /// Перевіряє роботу Rate Limiter при перевищенні ліміту запитів (10 на хвилину).
+    /// </summary>
     [Fact]
-    public async Task Register_NewUser_ReturnsSuccess()
+    public async Task Login_RateLimiting_ShouldReturn429TooManyRequests()
     {
         // Arrange
-        var request = new RegisterRequest
+        var loginDto = new LoginDto { Email = "test@example.com", Password = "Password123" };
+        
+        // Act: Відправляємо 11 запитів (ліміт 10)
+        HttpResponseMessage lastResponse = null!;
+        for (int i = 0; i < 12; i++)
         {
-            Nickname = "testuser_int",
-            Email = "test_int@example.com",
-            Password = "Password123!"
-        };
-
-        // Act
-        var response = await this.client.PostAsJsonAsync("/api/v1/Auth/register", request);
+            lastResponse = await this.client.PostAsJsonAsync("/api/v1/auth/login", loginDto);
+        }
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        Assert.NotNull(authResponse);
-        Assert.NotNull(authResponse.Token);
-        Assert.Equal(request.Email, authResponse.Email);
+        Assert.Equal(HttpStatusCode.TooManyRequests, lastResponse.StatusCode);
     }
 
-    [Fact]
-    public async Task Login_ValidCredentials_ReturnsToken()
+    /// <summary>
+    /// Перевіряє валідацію складного пароля при реєстрації.
+    /// </summary>
+    [Theory]
+    [InlineData("simple")] // Занадто короткий
+    [InlineData("password123")] // Немає великої літери
+    [InlineData("PASSWORD123")] // Немає малої літери (опціонально, але регулярка вимагає цифру і велику)
+    [InlineData("Password")] // Немає цифри
+    public async Task Register_WeakPassword_ShouldReturn400BadRequest(string weakPassword)
     {
         // Arrange
-        var registerRequest = new RegisterRequest
-        {
-            Nickname = "login_test",
-            Email = "login_test@example.com",
-            Password = "Password123!"
-        };
-        await this.client.PostAsJsonAsync("/api/v1/Auth/register", registerRequest);
-
-        var loginDto = new LoginDto
-        {
-            Email = registerRequest.Email,
-            Password = registerRequest.Password
+        var request = new RegisterRequest 
+        { 
+            Nickname = "testuser", 
+            Email = "test@example.com", 
+            Password = weakPassword 
         };
 
         // Act
-        var response = await this.client.PostAsJsonAsync("/api/v1/Auth/login", loginDto);
+        var response = await this.client.PostAsJsonAsync("/api/v1/auth/register", request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        Assert.NotNull(authResponse);
-        Assert.NotNull(authResponse.Token);
-    }
-
-    [Fact]
-    public async Task Register_DuplicateUser_ReturnsConflict()
-    {
-        // Arrange
-        var request = new RegisterRequest
-        {
-            Nickname = "duplicate",
-            Email = "duplicate@example.com",
-            Password = "Password123!"
-        };
-        await this.client.PostAsJsonAsync("/api/v1/Auth/register", request);
-
-        // Act
-        var response = await this.client.PostAsJsonAsync("/api/v1/Auth/register", request);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

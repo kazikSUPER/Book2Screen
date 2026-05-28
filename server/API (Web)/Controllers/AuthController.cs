@@ -9,12 +9,15 @@ using Book2Screen.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
+using Microsoft.AspNetCore.RateLimiting;
+
 /// <summary>
 /// Контролер для керування автентифікацією та реєстрацією користувачів.
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
 [Produces("application/json")]
+[EnableRateLimiting("auth")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService authService;
