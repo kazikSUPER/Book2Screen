@@ -12,6 +12,9 @@ import StarRating from '../components/StarRating.vue';
 import DifferencesMap from '../components/DifferencesMap.vue';
 import VotingBlock from '../components/VotingBlock.vue';
 import ReviewsBlock from '../components/ReviewsBlock.vue';
+import { STR } from '../constants';
+
+const t = STR.detail;
 
 /**
  * SCRUM-68 (US 3.2) — Book Details.
@@ -54,17 +57,13 @@ onMounted(loadItem);
 watch(() => route.params.id, loadItem);
 
 // ── Wishlist (хочу прочитати / переглянути) ─────────────────
-const inReadList = computed(() =>
-  item.value ? wishlist.isInWishlist(item.value.id, 'read') : false
-);
-const inWatchList = computed(() =>
-  item.value ? wishlist.isInWishlist(item.value.id, 'watch') : false
-);
+const inReadList = computed(() => (item.value ? wishlist.isInWishlist(item.value.id, 'read') : false));
+const inWatchList = computed(() => (item.value ? wishlist.isInWishlist(item.value.id, 'watch') : false));
 
 function toggleRead(): void {
   if (!item.value) return;
   if (!userStore.isAuthenticated) {
-    notifications.pushWarning('Увійдіть, щоб додавати до списку');
+    notifications.pushWarning(t.wishlistNeedAuth);
     return;
   }
   wishlist.toggle(item.value.id, 'read');
@@ -73,7 +72,7 @@ function toggleRead(): void {
 function toggleWatch(): void {
   if (!item.value) return;
   if (!userStore.isAuthenticated) {
-    notifications.pushWarning('Увійдіть, щоб додавати до списку');
+    notifications.pushWarning(t.wishlistNeedAuth);
     return;
   }
   wishlist.toggle(item.value.id, 'watch');
@@ -85,7 +84,7 @@ const myBookRating = computed({
   set: (v: number) => {
     if (!item.value) return;
     if (!userStore.isAuthenticated) {
-      notifications.pushWarning('Увійдіть, щоб ставити оцінку');
+      notifications.pushWarning(t.ratingNeedAuth);
       return;
     }
     userRatings.setRating(item.value.id, 'book', v);
@@ -97,7 +96,7 @@ const myFilmRating = computed({
   set: (v: number) => {
     if (!item.value) return;
     if (!userStore.isAuthenticated) {
-      notifications.pushWarning('Увійдіть, щоб ставити оцінку');
+      notifications.pushWarning(t.ratingNeedAuth);
       return;
     }
     userRatings.setRating(item.value.id, 'film', v);
@@ -117,18 +116,18 @@ const goBack = () => router.push({ name: 'home' });
   <div class="detail">
     <!-- Брейкрумна стрічка під шапкою (з Figma) -->
     <div v-if="item" class="detail__crumb">
-      <button class="detail__crumb-back" type="button" aria-label="Назад" @click="goBack">←</button>
+      <button class="detail__crumb-back" type="button" :aria-label="STR.common.back" @click="goBack">←</button>
       <span class="detail__crumb-text">{{ item.genre }} / {{ item.title }}</span>
     </div>
 
-    <p v-if="isLoading" class="detail__status">Завантаження…</p>
+    <p v-if="isLoading" class="detail__status">{{ STR.common.loading }}</p>
 
     <div v-else-if="errorMessage" class="detail__status">
       <p>⚠ {{ errorMessage }}</p>
-      <button class="detail__retry" type="button" @click="loadItem">Повторити</button>
+      <button class="detail__retry" type="button" @click="loadItem">{{ STR.common.retry }}</button>
     </div>
 
-    <p v-else-if="!item" class="detail__status">Елемент не знайдено</p>
+    <p v-else-if="!item" class="detail__status">{{ t.notFound }}</p>
 
     <template v-else>
       <!-- ── Дві картки порівняння ─────────────────────────── -->
@@ -138,14 +137,29 @@ const goBack = () => router.push({ name: 'home' });
           <h2 class="compare-card__title">{{ item.title }}</h2>
           <div class="compare-card__row">
             <div class="compare-card__poster">
-              <img :src="item.poster" :alt="item.title" />
+              <img :src="item.poster" :alt="item.title" loading="lazy" />
             </div>
             <dl class="compare-card__meta">
-              <div class="compare-card__meta-row"><dt>Рік:</dt><dd>{{ item.year }}</dd></div>
-              <div class="compare-card__meta-row"><dt>Жанр:</dt><dd>{{ item.genre }}</dd></div>
-              <div class="compare-card__meta-row"><dt>Країна:</dt><dd>{{ item.country }}</dd></div>
-              <div v-if="item.author" class="compare-card__meta-row"><dt>Автор:</dt><dd>{{ item.author }}</dd></div>
-              <div class="compare-card__meta-row"><dt>Рейтинг:</dt><dd>{{ item.bookRating }} / 10</dd></div>
+              <div class="compare-card__meta-row">
+                <dt>{{ t.bookYear }}</dt>
+                <dd>{{ item.year }}</dd>
+              </div>
+              <div class="compare-card__meta-row">
+                <dt>{{ t.bookGenre }}</dt>
+                <dd>{{ item.genre }}</dd>
+              </div>
+              <div class="compare-card__meta-row">
+                <dt>{{ t.bookCountry }}</dt>
+                <dd>{{ item.country }}</dd>
+              </div>
+              <div v-if="item.author" class="compare-card__meta-row">
+                <dt>{{ t.bookAuthor }}</dt>
+                <dd>{{ item.author }}</dd>
+              </div>
+              <div class="compare-card__meta-row">
+                <dt>{{ t.bookRating }}</dt>
+                <dd>{{ item.bookRating }} / 10</dd>
+              </div>
             </dl>
           </div>
           <button
@@ -155,36 +169,52 @@ const goBack = () => router.push({ name: 'home' });
             @click="toggleRead"
           >
             <span class="compare-card__wish-icon">{{ inReadList ? '✓' : '+' }}</span>
-            {{ inReadList ? 'У списку' : 'Хочу прочитати' }}
+            {{ inReadList ? t.inList : t.wantToRead }}
           </button>
           <p class="compare-card__summary">
-            <strong>Коротка анотація</strong><br />
+            <strong>{{ t.summaryTitle }}</strong
+            ><br />
             {{ bookSummary }}
           </p>
         </article>
 
         <!-- VS / Екранізовано -->
         <div class="detail__vs" aria-hidden="true">
-          <span class="detail__vs-text">Екранізовано</span>
+          <span class="detail__vs-text">{{ t.adapted }}</span>
           <svg width="40" height="20" viewBox="0 0 40 20" fill="none">
             <path d="M0 10H35M35 10L26 2M35 10L26 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
           </svg>
         </div>
 
-        <!-- Екранізація -->
-        <article class="compare-card">
+        <!-- Екранізація (за Figma — дзеркальна: текст ліворуч, постер праворуч) -->
+        <article class="compare-card compare-card--mirror">
           <h2 class="compare-card__title">{{ item.title }}</h2>
           <div class="compare-card__row">
-            <div class="compare-card__poster">
-              <img :src="item.filmPoster ?? item.poster" :alt="item.title" />
-            </div>
             <dl class="compare-card__meta">
-              <div class="compare-card__meta-row"><dt>Рік:</dt><dd>{{ filmYearLabel }}</dd></div>
-              <div class="compare-card__meta-row"><dt>Жанр:</dt><dd>{{ item.genre }}</dd></div>
-              <div class="compare-card__meta-row"><dt>Країна:</dt><dd>{{ filmCountryLabel }}</dd></div>
-              <div v-if="item.director" class="compare-card__meta-row"><dt>Режисер:</dt><dd>{{ item.director }}</dd></div>
-              <div class="compare-card__meta-row"><dt>Рейтинг:</dt><dd>{{ item.filmRating }} / 10</dd></div>
+              <div class="compare-card__meta-row">
+                <dt>{{ t.bookYear }}</dt>
+                <dd>{{ filmYearLabel }}</dd>
+              </div>
+              <div class="compare-card__meta-row">
+                <dt>{{ t.bookGenre }}</dt>
+                <dd>{{ item.genre }}</dd>
+              </div>
+              <div class="compare-card__meta-row">
+                <dt>{{ t.bookCountry }}</dt>
+                <dd>{{ filmCountryLabel }}</dd>
+              </div>
+              <div v-if="item.director" class="compare-card__meta-row">
+                <dt>{{ t.bookDirector }}</dt>
+                <dd>{{ item.director }}</dd>
+              </div>
+              <div class="compare-card__meta-row">
+                <dt>{{ t.bookRating }}</dt>
+                <dd>{{ item.filmRating }} / 10</dd>
+              </div>
             </dl>
+            <div class="compare-card__poster">
+              <img :src="item.filmPoster ?? item.poster" :alt="item.title" loading="lazy" />
+            </div>
           </div>
           <button
             class="compare-card__wish"
@@ -193,10 +223,11 @@ const goBack = () => router.push({ name: 'home' });
             @click="toggleWatch"
           >
             <span class="compare-card__wish-icon">{{ inWatchList ? '✓' : '+' }}</span>
-            {{ inWatchList ? 'У списку' : 'Хочу переглянути' }}
+            {{ inWatchList ? t.inList : t.wantToWatch }}
           </button>
           <p class="compare-card__summary">
-            <strong>Коротка анотація</strong><br />
+            <strong>{{ t.summaryTitle }}</strong
+            ><br />
             {{ filmSummary }}
           </p>
         </article>
@@ -205,11 +236,11 @@ const goBack = () => router.push({ name: 'home' });
       <!-- ── Зіркові оцінки користувача ─────────────────────── -->
       <section class="detail__user-ratings">
         <div class="user-rating">
-          <span class="user-rating__label">Оцінка книги</span>
+          <span class="user-rating__label">{{ t.bookRatingLabel }}</span>
           <StarRating v-model="myBookRating" :size="32" />
         </div>
         <div class="user-rating">
-          <span class="user-rating__label">Оцінка екранізації</span>
+          <span class="user-rating__label">{{ t.filmRatingLabel }}</span>
           <StarRating v-model="myFilmRating" :size="32" />
         </div>
       </section>
@@ -297,6 +328,11 @@ const goBack = () => router.push({ name: 'home' });
   grid-template-columns: auto 1fr;
   gap: 12px;
   align-items: start;
+}
+
+/* Дзеркальна картка екранізації (за Figma — постер праворуч, текст ліворуч). */
+.compare-card--mirror .compare-card__row {
+  grid-template-columns: 1fr auto;
 }
 
 .compare-card__poster {

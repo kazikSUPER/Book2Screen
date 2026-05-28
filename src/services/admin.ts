@@ -1,6 +1,7 @@
 import { apiClient } from './api';
 import type { BookScreenItem, DifferencePoint, ReviewResponse } from './types';
 import { ALL_ITEMS } from './items';
+import { USE_MOCK_FALLBACK } from './env';
 
 /**
  * SCRUM-143 — Admin Panel API.
@@ -17,8 +18,6 @@ import { ALL_ITEMS } from './items';
  * Mock-fallback: працюємо з in-memory копією ALL_ITEMS, щоб дії в UI були
  * видимі впродовж сесії. Скидається при перезавантаженні.
  */
-
-const USE_MOCK_FALLBACK = true;
 
 const localBooks: BookScreenItem[] = [...ALL_ITEMS];
 
@@ -68,10 +67,7 @@ export async function createBook(book: Omit<BookScreenItem, 'id'>): Promise<Book
   }
 }
 
-export async function updateBook(
-  id: string,
-  patch: Partial<Omit<BookScreenItem, 'id'>>
-): Promise<BookScreenItem> {
+export async function updateBook(id: string, patch: Partial<Omit<BookScreenItem, 'id'>>): Promise<BookScreenItem> {
   try {
     const response = await apiClient.put<BookScreenItem>(`/api/v1/works/${id}`, patch);
     const idx = localBooks.findIndex((b) => b.id === id);
@@ -85,7 +81,7 @@ export async function updateBook(
         localBooks[idx] = { ...localBooks[idx], ...patch };
         return localBooks[idx];
       }
-      throw new Error('Книгу не знайдено');
+      throw new Error('Книгу не знайдено', { cause: err });
     }
     throw err;
   }
@@ -117,10 +113,7 @@ export async function fetchReports(): Promise<ReportedComment[]> {
   }
 }
 
-export async function moderateReport(
-  reportId: string,
-  action: 'approve' | 'reject' | 'spoiler'
-): Promise<void> {
+export async function moderateReport(reportId: string, action: 'approve' | 'reject' | 'spoiler'): Promise<void> {
   try {
     await apiClient.post(`/api/v1/admin/reports/${reportId}/${action}`);
   } catch (err) {
@@ -129,8 +122,7 @@ export async function moderateReport(
   }
   const r = localReports.find((x) => x.reportId === reportId);
   if (r) {
-    r.status =
-      action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'marked-spoiler';
+    r.status = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'marked-spoiler';
   }
 }
 

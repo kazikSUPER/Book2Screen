@@ -38,9 +38,7 @@ export const useWishlistStore = defineStore('wishlist', () => {
 
   // Списки id для ProfileView (SCRUM-64) — секція "Хочу переглянути/прочитати".
   const readList = computed(() => items.value.filter((e) => e.kind === 'read').map((e) => e.workId));
-  const watchList = computed(() =>
-    items.value.filter((e) => e.kind === 'watch').map((e) => e.workId)
-  );
+  const watchList = computed(() => items.value.filter((e) => e.kind === 'watch').map((e) => e.workId));
 
   return { items, isInWishlist, toggle, readList, watchList };
 });

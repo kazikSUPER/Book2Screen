@@ -14,6 +14,7 @@ import {
 } from '../services/admin';
 import type { BookScreenItem, DifferencePoint } from '../services/types';
 import { extractErrorMessage } from '../services/error';
+import { GENRES, STR } from '../constants';
 
 /**
  * SCRUM-143 — Admin Panel.
@@ -90,19 +91,8 @@ const emptyForm = (): BookForm => ({
 const form = ref<BookForm>(emptyForm());
 const isSubmitting = ref(false);
 
-const genreOptions = [
-  'Комедія',
-  'Драма',
-  'Фантастика',
-  'Фентезі',
-  'Жахи',
-  'Детектив',
-  'Кримінал',
-  'Пригоди',
-  'Історичні',
-  'Біографічні',
-  'Документальні',
-];
+const genreOptions = GENRES;
+const t = STR.admin;
 
 // ── Завантаження даних ──────────────────────────────────────
 async function loadBooks(): Promise<void> {
@@ -165,12 +155,12 @@ function startEdit(book: BookScreenItem): void {
 
 // ── CRUD ────────────────────────────────────────────────────
 async function onDelete(book: BookScreenItem): Promise<void> {
-  if (!confirm(`Видалити "${book.title}"?`)) return;
+  if (!confirm(t.confirmDelete(book.title))) return;
   try {
     await deleteBook(book.id);
     books.value = books.value.filter((b) => b.id !== book.id);
     if (selectedBook.value?.id === book.id) selectedBook.value = books.value[0] ?? null;
-    notifications.pushSuccess('Книгу видалено');
+    notifications.pushSuccess(t.bookDeleted);
   } catch (err) {
     notifications.pushError(extractErrorMessage(err));
   }
@@ -178,7 +168,7 @@ async function onDelete(book: BookScreenItem): Promise<void> {
 
 async function submitForm(): Promise<void> {
   if (!form.value.title || !form.value.year) {
-    notifications.pushWarning('Заповніть назву і рік');
+    notifications.pushWarning(t.fillTitleAndYear);
     return;
   }
   isSubmitting.value = true;
@@ -200,11 +190,11 @@ async function submitForm(): Promise<void> {
       const updated = await updateBook(form.value.id, payload);
       const idx = books.value.findIndex((b) => b.id === updated.id);
       if (idx >= 0) books.value[idx] = updated;
-      notifications.pushSuccess('Книгу оновлено');
+      notifications.pushSuccess(t.bookUpdated);
     } else {
       const created = await createBook(payload);
       books.value.push(created);
-      notifications.pushSuccess('Книгу додано');
+      notifications.pushSuccess(t.bookAdded);
     }
     mode.value = 'books';
   } catch (err) {
@@ -239,13 +229,12 @@ async function moderate(reportId: string, action: 'approve' | 'reject' | 'spoile
     await moderateReport(reportId, action);
     const r = reports.value.find((x) => x.reportId === reportId);
     if (r) {
-      r.status =
-        action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'marked-spoiler';
+      r.status = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'marked-spoiler';
     }
     const labels = {
-      approve: 'Коментар видалено',
-      reject: 'Скаргу відхилено',
-      spoiler: 'Позначено як спойлер',
+      approve: t.commentDeleted,
+      reject: t.reportRejected,
+      spoiler: t.markedSpoiler,
     };
     notifications.pushSuccess(labels[action]);
   } catch (err) {
@@ -267,9 +256,9 @@ onMounted(() => {
   <div v-if="userStore.isAuthenticated" class="admin">
     <!-- ═════════ Стрічка-заголовок ═════════ -->
     <div class="admin__stripe">
-      <span v-if="mode === 'books'">Адмін-панель</span>
-      <span v-else-if="mode === 'comments'">Модерація коментарів</span>
-      <span v-else>{{ form.id ? 'Редагування твору' : 'Додавання твору' }}</span>
+      <span v-if="mode === 'books'">{{ t.panelTitle }}</span>
+      <span v-else-if="mode === 'comments'">{{ t.moderationTitle }}</span>
+      <span v-else>{{ form.id ? t.editBookTitle : t.addBookTitle }}</span>
     </div>
 
     <!-- ═════════ Mode: книги ═════════ -->
@@ -277,9 +266,9 @@ onMounted(() => {
       <div class="admin__layout">
         <!-- Sidebar з діями -->
         <aside class="admin__sidebar">
-          <button class="admin__action" @click="startCreate">Додати книгу</button>
+          <button class="admin__action" @click="startCreate">{{ t.addBook }}</button>
           <button class="admin__action admin__action--secondary" @click="switchToComments">
-            Модерація коментарів
+            {{ t.moderation }}
           </button>
 
           <!-- Картка-прев'ю обраної книги -->
@@ -297,10 +286,10 @@ onMounted(() => {
             </div>
             <div class="admin__preview-actions">
               <button class="admin__btn admin__btn--primary" @click="startEdit(selectedBook)">
-                Редагувати
+                {{ STR.common.edit }}
               </button>
               <button class="admin__btn admin__btn--dark" @click="onDelete(selectedBook)">
-                Видалити
+                {{ STR.common.delete }}
               </button>
             </div>
           </article>
@@ -309,12 +298,7 @@ onMounted(() => {
         <!-- Main: пошук + таблиця -->
         <section class="admin__main">
           <div class="admin__search">
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Пошук за назвою / автором / роком…"
-              class="admin__search-input"
-            />
+            <input v-model="searchQuery" type="text" :placeholder="t.searchPlaceholder" class="admin__search-input" />
             <span class="admin__search-icon" aria-hidden="true">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
@@ -323,16 +307,16 @@ onMounted(() => {
             </span>
           </div>
 
-          <p v-if="isLoading" class="admin__status">Завантаження…</p>
+          <p v-if="isLoading" class="admin__status">{{ STR.common.loading }}</p>
 
           <table v-else class="admin__table" aria-label="Список творів">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Назва</th>
-                <th>Автор</th>
-                <th>Рік</th>
-                <th>Дія</th>
+                <th>{{ t.idHeader }}</th>
+                <th>{{ t.titleHeader }}</th>
+                <th>{{ t.authorLabel }}</th>
+                <th>{{ t.yearHeader }}</th>
+                <th>{{ t.actionHeader }}</th>
               </tr>
             </thead>
             <tbody>
@@ -348,13 +332,13 @@ onMounted(() => {
                 <td>{{ b.year }}</td>
                 <td class="admin__row-actions" @click.stop>
                   <button class="admin__btn admin__btn--primary" @click="startEdit(b)">
-                    Редагувати
+                    {{ STR.common.edit }}
                   </button>
-                  <button class="admin__btn admin__btn--primary" @click="onDelete(b)">Видалити</button>
+                  <button class="admin__btn admin__btn--primary" @click="onDelete(b)">{{ STR.common.delete }}</button>
                 </td>
               </tr>
               <tr v-if="filteredBooks.length === 0">
-                <td colspan="5" class="admin__empty">Нічого не знайдено</td>
+                <td colspan="5" class="admin__empty">{{ t.nothingFound }}</td>
               </tr>
             </tbody>
           </table>
@@ -365,16 +349,16 @@ onMounted(() => {
     <!-- ═════════ Mode: коментарі ═════════ -->
     <template v-else-if="mode === 'comments'">
       <div class="admin__main">
-        <button class="admin__back" type="button" @click="switchToBooks">← До списку творів</button>
+        <button class="admin__back" type="button" @click="switchToBooks">{{ t.backToBooks }}</button>
 
-        <p v-if="isLoading" class="admin__status">Завантаження…</p>
+        <p v-if="isLoading" class="admin__status">{{ STR.common.loading }}</p>
 
         <table v-else class="admin__table admin__table--reports">
           <thead>
             <tr>
-              <th>Причина</th>
-              <th>Коментар</th>
-              <th>Дія</th>
+              <th>{{ t.reasonHeader }}</th>
+              <th>{{ t.commentHeader }}</th>
+              <th>{{ t.actionHeader }}</th>
             </tr>
           </thead>
           <tbody>
@@ -387,26 +371,26 @@ onMounted(() => {
                   :disabled="r.status !== 'pending'"
                   @click="moderate(r.reportId, 'reject')"
                 >
-                  Схвалити
+                  {{ t.approve }}
                 </button>
                 <button
                   class="admin__btn admin__btn--primary"
                   :disabled="r.status !== 'pending'"
                   @click="moderate(r.reportId, 'approve')"
                 >
-                  Видалити
+                  {{ STR.common.delete }}
                 </button>
                 <button
                   class="admin__btn admin__btn--ghost"
                   :disabled="r.status !== 'pending'"
                   @click="moderate(r.reportId, 'spoiler')"
                 >
-                  Спойлер
+                  {{ t.markSpoiler }}
                 </button>
               </td>
             </tr>
             <tr v-if="reports.length === 0">
-              <td colspan="3" class="admin__empty">Скарг немає</td>
+              <td colspan="3" class="admin__empty">{{ t.noReports }}</td>
             </tr>
           </tbody>
         </table>
@@ -419,109 +403,123 @@ onMounted(() => {
         <div class="admin-form__layout">
           <!-- Ліва колонка — інфо про книгу -->
           <div class="admin-form__col">
-            <h2 class="admin-form__col-title">Заповніть інформацію про книгу</h2>
+            <h2 class="admin-form__col-title">{{ t.bookFormSectionTitle }}</h2>
 
             <label class="admin-form__field">
-              <span>Назва</span>
+              <span>{{ t.titleLabel }}</span>
               <input v-model="form.title" type="text" class="admin-form__input" required />
             </label>
 
             <label class="admin-form__field">
-              <span>Автор</span>
+              <span>{{ t.authorLabel }}</span>
               <input v-model="form.author" type="text" class="admin-form__input" />
             </label>
 
             <label class="admin-form__field">
-              <span>Рік виходу</span>
+              <span>{{ t.yearLabel }}</span>
               <input v-model.number="form.year" type="number" class="admin-form__input" min="1900" required />
             </label>
 
             <label class="admin-form__field">
-              <span>Жанр</span>
+              <span>{{ t.genreLabel }}</span>
               <select v-model="form.genre" class="admin-form__input">
-                <option value="">— оберіть —</option>
+                <option value="">{{ t.chooseGenre }}</option>
                 <option v-for="g in genreOptions" :key="g" :value="g">{{ g }}</option>
               </select>
             </label>
 
             <label class="admin-form__field">
-              <span>Країна</span>
+              <span>{{ t.countryLabel }}</span>
               <input v-model="form.country" type="text" class="admin-form__input" />
             </label>
 
             <label class="admin-form__field">
-              <span>URL зображення (постер)</span>
+              <span>{{ t.posterLabel }}</span>
               <input v-model="form.poster" type="url" class="admin-form__input" placeholder="https://…" />
             </label>
 
             <div v-if="form.poster" class="admin-form__poster">
-              <img :src="form.poster" alt="Прев'ю" />
+              <img :src="form.poster" :alt="t.posterPreviewAlt" />
             </div>
 
             <label class="admin-form__field">
-              <span>Короткий опис</span>
+              <span>{{ t.descriptionLabel }}</span>
               <textarea v-model="form.description" rows="4" class="admin-form__input"></textarea>
             </label>
 
             <div class="admin-form__row">
               <label class="admin-form__field">
-                <span>Рейтинг книги (0–10)</span>
-                <input v-model.number="form.bookRating" type="number" step="0.1" min="0" max="10" class="admin-form__input" />
+                <span>{{ t.bookRatingLabel }}</span>
+                <input
+                  v-model.number="form.bookRating"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  class="admin-form__input"
+                />
               </label>
               <label class="admin-form__field">
-                <span>Рейтинг екранізації (0–10)</span>
-                <input v-model.number="form.filmRating" type="number" step="0.1" min="0" max="10" class="admin-form__input" />
+                <span>{{ t.filmRatingLabel }}</span>
+                <input
+                  v-model.number="form.filmRating"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  class="admin-form__input"
+                />
               </label>
             </div>
           </div>
 
           <!-- Права колонка — карта відмінностей -->
           <div class="admin-form__col admin-form__col--map">
-            <h2 class="admin-form__col-title">Заповніть інтерактивну карту відмінностей</h2>
+            <h2 class="admin-form__col-title">{{ t.mapSectionTitle }}</h2>
 
             <p v-if="form.differences.length === 0" class="admin-form__empty">
-              Точок ще немає. Натисніть "Додати точку".
+              {{ t.noPoints }}
             </p>
 
             <ol class="admin-form__points">
               <li v-for="(p, i) in form.differences" :key="p.id" class="admin-form__point">
                 <header class="admin-form__point-head">
-                  <span class="admin-form__point-num">Точка {{ i + 1 }}</span>
+                  <span class="admin-form__point-num">{{ t.point(i + 1) }}</span>
                   <button type="button" class="admin-form__point-remove" @click="removePoint(i)">
-                    Видалити
+                    {{ STR.common.delete }}
                   </button>
                 </header>
                 <label class="admin-form__field">
-                  <span>Заголовок</span>
+                  <span>{{ t.pointTitle }}</span>
                   <input v-model="p.title" type="text" class="admin-form__input" />
                 </label>
                 <label class="admin-form__field">
-                  <span>Сцена в книзі</span>
+                  <span>{{ t.sceneBook }}</span>
                   <textarea v-model="p.bookText" rows="3" class="admin-form__input"></textarea>
                 </label>
                 <label class="admin-form__field">
-                  <span>Сцена в фільмі</span>
+                  <span>{{ t.sceneFilm }}</span>
                   <textarea v-model="p.filmText" rows="3" class="admin-form__input"></textarea>
                 </label>
                 <label class="admin-form__checkbox">
                   <input v-model="p.isSpoiler" type="checkbox" />
-                  <span>Спойлер</span>
+                  <span>{{ t.spoiler }}</span>
                 </label>
               </li>
             </ol>
 
             <button type="button" class="admin-form__add-point" @click="addPoint">
-              + Додати нову точку
+              {{ t.addPoint }}
             </button>
           </div>
         </div>
 
         <div class="admin-form__actions">
           <button type="submit" class="admin__btn admin__btn--primary admin__btn--large" :disabled="isSubmitting">
-            {{ isSubmitting ? 'Збереження…' : 'Підтвердити' }}
+            {{ isSubmitting ? t.saving : STR.common.confirm }}
           </button>
           <button type="button" class="admin__btn admin__btn--dark admin__btn--large" @click="cancelForm">
-            Скасувати
+            {{ STR.common.cancel }}
           </button>
         </div>
       </form>

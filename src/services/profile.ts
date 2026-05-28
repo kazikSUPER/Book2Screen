@@ -1,5 +1,6 @@
 import { apiClient } from './api';
 import type { ReviewResponse } from './types';
+import { USE_MOCK_FALLBACK } from './env';
 
 /**
  * SCRUM-64 — Personal Profile.
@@ -12,8 +13,6 @@ import type { ReviewResponse } from './types';
  * Поки бекенд не готовий — повертаємо мок-список відгуків з тих самих
  * сидових даних, які seed'ить services/reviews.ts.
  */
-
-const USE_MOCK_FALLBACK = true;
 
 export async function fetchMyReviews(): Promise<ReviewResponse[]> {
   try {

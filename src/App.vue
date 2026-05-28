@@ -11,29 +11,29 @@ import IconUser from './components/IconUser.vue';
 import { checkHealth } from './services/health';
 import { useUserStore } from './state/user';
 import { useFiltersStore } from './state/filters';
+import { STR } from './constants';
 
 const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
 const filtersStore = useFiltersStore();
+const t = STR.common;
 
 // ── Filter panel — показується тільки на сторінках, де є каталог.
-// Конфігурація секцій залежить від маршруту (за дизайном Figma).
+// За Figma: Home — Жанри+Країна (Frame 1), Search — повний набір.
 const filterPanelConfig = computed<{ visible: boolean; sections: FilterSection[] }>(() => {
   switch (route.name) {
     case 'home':
-      // Home — за Figma тільки жанри і країни.
       return { visible: true, sections: ['genres', 'countries'] };
     case 'search':
-      // Search — повний набір.
       return { visible: true, sections: ['sort', 'genres', 'countries', 'years', 'rating'] };
     default:
-      // Top, Detail, Profile, Admin — без бічної панелі.
+      // Top, Detail, Profile, Admin — без бічної панелі (за макетами).
       return { visible: false, sections: [] };
   }
 });
 
-// ── Health-check при старті застосунку ──────────────
+// ── Health-check при старті ──────────────────────────
 const backendStatus = ref<'checking' | 'up' | 'down'>('checking');
 
 onMounted(async () => {
@@ -48,8 +48,6 @@ onMounted(async () => {
 });
 
 // ── Search ──────────────────────────────────────────
-// Поле пошуку у хедері тепер пише напряму у filters store —
-// тому будь-яка сторінка одразу бачить актуальний searchQuery.
 const onSearchSubmit = () => {
   if (filtersStore.searchQuery.trim()) {
     router.push({ name: 'search', query: { q: filtersStore.searchQuery.trim() } });
@@ -61,13 +59,14 @@ type ModalType = 'login' | 'register' | 'reset' | null;
 const activeModal = ref<ModalType>(null);
 
 // ── Mobile filters drawer ──────────────────────────
-// На мобільному фільтри ховаються у "шторку". Кнопка біля пошуку — її відкриває.
 const isMobileFiltersOpen = ref(false);
 
-// ── Auth ─────────────────────────────────────────────
+// ── Auth: іконка користувача — єдиний UI-елемент авторизації за макетами.
+// Не залогінений → відкрити модалку Login.
+// Залогінений → перейти у профіль (де є кнопка "Вийти").
 const handleAuthClick = () => {
   if (userStore.isAuthenticated) {
-    userStore.logout();
+    router.push({ name: 'profile' });
   } else {
     activeModal.value = 'login';
   }
@@ -77,9 +76,7 @@ const handleAuthClick = () => {
 <template>
   <div class="app-wrapper">
     <!-- Банер статусу бекенду -->
-    <div v-if="backendStatus === 'down'" class="backend-status-banner">
-      ⚠ Backend недоступний. Дані не завантажуються.
-    </div>
+    <div v-if="backendStatus === 'down'" class="backend-status-banner" role="status">⚠ {{ t.serverDown }}</div>
 
     <header class="header">
       <RouterLink to="/" class="logo-link" aria-label="Book2Screen — на головну">
@@ -87,9 +84,22 @@ const handleAuthClick = () => {
       </RouterLink>
 
       <div class="search-bar header-search">
-        <input v-model="filtersStore.searchQuery" type="text" placeholder="Пошук..." @keyup.enter="onSearchSubmit" />
-        <button class="search-submit" aria-label="Шукати" @click="onSearchSubmit">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <input
+          v-model="filtersStore.searchQuery"
+          type="search"
+          :placeholder="t.search"
+          :aria-label="t.search"
+          @keyup.enter="onSearchSubmit"
+        />
+        <button class="search-submit" type="button" :aria-label="t.searchSubmit" @click="onSearchSubmit">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
             <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
             <path d="M21 21L16.5 16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
           </svg>
@@ -98,7 +108,8 @@ const handleAuthClick = () => {
 
       <button
         class="login-btn"
-        :title="userStore.isAuthenticated ? `Вийти (${userStore.email})` : 'Вхід'"
+        type="button"
+        :title="userStore.isAuthenticated ? STR.auth.logoutTooltip(userStore.email) : STR.auth.loginTooltip"
         @click="handleAuthClick"
       >
         <IconUser :size="28" />
@@ -108,11 +119,24 @@ const handleAuthClick = () => {
     <!-- Mobile-only search-bar -->
     <div class="mobile-search">
       <div class="search-bar">
-        <input v-model="filtersStore.searchQuery" type="text" placeholder="Пошук..." @keyup.enter="onSearchSubmit" />
-        <span class="search-icon">🔍</span>
+        <input
+          v-model="filtersStore.searchQuery"
+          type="search"
+          :placeholder="t.search"
+          :aria-label="t.search"
+          @keyup.enter="onSearchSubmit"
+        />
+        <span class="search-icon" aria-hidden="true">🔍</span>
       </div>
-      <!-- Mobile-кнопка для відкриття фільтрів -->
-      <button class="mobile-filters-btn" @click="isMobileFiltersOpen = true">⚙ Фільтри</button>
+      <button
+        v-if="filterPanelConfig.visible"
+        type="button"
+        class="mobile-filters-btn"
+        :aria-label="t.filters"
+        @click="isMobileFiltersOpen = true"
+      >
+        {{ t.filters }}
+      </button>
     </div>
 
     <div class="main-layout">
@@ -142,8 +166,6 @@ const handleAuthClick = () => {
 </template>
 
 <style>
-/* :root токени винесено у src/style.css — глобально для всього застосунку. */
-
 .app-wrapper {
   display: flex;
   flex-direction: column;
@@ -160,7 +182,7 @@ const handleAuthClick = () => {
   font-size: 14px;
 }
 
-/* ── Header ── */
+/* ── Header (за Figma: Лого + широкий пошук + іконка користувача) ── */
 .header {
   background-color: var(--color-header);
   height: var(--header-height);
@@ -171,7 +193,6 @@ const handleAuthClick = () => {
   gap: 24px;
   position: relative;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--color-header);
 }
 
 .logo-link {
@@ -180,12 +201,18 @@ const handleAuthClick = () => {
   align-items: center;
   flex-shrink: 0;
   padding: 4px 6px;
+  border-radius: var(--radius-xs);
+}
+
+.logo-link:focus-visible {
+  outline: 2px solid var(--color-panel-box);
+  outline-offset: 2px;
 }
 
 .search-bar {
   width: 700px;
   max-width: 100%;
-  flex-shrink: 1;
+  flex: 1;
   position: relative;
   display: flex;
   align-items: center;
@@ -289,7 +316,6 @@ const handleAuthClick = () => {
   flex-shrink: 0;
 }
 
-/* ── Адаптив ── */
 @media (max-width: 1280px) {
   .header {
     gap: 16px;

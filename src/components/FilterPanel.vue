@@ -6,7 +6,8 @@ export type FilterSection = 'sort' | 'genres' | 'countries' | 'years' | 'rating'
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useFiltersStore, type SortOption } from '../state/filters';
+import { useFiltersStore } from '../state/filters';
+import { GENRES, COUNTRIES, SORT_OPTIONS_VERTICAL, MIN_YEAR, MAX_YEAR } from '../constants';
 
 /**
  * Універсальна вертикальна панель фільтрів. Використовується на Home (компактно)
@@ -36,50 +37,15 @@ function show(section: FilterSection): boolean {
   return props.sections.includes(section);
 }
 
-const genres: string[] = [
-  'Комедія',
-  'Драма',
-  'Фантастика',
-  'Фентезі',
-  'Жахи',
-  'Детектив',
-  'Кримінал',
-  'Пригоди',
-  'Історичні',
-  'Біографічні',
-  'Документальні',
-];
-
-const countries: string[] = [
-  'Україна',
-  'США',
-  'Велика Британія',
-  'Канада',
-  'Греція',
-  'Італія',
-  'Туреччина',
-  'Іспанія',
-  'Німеччина',
-  'Японія',
-  'Швеція',
-];
-
-const sortOptions: Array<{ value: SortOption; label: string }> = [
-  { value: 'popular', label: 'Популярні' },
-  { value: 'rating-desc', label: 'Рейтинг ↓' },
-  { value: 'year-desc', label: 'Спочатку нові' },
-  { value: 'year-asc', label: 'Спочатку старі' },
-];
-
-const MIN_YEAR = 1900;
-const MAX_YEAR = new Date().getFullYear();
+const genres = GENRES;
+const countries = COUNTRIES;
+const sortOptions = SORT_OPTIONS_VERTICAL;
 
 const yearMinInput = computed({
   get: () => filters.yearMin ?? '',
   set: (v: number | string) => {
     const n = Number(v);
-    filters.yearMin =
-      v === '' || isNaN(n) ? null : Math.min(Math.max(n, MIN_YEAR), MAX_YEAR);
+    filters.yearMin = v === '' || isNaN(n) ? null : Math.min(Math.max(n, MIN_YEAR), MAX_YEAR);
   },
 });
 
@@ -87,8 +53,7 @@ const yearMaxInput = computed({
   get: () => filters.yearMax ?? '',
   set: (v: number | string) => {
     const n = Number(v);
-    filters.yearMax =
-      v === '' || isNaN(n) ? null : Math.min(Math.max(n, MIN_YEAR), MAX_YEAR);
+    filters.yearMax = v === '' || isNaN(n) ? null : Math.min(Math.max(n, MIN_YEAR), MAX_YEAR);
   },
 });
 
@@ -110,14 +75,7 @@ function toggleCountry(c: string): void {
 
 <template>
   <aside class="filter-panel" :class="{ 'mobile-open': mobileOpen }">
-    <button
-      v-if="mobileOpen"
-      class="mobile-close"
-      aria-label="Закрити фільтри"
-      @click="$emit('closeMobile')"
-    >
-      ✕
-    </button>
+    <button v-if="mobileOpen" class="mobile-close" aria-label="Закрити фільтри" @click="$emit('closeMobile')">✕</button>
 
     <div v-if="show('sort')" class="filter-box">
       <h3 class="filter-title">Сортування</h3>
@@ -185,19 +143,10 @@ function toggleCountry(c: string): void {
       <h3 class="filter-title">
         Мін. рейтинг: <span class="rating-value">{{ minRatingInput }}</span>
       </h3>
-      <input
-        v-model.number="minRatingInput"
-        type="range"
-        min="0"
-        max="10"
-        step="0.5"
-        class="rating-slider"
-      />
+      <input v-model.number="minRatingInput" type="range" min="0" max="10" step="0.5" class="rating-slider" />
     </div>
 
-    <button v-if="filters.hasActiveFilters" class="clear-btn" @click="filters.clearAll()">
-      Очистити всі фільтри
-    </button>
+    <button v-if="filters.hasActiveFilters" class="clear-btn" @click="filters.clearAll()">Очистити всі фільтри</button>
   </aside>
 </template>
 
@@ -284,7 +233,9 @@ function toggleCountry(c: string): void {
   cursor: pointer;
   padding: 2px 4px;
   border-radius: var(--radius-xs);
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .filter-item:hover {

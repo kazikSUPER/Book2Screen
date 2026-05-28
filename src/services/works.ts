@@ -1,6 +1,7 @@
 import { apiClient } from './api';
 import type { BookScreenItem } from './types';
 import { ALL_ITEMS } from './items';
+import { USE_MOCK_FALLBACK } from './env';
 import type { SortOption } from '../state/filters';
 
 export interface FetchWorksParams {
@@ -14,8 +15,6 @@ export interface FetchWorksParams {
   // SCRUM-67: чекбокс "Лише з картою відмінностей" у TopView.
   onlyWithMap?: boolean | null;
 }
-
-const USE_MOCK_FALLBACK = true;
 
 /**
  * GET /api/v1/works

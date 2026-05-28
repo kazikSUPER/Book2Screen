@@ -55,13 +55,6 @@
   /* ── Розміри ─────────────────────────────────────────── */
   --header-height: 80px;
   --filter-panel-width: 220px;
-
-  /* ── Backward-compat aliases (TODO: видалити після рефактору всіх views) ── */
-  --pink-light: var(--text-on-dark);
-  --pink-mid: var(--color-panel-box);
-  --dark-bg: var(--color-page);
-  --dark-card: var(--text-on-light);
-  --accent: var(--color-primary);
 }
 
 /* ── Reset ────────────────────────────────────────────── */
@@ -86,4 +79,73 @@ body {
   color: var(--text-on-light);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%; /* iOS Safari — не збільшувати текст у landscape */
+  text-size-adjust: 100%;
+}
+
+/* ── A11y: глобальний focus-visible (Етап 3, Крок 3 — Accessibility) ── */
+/* Кожен інтерактивний елемент отримує помітний фокус при tab-навігації. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Прибираємо outline для миші — він повертається тільки для клавіатури. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Зображення — за замовчуванням адаптивні. */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Buttons — спільні базові правила. Конкретний стайл — у scoped CSS. */
+button {
+  font-family: inherit;
+}
+
+/* Лінки за замовчуванням використовують primary-колір */
+a {
+  color: var(--color-primary);
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+/* Reduced motion — поважаємо системне налаштування користувача (Етап 4: Cross-browser). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Safari: type="search" має дефолтний macOS-стиль — нормалізуємо. */
+input[type='search'] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Firefox: number input — приховуємо стрілочки, якщо вони не потрібні семантично. */
+input[type='number'].no-spinner {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type='number'].no-spinner::-webkit-outer-spin-button,
+input[type='number'].no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }

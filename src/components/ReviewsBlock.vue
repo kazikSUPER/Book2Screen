@@ -8,6 +8,9 @@ import { useNotificationsStore } from '../state/notifications';
 import { extractErrorMessage } from '../services/error';
 import ReviewItem from './ReviewItem.vue';
 import ReportCommentModal from './ReportCommentModal.vue';
+import { STR } from '../constants';
+
+const t = STR.detail;
 
 /**
  * SCRUM-72 (US 6.1) — блок коментарів на сторінці деталей твору.
@@ -61,12 +64,12 @@ async function loadReviews(): Promise<void> {
 
 async function onSubmit(): Promise<void> {
   if (!userStore.isAuthenticated) {
-    notifications.pushWarning('Увійдіть, щоб написати відгук');
+    notifications.pushWarning(t.commentNeedAuth);
     return;
   }
   const trimmed = text.value.trim();
   if (!trimmed) {
-    notifications.pushWarning('Введіть текст відгуку');
+    notifications.pushWarning(t.commentEmpty);
     return;
   }
   isSubmitting.value = true;
@@ -86,7 +89,7 @@ async function onSubmit(): Promise<void> {
     reviews.value.unshift(created);
     text.value = '';
     isSpoiler.value = false;
-    notifications.pushSuccess('Відгук опубліковано');
+    notifications.pushSuccess(t.commentPublished);
   } catch (err) {
     notifications.pushError(extractErrorMessage(err));
   } finally {
@@ -118,7 +121,7 @@ watch(
 
 <template>
   <section class="reviews">
-    <h2 class="reviews__title">Коментарі</h2>
+    <h2 class="reviews__title">{{ t.commentsTitle }}</h2>
 
     <!-- ── Форма ────────────────────────────────────────── -->
     <form class="reviews__form" @submit.prevent="onSubmit">
@@ -130,34 +133,30 @@ watch(
           v-model="text"
           type="text"
           class="reviews__input"
-          placeholder="Залиште коментар"
+          :placeholder="t.commentPlaceholder"
           :disabled="isSubmitting"
           @keyup.enter="onSubmit"
         />
-        <button
-          type="submit"
-          class="reviews__submit"
-          :disabled="isSubmitting || !text.trim()"
-        >
-          {{ isSubmitting ? '…' : 'Надіслати' }}
+        <button type="submit" class="reviews__submit" :disabled="isSubmitting || !text.trim()">
+          {{ isSubmitting ? '…' : STR.common.submit }}
         </button>
       </div>
       <label class="reviews__spoiler-toggle">
         <input v-model="isSpoiler" type="checkbox" :disabled="isSubmitting" />
-        <span>Позначити як спойлер</span>
+        <span>{{ t.markSpoiler }}</span>
       </label>
     </form>
 
     <!-- ── Список ───────────────────────────────────────── -->
-    <p v-if="isLoading" class="reviews__status">Завантаження…</p>
+    <p v-if="isLoading" class="reviews__status">{{ STR.common.loading }}</p>
 
     <div v-else-if="errorMessage" class="reviews__status">
       <p>⚠ {{ errorMessage }}</p>
-      <button type="button" class="reviews__retry" @click="loadReviews">Повторити</button>
+      <button type="button" class="reviews__retry" @click="loadReviews">{{ STR.common.retry }}</button>
     </div>
 
     <p v-else-if="reviews.length === 0" class="reviews__status">
-      Будьте першим, хто залишить відгук
+      {{ t.commentEmptyList }}
     </p>
 
     <ul v-else class="reviews__list">
@@ -166,21 +165,12 @@ watch(
       </li>
     </ul>
 
-    <button
-      v-if="hasMore"
-      type="button"
-      class="reviews__more"
-      @click="showMore"
-    >
-      Показати більше
+    <button v-if="hasMore" type="button" class="reviews__more" @click="showMore">
+      {{ STR.common.showMore }}
     </button>
 
     <!-- ── Модалка скарги ──────────────────────────────── -->
-    <ReportCommentModal
-      v-if="reportingReviewId"
-      :review-id="reportingReviewId"
-      @close="closeReport"
-    />
+    <ReportCommentModal v-if="reportingReviewId" :review-id="reportingReviewId" @close="closeReport" />
   </section>
 </template>
 

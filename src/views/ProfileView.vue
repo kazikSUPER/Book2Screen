@@ -11,6 +11,9 @@ import { extractErrorMessage } from '../services/error';
 import type { BookScreenItem, ReviewResponse } from '../services/types';
 import StarRating from '../components/StarRating.vue';
 import WorkCard from '../components/WorkCard.vue';
+import { STR } from '../constants';
+
+const t = STR.profile;
 
 /**
  * SCRUM-64 (US 1.3) — Personal profile.
@@ -113,11 +116,17 @@ function saveProfile(): void {
     birthDate: editForm.value.birthDate.trim(),
   });
   editing.value = false;
-  notifications.pushSuccess('Профіль оновлено');
+  notifications.pushSuccess(t.profileUpdated);
 }
 
 function cancelEditing(): void {
   editing.value = false;
+}
+
+// ── Вихід (за Figma — кнопка усередині профілю) ──────────────
+function handleLogout(): void {
+  userStore.logout();
+  router.push({ name: 'home' });
 }
 
 // ── Avatar (mock через FileReader → base64 у localStorage) ───
@@ -131,14 +140,14 @@ function onAvatarChange(e: Event): void {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
   if (file.size > 1024 * 1024) {
-    notifications.pushWarning('Розмір файлу не має перевищувати 1 МБ');
+    notifications.pushWarning(t.avatarTooLarge);
     return;
   }
   const reader = new FileReader();
   reader.onload = () => {
     if (typeof reader.result === 'string') {
       userStore.updateProfile({ avatarUrl: reader.result });
-      notifications.pushSuccess('Фото оновлено');
+      notifications.pushSuccess(t.avatarUpdated);
     }
   };
   reader.readAsDataURL(file);
@@ -149,7 +158,7 @@ async function deleteReview(reviewId: string): Promise<void> {
   try {
     await deleteMyReview(reviewId);
     myReviews.value = myReviews.value.filter((r) => r.reviewId !== reviewId);
-    notifications.pushSuccess('Відгук видалено');
+    notifications.pushSuccess(t.reviewDeleted);
   } catch (err) {
     notifications.pushError(extractErrorMessage(err));
   }
@@ -184,7 +193,10 @@ onMounted(() => {
 
 <template>
   <div v-if="userStore.isAuthenticated" class="profile">
-    <h1 class="profile__title">Ваш профіль</h1>
+    <header class="profile__top">
+      <h1 class="profile__title">{{ t.title }}</h1>
+      <button type="button" class="profile__logout" @click="handleLogout">Вийти</button>
+    </header>
 
     <!-- ═════════════ Шапка профілю ═════════════ -->
     <section class="profile-header">
@@ -195,15 +207,9 @@ onMounted(() => {
           <span v-else class="profile-header__avatar-fallback">{{ initial }}</span>
         </div>
         <button type="button" class="profile-header__change-photo" @click="pickAvatar">
-          Змінити фото
+          {{ t.changePhoto }}
         </button>
-        <input
-          ref="avatarInput"
-          type="file"
-          accept="image/*"
-          style="display: none"
-          @change="onAvatarChange"
-        />
+        <input ref="avatarInput" type="file" accept="image/*" style="display: none" @change="onAvatarChange" />
       </div>
 
       <!-- Інформація про користувача -->
@@ -215,28 +221,28 @@ onMounted(() => {
               <path d="M4 21C4 16.5817 7.58172 13 12 13C16.4183 13 20 16.5817 20 21V22H4V21Z" />
             </svg>
           </span>
-          <h2 class="profile-card__title">Ім'я користувача:</h2>
+          <h2 class="profile-card__title">{{ t.usernameTitle }}</h2>
         </header>
 
         <div v-if="!editing" class="profile-card__body">
           <p class="profile-card__row">
-            <span class="profile-card__label">Username:</span>
+            <span class="profile-card__label">{{ t.username }}</span>
             <span class="profile-card__value">{{ userStore.fullName || userStore.nickname || '—' }}</span>
           </p>
           <p class="profile-card__row">
-            <span class="profile-card__label">Дата народження:</span>
+            <span class="profile-card__label">{{ t.birthDate }}</span>
             <span class="profile-card__value">{{ userStore.birthDate || '—' }}</span>
           </p>
           <p class="profile-card__row">
-            <span class="profile-card__label">Електронна пошта:</span>
+            <span class="profile-card__label">{{ t.email }}</span>
             <span class="profile-card__value">{{ userStore.email }}</span>
           </p>
-          <button type="button" class="profile-card__edit" @click="startEditing">Редагувати</button>
+          <button type="button" class="profile-card__edit" @click="startEditing">{{ STR.common.edit }}</button>
         </div>
 
         <form v-else class="profile-card__body" @submit.prevent="saveProfile">
           <label class="profile-card__edit-row">
-            <span class="profile-card__label">Ім'я</span>
+            <span class="profile-card__label">{{ t.name }}</span>
             <input v-model="editForm.fullName" type="text" class="profile-card__input" />
           </label>
           <label class="profile-card__edit-row">
@@ -244,12 +250,12 @@ onMounted(() => {
             <input v-model="editForm.nickname" type="text" class="profile-card__input" />
           </label>
           <label class="profile-card__edit-row">
-            <span class="profile-card__label">Дата народження</span>
+            <span class="profile-card__label">{{ t.birthDate }}</span>
             <input v-model="editForm.birthDate" type="date" class="profile-card__input" />
           </label>
           <div class="profile-card__edit-actions">
-            <button type="submit" class="profile-card__edit">Зберегти</button>
-            <button type="button" class="profile-card__cancel" @click="cancelEditing">Скасувати</button>
+            <button type="submit" class="profile-card__edit">{{ STR.common.save }}</button>
+            <button type="button" class="profile-card__cancel" @click="cancelEditing">{{ STR.common.cancel }}</button>
           </div>
         </form>
       </div>
@@ -258,19 +264,19 @@ onMounted(() => {
       <div class="profile-card profile-card--stats">
         <header class="profile-card__head">
           <span class="profile-card__icon" aria-hidden="true">📊</span>
-          <h2 class="profile-card__title">Статистика активності:</h2>
+          <h2 class="profile-card__title">{{ t.statsTitle }}</h2>
         </header>
         <div class="profile-card__body">
           <p class="profile-card__row">
-            <span class="profile-card__label">Відгуки:</span>
+            <span class="profile-card__label">{{ t.statsReviews }}</span>
             <span class="profile-card__value">{{ stats.reviewsCount }}</span>
           </p>
           <p class="profile-card__row">
-            <span class="profile-card__label">Оцінки:</span>
+            <span class="profile-card__label">{{ t.statsRatings }}</span>
             <span class="profile-card__value">{{ stats.ratingsCount }}</span>
           </p>
           <p class="profile-card__row">
-            <span class="profile-card__label">Переглянуто:</span>
+            <span class="profile-card__label">{{ t.statsWatched }}</span>
             <span class="profile-card__value">{{ stats.watchedCount }}</span>
           </p>
         </div>
@@ -279,9 +285,9 @@ onMounted(() => {
 
     <!-- ═════════════ Мої оцінки ═════════════ -->
     <section class="profile-section">
-      <h2 class="profile-section__title">⭐ Мої оцінки</h2>
+      <h2 class="profile-section__title">{{ t.myRatingsTitle }}</h2>
       <p v-if="ratedWorks.length === 0" class="profile-section__empty">
-        Ви ще не поставили жодної оцінки
+        {{ t.noRatings }}
       </p>
       <div v-else class="profile-section__scroll">
         <article v-for="r in ratedWorks" :key="r.work.id" class="rating-card">
@@ -290,15 +296,28 @@ onMounted(() => {
           </div>
           <h3 class="rating-card__title">{{ r.work.title }}</h3>
           <dl class="rating-card__meta">
-            <div><dt>Рік:</dt><dd>{{ r.work.year }}</dd></div>
-            <div><dt>Жанр:</dt><dd>{{ r.work.genre }}</dd></div>
-            <div><dt>Країна:</dt><dd>{{ r.work.country }}</dd></div>
+            <div>
+              <dt>{{ STR.detail.bookYear }}</dt>
+              <dd>{{ r.work.year }}</dd>
+            </div>
+            <div>
+              <dt>{{ STR.detail.bookGenre }}</dt>
+              <dd>{{ r.work.genre }}</dd>
+            </div>
+            <div>
+              <dt>{{ STR.detail.bookCountry }}</dt>
+              <dd>{{ r.work.country }}</dd>
+            </div>
           </dl>
-          <button class="rating-card__btn" @click="router.push({ name: 'detail', params: { id: r.work.id } })">
-            Переглянути
+          <button
+            type="button"
+            class="rating-card__btn"
+            @click="router.push({ name: 'detail', params: { id: r.work.id } })"
+          >
+            {{ t.view }}
           </button>
           <div class="rating-card__user-rating">
-            <span class="rating-card__user-label">Ваша оцінка</span>
+            <span class="rating-card__user-label">{{ t.yourRating }}</span>
             <StarRating :model-value="Math.max(r.bookRating, r.filmRating)" readonly :size="20" />
           </div>
         </article>
@@ -307,8 +326,8 @@ onMounted(() => {
 
     <!-- ═════════════ Мої відгуки ═════════════ -->
     <section class="profile-section">
-      <h2 class="profile-section__title">💬 Мої відгуки</h2>
-      <p v-if="myReviews.length === 0" class="profile-section__empty">У вас ще немає відгуків</p>
+      <h2 class="profile-section__title">{{ t.myReviewsTitle }}</h2>
+      <p v-if="myReviews.length === 0" class="profile-section__empty">{{ t.noReviews }}</p>
       <ul v-else class="profile-reviews">
         <li v-for="r in visibleReviews" :key="r.reviewId" class="profile-review">
           <div class="profile-review__poster">
@@ -316,32 +335,37 @@ onMounted(() => {
           </div>
           <div class="profile-review__body">
             <p class="profile-review__work">{{ findWork(r.workId)?.title || 'Твір' }}</p>
-            <p class="profile-review__label">Текст відгуку:</p>
+            <p class="profile-review__label">{{ t.reviewText }}</p>
             <p class="profile-review__text">{{ r.text }}</p>
           </div>
           <div class="profile-review__actions">
             <button
+              type="button"
               class="profile-review__btn profile-review__btn--edit"
               @click="router.push({ name: 'detail', params: { id: r.workId } })"
             >
-              Редагувати
+              {{ STR.common.edit }}
             </button>
-            <button class="profile-review__btn profile-review__btn--delete" @click="deleteReview(r.reviewId)">
-              Видалити
+            <button
+              type="button"
+              class="profile-review__btn profile-review__btn--delete"
+              @click="deleteReview(r.reviewId)"
+            >
+              {{ STR.common.delete }}
             </button>
           </div>
         </li>
       </ul>
       <button v-if="hasMoreReviews" type="button" class="profile-show-more" @click="showMoreReviews">
-        Показати більше
+        {{ STR.common.showMore }}
       </button>
     </section>
 
     <!-- ═════════════ Список "Хочу переглянути/прочитати" ═════════════ -->
     <section class="profile-section">
-      <h2 class="profile-section__title">Список «Хочу переглянути/прочитати»</h2>
+      <h2 class="profile-section__title">{{ t.wishlistTitle }}</h2>
       <p v-if="wishWorks.length === 0" class="profile-section__empty">
-        Ви ще нічого не додали в список
+        {{ t.noWishlist }}
       </p>
       <div v-else class="profile-section__scroll">
         <WorkCard v-for="w in wishWorks" :key="w.id" :item="w" />
@@ -359,6 +383,13 @@ onMounted(() => {
   font-family: var(--font-body);
 }
 
+.profile__top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
 .profile__title {
   margin: 0;
   text-align: center;
@@ -366,6 +397,35 @@ onMounted(() => {
   font-size: 28px;
   font-weight: 400;
   color: var(--text-on-light);
+}
+
+.profile__logout {
+  position: absolute;
+  right: 0;
+  background: transparent;
+  color: var(--text-on-light);
+  border: 1px solid var(--color-card);
+  border-radius: var(--radius-sm);
+  padding: 6px 16px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.profile__logout:hover {
+  background: var(--color-card);
+  color: var(--text-on-dark);
+}
+
+@media (max-width: 600px) {
+  .profile__top {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .profile__logout {
+    position: static;
+  }
 }
 
 /* ── Шапка профілю ─────────────────────────────────────── */

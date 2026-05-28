@@ -36,11 +36,8 @@ export async function requestPasswordReset(email: string): Promise<void> {
 // Повертає дані сесії → одразу авторизує користувача.
 
 export async function confirmPasswordReset(
-  payload: PasswordResetConfirmRequest,
+  payload: PasswordResetConfirmRequest
 ): Promise<PasswordResetConfirmResponse> {
-  const response = await apiClient.post<PasswordResetConfirmResponse>(
-    '/api/v1/auth/password-reset/confirm',
-    payload,
-  );
+  const response = await apiClient.post<PasswordResetConfirmResponse>('/api/v1/auth/password-reset/confirm', payload);
   return response.data;
 }

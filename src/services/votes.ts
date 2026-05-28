@@ -1,5 +1,6 @@
 import { apiClient } from './api';
 import type { VoteRequest, VoteResponse, VoteType } from './types';
+import { USE_MOCK_FALLBACK } from './env';
 
 /**
  * SCRUM-70 / SCRUM-71 — голосування "Книга vs Фільм".
@@ -11,8 +12,6 @@ import type { VoteRequest, VoteResponse, VoteType } from './types';
  * Поки бекенд не готовий — повертаємо мок-результат, який гарантовано
  * не зламає UI (зберігає відсотки книги/фільму довкола 50/50).
  */
-
-const USE_MOCK_FALLBACK = true;
 
 export async function submitVote(workId: string, type: VoteType): Promise<VoteResponse> {
   const body: VoteRequest = { workId, voteType: type };

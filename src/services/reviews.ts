@@ -1,5 +1,6 @@
 import { apiClient } from './api';
 import type { ReviewRequest, ReviewResponse } from './types';
+import { USE_MOCK_FALLBACK } from './env';
 
 /**
  * SCRUM-72 (US 6.1) — Writing Review.
@@ -12,13 +13,11 @@ import type { ReviewRequest, ReviewResponse } from './types';
  * (закумулюється на час сесії, скидається при перезавантаженні).
  */
 
-const USE_MOCK_FALLBACK = true;
-
 // In-memory лог mock-відгуків. Ключ — workId, значення — масив відгуків.
 const mockReviewsByWork: Map<string, ReviewResponse[]> = new Map();
 
-// Стартові mock-відгуки для демонстрації UI.
-seedMockReviews();
+// Стартові mock-відгуки для демонстрації UI (тільки коли USE_MOCK_FALLBACK).
+if (USE_MOCK_FALLBACK) seedMockReviews();
 
 export async function fetchReviews(workId: string): Promise<ReviewResponse[]> {
   try {

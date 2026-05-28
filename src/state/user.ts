@@ -64,7 +64,12 @@ export const useUserStore = defineStore('user', () => {
 
   // SCRUM-64 — методи для редагування профілю.
   // Поки бекенд не готовий — пишемо тільки локально. TODO: PUT /api/v1/users/me.
-  function updateProfile(patch: { fullName?: string; nickname?: string; birthDate?: string; avatarUrl?: string }): void {
+  function updateProfile(patch: {
+    fullName?: string;
+    nickname?: string;
+    birthDate?: string;
+    avatarUrl?: string;
+  }): void {
     if (patch.fullName !== undefined) fullName.value = patch.fullName;
     if (patch.nickname !== undefined) nickname.value = patch.nickname;
     if (patch.birthDate !== undefined) birthDate.value = patch.birthDate;
