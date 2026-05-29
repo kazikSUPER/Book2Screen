@@ -1,3 +1,4 @@
+```csharp id="migr_001"
 using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -9,30 +10,64 @@ namespace BookScreenExplorer.Infrastructure.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // =========================
+            // PASSWORD RESET TOKENS
+            // =========================
             migrationBuilder.CreateTable(
                 name: "password_reset_tokens",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                    Code = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+
+                    // SECURITY IMPROVEMENT: store hashed token instead of raw code
+                    TokenHash = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+
                     ExpiryTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+
                     IsUsed = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_password_reset_tokens", x => x.Id);
+
+                    // DATA INTEGRITY: email must exist
+                    table.CheckConstraint(
+                        "CK_password_reset_tokens_Email_NotEmpty",
+                        "\"Email\" <> ''"
+                    );
+
+                    table.CheckConstraint(
+                        "CK_password_reset_tokens_TokenHash_NotEmpty",
+                        "\"TokenHash\" <> ''"
+                    );
                 });
 
+            // INDEXES FOR PERFORMANCE
+            migrationBuilder.CreateIndex(
+                name: "IX_password_reset_tokens_Email",
+                table: "password_reset_tokens",
+                column: "Email");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_password_reset_tokens_ExpiryTime",
+                table: "password_reset_tokens",
+                column: "ExpiryTime");
+
+            // =========================
+            // FAVORITES
+            // =========================
             migrationBuilder.CreateTable(
                 name: "favorites",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    WorkId = table.Column<Guid>(type: "uuid", nullable: false)
+                    WorkId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
                 constraints: table =>
                 {
@@ -53,6 +88,7 @@ namespace BookScreenExplorer.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // prevent duplicates
             migrationBuilder.CreateIndex(
                 name: "IX_favorites_UserId_WorkId",
                 table: "favorites",
@@ -60,10 +96,18 @@ namespace BookScreenExplorer.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_favorites_UserId",
+                table: "favorites",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_favorites_WorkId",
                 table: "favorites",
                 column: "WorkId");
 
+            // =========================
+            // PERFORMANCE INDEXES
+            // =========================
             migrationBuilder.CreateIndex(
                 name: "IX_books_Genre",
                 table: "books",
@@ -102,3 +146,4 @@ namespace BookScreenExplorer.Infrastructure.Migrations
         }
     }
 }
+```
