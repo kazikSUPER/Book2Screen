@@ -425,6 +425,46 @@ namespace Book2Screen.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Book2Screen.Domain.Entities.Report", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("ReviewId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Reports", t =>
+                        {
+                            t.HasCheckConstraint("CK_Report_Status", "\"Status\" IN ('Pending', 'Resolved', 'Dismissed')");
+                        });
+                });
+
             modelBuilder.Entity("Book2Screen.Domain.Entities.Review", b =>
                 {
                     b.Property<Guid>("Id")
@@ -475,6 +515,10 @@ namespace Book2Screen.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -700,6 +744,23 @@ namespace Book2Screen.Migrations
                         .IsRequired();
 
                     b.Navigation("Work");
+                });
+
+            modelBuilder.Entity("Book2Screen.Domain.Entities.Report", b =>
+                {
+                    b.HasOne("Book2Screen.Domain.Entities.Review", "Review")
+                        .WithMany()
+                        .HasForeignKey("ReviewId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Book2Screen.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Review");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Book2Screen.Domain.Entities.Review", b =>

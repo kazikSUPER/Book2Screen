@@ -57,25 +57,16 @@ public class FavoritesController : ControllerBase
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddToFavorites([FromBody] FavoriteRequest request)
     {
         var userId = this.GetUserId();
-        if (userId == Guid.Empty)
-        {
-            return this.Unauthorized();
-        }
-
         if (!request.WorkId.HasValue)
         {
             return this.BadRequest("WorkId is required.");
         }
 
-        var success = await this.favoriteService.AddToFavoritesAsync(userId, request.WorkId.Value);
-        if (!success)
-        {
-            return this.BadRequest("Failed to add to favorites.");
-        }
-
+        await this.favoriteService.AddToFavoritesAsync(userId, request.WorkId.Value);
         return this.Ok(new { message = "Added to favorites." });
     }
 
@@ -86,21 +77,10 @@ public class FavoritesController : ControllerBase
     /// <returns>Статус операції.</returns>
     [HttpDelete("{workId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> RemoveFromFavorites(Guid workId)
     {
         var userId = this.GetUserId();
-        if (userId == Guid.Empty)
-        {
-            return this.Unauthorized();
-        }
-
-        var success = await this.favoriteService.RemoveFromFavoritesAsync(userId, workId);
-        if (!success)
-        {
-            return this.BadRequest("Failed to remove from favorites.");
-        }
-
+        await this.favoriteService.RemoveFromFavoritesAsync(userId, workId);
         return this.Ok(new { message = "Removed from favorites." });
     }
 

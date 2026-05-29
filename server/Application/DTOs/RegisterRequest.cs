@@ -30,5 +30,7 @@ public class RegisterRequest
     /// Gets or sets пароль користувача.
     /// </summary>
     [Required]
+    [MinLength(8, ErrorMessage = "Password must be at least 8 characters long")]
+    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*$", ErrorMessage = "Password must contain at least one lowercase letter, one uppercase letter and one digit")]
     public string Password { get; set; } = null!;
 }

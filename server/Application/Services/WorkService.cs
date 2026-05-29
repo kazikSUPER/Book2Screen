@@ -88,7 +88,7 @@ public class WorkService : IWorkService
 
         if (work == null)
         {
-            return null;
+            throw new KeyNotFoundException($"Work with ID {id} not found.");
         }
 
         var dto = this.MapToDto(work);
@@ -100,9 +100,9 @@ public class WorkService : IWorkService
             dto.Differences = work.DifferenceMap.Differences.Select(d => new DifferenceDto
             {
                 Id = d.Id,
-                Title = d.DifferenceType, // Поки використовуємо тип як заголовок, або можна додати поле Title в ентіті
-                BookText = d.Description, // Логіку розділення тексту книги/фільму можна уточнити
-                FilmText = d.Description, // Наразі в БД лише один Description
+                Title = d.DifferenceType,
+                BookText = d.Description,
+                FilmText = d.Description,
                 IsSpoiler = d.ImportanceLevel == "high",
             }).ToList();
         }

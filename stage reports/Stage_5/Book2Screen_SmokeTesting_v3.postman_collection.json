@@ -1,0 +1,1095 @@
+{
+  "info": {
+    "name": "Book2Screen — Smoke Testing v3",
+    "_postman_id": "b2s-smoke-v3-final",
+    "description": "Smoke Testing · Book2Screen · Team 17\n\nРеальні креденшали з DbSeeder.cs:\n  admin: admin@book2screen.com / Admin123!\n  user:  john@example.com / User123!\n\nПоле реєстрації: 'Nickname' (НЕ username!)\nПоле логіну: Email + Password",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "workId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "itemId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 · Infrastructure",
+      "item": [
+        {
+          "name": "TC-SM-02 · GET /health — JSON формат",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-02 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-SM-02 · Content-Type is JSON', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'); });",
+                  "pm.test('TC-SM-02 · Body has status field', () => { pm.expect(pm.response.json()).to.have.property('status'); });",
+                  "pm.test('TC-SM-02 · Status is Healthy', () => { pm.expect(pm.response.json().status).to.equal('Healthy'); });",
+                  "console.log('[TC-SM-02] elapsed: ' + pm.response.responseTime + 'ms');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 · Auth",
+      "description": "ВАЖЛИВО:\n- Реєстрація: поле 'Nickname' (не username!)\n- Логін: Email + Password\n- admin: admin@book2screen.com / Admin123!\n- user: john@example.com / User123!",
+      "item": [
+        {
+          "name": "TC-SM-03 · POST /auth/register — новий user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-03 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-SM-03 · Has token', () => { const j = pm.response.json(); pm.expect(j).to.have.property('token'); pm.expect(j.token).to.not.be.empty; });",
+                  "const j = pm.response.json();",
+                  "if (j && j.token) { pm.collectionVariables.set('token', j.token); console.log('[TC-SM-03] token saved'); }",
+                  "pm.test('TC-SM-03 · No stack trace', () => { pm.expect(pm.response.text()).to.not.include('StackTrace'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Nickname\": \"smoketest_{{$randomInt}}\",\n  \"Email\": \"smoke_{{$randomInt}}@test.com\",\n  \"Password\": \"P@ssw0rd123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-04 · POST /auth/login — admin@book2screen.com",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-04 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-SM-04 · Has token', () => { pm.expect(pm.response.json()).to.have.property('token'); });",
+                  "const j = pm.response.json();",
+                  "if (j && j.token) { pm.collectionVariables.set('token', j.token); pm.environment.set('token', j.token); console.log('[TC-SM-04] admin token saved'); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Email\": \"admin@book2screen.com\",\n  \"Password\": \"Admin123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-04b · POST /auth/login — john@example.com",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-04b · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-SM-04b · Has token', () => { pm.expect(pm.response.json()).to.have.property('token'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Email\": \"john@example.com\",\n  \"Password\": \"User123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-05 · POST /auth/register — дублікат → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-05 · Status 409 Conflict (не 401, не 500)', () => { pm.response.to.have.status(409); });",
+                  "pm.test('TC-SM-05 · No HTML', () => { pm.expect(pm.response.text()).to.not.include('<html>'); });",
+                  "pm.test('TC-SM-05 · No stack trace', () => { pm.expect(pm.response.text()).to.not.include('StackTrace'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Nickname\": \"admin\",\n  \"Email\": \"admin@book2screen.com\",\n  \"Password\": \"Admin123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-06 · POST /auth/login — невірний пароль → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-06 · Status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('TC-SM-06 · No BCrypt details', () => { const t = pm.response.text(); pm.expect(t).to.not.include('BCrypt'); pm.expect(t).to.not.include('PasswordHash'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Email\": \"admin@book2screen.com\",\n  \"Password\": \"WRONG_PASSWORD\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 · Items (regression)",
+      "item": [
+        {
+          "name": "TC-SM-07 · GET /items — список з seed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-07 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-SM-07 · JSON array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('TC-SM-07 · Не порожній', () => pm.expect(pm.response.json().length).to.be.at.least(1));",
+                  "const items = pm.response.json();",
+                  "if (items && items.length > 0) { pm.collectionVariables.set('itemId', items[0].id); console.log('[TC-SM-07] itemId: ' + items[0].id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "items"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-08 · GET /items/{guid} — існуючий",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-08 · Status 200 або 404', () => { pm.expect([200,404]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200) { pm.test('TC-SM-08 · Has id + title', () => { pm.expect(pm.response.json()).to.have.property('id'); pm.expect(pm.response.json()).to.have.property('title'); }); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/items/{{itemId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "items",
+                "{{itemId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-09 · GET /items/{guid} — не існує → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-09 · Status 404 (не 500)', () => pm.response.to.have.status(404));",
+                  "pm.test('TC-SM-09 · No HTML', () => { pm.expect(pm.response.text()).to.not.include('<html>'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/items/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "items",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 · Works (нові ендпоінти)",
+      "item": [
+        {
+          "name": "TC-SM-10 · GET /works — список",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-10 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-SM-10 · JSON array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "const works = pm.response.json();",
+                  "if (works && works.length > 0) { pm.collectionVariables.set('workId', works[0].id); console.log('[TC-SM-10] workId: ' + works[0].id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/works",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "works"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-11 · GET /works?search=Dune",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-11 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-SM-11 · JSON array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "console.log('[TC-SM-11] results: ' + pm.response.json().length);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/works?search=Dune",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "works"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Dune"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-12 · GET /works/top",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-12 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-SM-12 · JSON array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/works/top",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "works",
+                "top"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-13 · GET /works/{guid} — деталі з differences[]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-13 · Status 200 або 404', () => { pm.expect([200,404]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  pm.test('TC-SM-13 · Has differences[]', () => { pm.expect(j).to.have.property('differences'); pm.expect(j.differences).to.be.an('array'); });",
+                  "  console.log('[TC-SM-13] differences: ' + j.differences.length);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/works/{{workId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "works",
+                "{{workId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-14 · GET /works/{guid} — не існує → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-14 · Status 404 (не 500)', () => pm.response.to.have.status(404));",
+                  "pm.test('TC-SM-14 · No HTML', () => pm.expect(pm.response.text()).to.not.include('<html>'));",
+                  "pm.test('TC-SM-14 · No stack trace', () => pm.expect(pm.response.text()).to.not.include('StackTrace'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/works/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "works",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 · Votes",
+      "item": [
+        {
+          "name": "TC-SM-15 · POST /votes — голосування (з токеном)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-15 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-SM-15 · Has bookVotes', () => pm.expect(pm.response.json()).to.have.property('bookVotes'));",
+                  "pm.test('TC-SM-15 · Has movieVotes', () => pm.expect(pm.response.json()).to.have.property('movieVotes'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"WorkId\": \"{{workId}}\",\n  \"VoteType\": \"BOOK\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/votes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "votes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-16 · GET /votes/{workId} — без токена",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-16 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-SM-16 · Has bookVotes + movieVotes', () => { const j = pm.response.json(); pm.expect(j).to.have.property('bookVotes'); pm.expect(j).to.have.property('movieVotes'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/votes/{{workId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "votes",
+                "{{workId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 · Reviews",
+      "item": [
+        {
+          "name": "TC-SM-17 · POST /reviews (з токеном)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-17 · Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "console.log('[TC-SM-17] response: ' + JSON.stringify(j));",
+                  "pm.test('TC-SM-17 · Has some id field', () => {",
+                  "  const hasId = j.reviewId !== undefined || j.id !== undefined || j.ReviewId !== undefined;",
+                  "  pm.expect(hasId, 'response has id field').to.be.true;",
+                  "});",
+                  "pm.test('TC-SM-17 · Has text', () => {",
+                  "  const hasText = j.text !== undefined || j.Text !== undefined;",
+                  "  pm.expect(hasText, 'response has text field').to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"WorkId\": \"{{workId}}\",\n  \"Text\": \"Smoke test відгук — автоматично\",\n  \"IsSpoiler\": false,\n  \"Rating\": 8.0,\n  \"TargetType\": \"comparison\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reviews"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-18 · GET /reviews/work/{workId}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-18 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-SM-18 · JSON array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('TC-SM-18 · Відгук є', () => pm.expect(pm.response.json().length).to.be.at.least(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews/work/{{workId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reviews",
+                "work",
+                "{{workId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 · Favorites",
+      "item": [
+        {
+          "name": "TC-SM-19 · POST /favorites (з токеном)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-19 · Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"WorkId\": \"{{workId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/favorites",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "favorites"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-20 · GET /favorites (з токеном)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-20 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-SM-20 · JSON array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('TC-SM-20 · Favorite є', () => pm.expect(pm.response.json().length).to.be.at.least(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/favorites",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "favorites"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-21 · DELETE /favorites/{workId}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-21 · Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/favorites/{{workId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "favorites",
+                "{{workId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 · Errors & Security",
+      "item": [
+        {
+          "name": "TC-SM-22 · POST /auth/login — порожній body → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-22 · Status 400 (не 500)', () => pm.response.to.have.status(400));",
+                  "pm.test('TC-SM-22 · No HTML', () => pm.expect(pm.response.text()).to.not.include('<html>'));",
+                  "pm.test('TC-SM-22 · No stack trace', () => pm.expect(pm.response.text()).to.not.include('StackTrace'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-23 · POST /votes — без токена → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-23 · Status 401 (не 500)', () => pm.response.to.have.status(401));",
+                  "pm.test('TC-SM-23 · No HTML', () => pm.expect(pm.response.text()).to.not.include('<html>'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"WorkId\": \"{{workId}}\",\n  \"VoteType\": \"BOOK\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/votes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "votes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-24 · GET /works?search=SQL injection",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-24 · Status 200 або 400 (не 500)', () => { pm.expect([200,400]).to.include(pm.response.code); });",
+                  "pm.test('TC-SM-24 · No SQL text', () => { const t = pm.response.text().toLowerCase(); pm.expect(t).to.not.include('select '); pm.expect(t).to.not.include('drop table'); pm.expect(t).to.not.include('npgsql'); });",
+                  "pm.test('TC-SM-24 · No stack trace', () => { pm.expect(pm.response.text()).to.not.include('StackTrace'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/works?search='; DROP TABLE Works; --",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "works"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "'; DROP TABLE Works; --"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 · Password Reset",
+      "item": [
+        {
+          "name": "TC-SM-25 · POST /auth/password-reset",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-25 · Status 200 (BUG-018 CLOSED)', () => pm.response.to.have.status(200));",
+                  "console.log('[TC-SM-25] BUG-018 CLOSED ✔');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Email\": \"admin@book2screen.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/password-reset",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "password-reset"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-26 · POST /auth/verify-code — невалідний → 400/404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-26 · Status 400 або 404 (не 500)', () => { pm.expect([400,404]).to.include(pm.response.code); });",
+                  "pm.test('TC-SM-26 · No stack trace', () => pm.expect(pm.response.text()).to.not.include('StackTrace'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Email\": \"admin@book2screen.com\",\n  \"Code\": \"000000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/verify-code",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "verify-code"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 · Admin",
+      "item": [
+        {
+          "name": "TC-SM-27 · POST /admin/adaptations (admin token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-27 · Status 200 або 201', () => { pm.expect([200,201]).to.include(pm.response.code); });",
+                  "pm.test('TC-SM-27 · Has id', () => pm.expect(pm.response.json()).to.have.property('id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Title\": \"Smoke Test Adaptation\",\n  \"Type\": \"movie\",\n  \"Description\": \"Created by smoke test\",\n  \"ReleaseYear\": 2024,\n  \"Studio\": \"Test Studio\",\n  \"Country\": \"UA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/adaptations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "adaptations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-28 · POST /admin/adaptations — без токена → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-28 · Status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Title\": \"Test\",\n  \"Type\": \"movie\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/adaptations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "adaptations"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

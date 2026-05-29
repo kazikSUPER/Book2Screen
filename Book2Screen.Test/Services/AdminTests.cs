@@ -7,6 +7,7 @@ using Book2Screen.Application.Services;
 using Book2Screen.Domain.Entities;
 using Book2Screen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Serilog;
 using Serilog.Extensions.Logging;
 using Xunit;
@@ -25,6 +26,7 @@ public class AdaptationServiceTests : IDisposable
         // Setup InMemory Database
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(x => x.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         _context = new ApplicationDbContext(options);
 
@@ -91,13 +93,10 @@ public class AdaptationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateAdaptationAsync_NonExistingId_ReturnsNull()
+    public async Task UpdateAdaptationAsync_NonExistingId_ThrowsKeyNotFound()
     {
-        // Act
-        var result = await _service.UpdateAdaptationAsync(Guid.NewGuid(), new AdaptationDto { Title = "Title", Type = "movie" });
-
-        // Assert
-        Assert.Null(result);
+        // Act & Assert
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.UpdateAdaptationAsync(Guid.NewGuid(), new AdaptationDto { Title = "Title", Type = "movie" }));
     }
 
     [Fact]
@@ -118,12 +117,9 @@ public class AdaptationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAdaptationAsync_NonExistingId_ReturnsFalse()
+    public async Task DeleteAdaptationAsync_NonExistingId_ThrowsKeyNotFound()
     {
-        // Act
-        var result = await _service.DeleteAdaptationAsync(Guid.NewGuid());
-
-        // Assert
-        Assert.False(result);
+        // Act & Assert
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.DeleteAdaptationAsync(Guid.NewGuid()));
     }
 }

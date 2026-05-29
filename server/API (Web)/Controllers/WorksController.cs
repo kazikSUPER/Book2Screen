@@ -69,11 +69,6 @@ public class WorksController : ControllerBase
     public async Task<IActionResult> GetWorkById(Guid id)
     {
         var result = await this.workService.GetWorkByIdAsync(id);
-        if (result == null)
-        {
-            return this.NotFound();
-        }
-
         return this.Ok(result);
     }
 }

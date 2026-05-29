@@ -9,12 +9,15 @@ using Book2Screen.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
+using Microsoft.AspNetCore.RateLimiting;
+
 /// <summary>
 /// Контролер для керування автентифікацією та реєстрацією користувачів.
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
 [Produces("application/json")]
+[EnableRateLimiting("auth")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService authService;
@@ -35,27 +38,13 @@ public class AuthController : ControllerBase
     /// <returns>Повертає JWT токен у разі успіху.</returns>
     /// <response code="200">Успішний вхід. Повертає об'єкт з токеном.</response>
     /// <response code="401">Невірне ім'я користувача або пароль.</response>
-    /// <response code="400">Помилка при обробці запиту.</response>
     [HttpPost("login")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AuthResponse))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
     {
-        try
-        {
-            var response = await this.authService.LoginAsync(loginDto);
-            if (response == null)
-            {
-                return this.Unauthorized("Invalid username or password.");
-            }
-
-            return this.Ok(response);
-        }
-        catch (Exception ex)
-        {
-            return this.BadRequest(ex.Message);
-        }
+        var response = await this.authService.LoginAsync(loginDto);
+        return this.Ok(response);
     }
 
     /// <summary>
@@ -71,12 +60,6 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterRequest registerRequest)
     {
         var response = await this.authService.RegisterAsync(registerRequest);
-
-        if (response == null)
-        {
-            return this.Conflict("User with this username or email already exists.");
-        }
-
         return this.Ok(response);
     }
 
@@ -85,7 +68,9 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <param name="request">Запит з Email.</param>
     /// <returns>Повертає 200 OK.</returns>
+    /// <response code="200">Лист з кодом успішно надіслано (якщо email існує).</response>
     [HttpPost("password-reset")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> PasswordReset([FromBody] ForgotPasswordRequest request)
     {
         await this.authService.ForgotPasswordAsync(request);
@@ -97,7 +82,11 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <param name="request">Запит з Email та кодом.</param>
     /// <returns>Повертає 200 OK, якщо код вірний.</returns>
+    /// <response code="200">Код вірний.</response>
+    /// <response code="400">Код невірний або термін дії вичерпано.</response>
     [HttpPost("verify-code")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeRequest request)
     {
         var isValid = await this.authService.VerifyResetCodeAsync(request);
@@ -114,6 +103,8 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <param name="request">Запит з Email, кодом та новим паролем.</param>
     /// <returns>Повертає 200 OK з даними сесії у разі успіху.</returns>
+    /// <response code="200">Пароль успішно змінено. Повертає нову сесію.</response>
+    /// <response code="400">Некоректні дані, код або email.</response>
     [HttpPost("reset-password")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AuthResponse))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

@@ -40,6 +40,12 @@ public class User : BaseEntity
     public string Role { get; set; } = "user";
 
     /// <summary>
+    /// Gets or sets URL аватара користувача.
+    /// </summary>
+    [MaxLength(1000)]
+    public string? AvatarUrl { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether статус активності акаунту.
     /// </summary>
     public bool IsActive { get; set; } = true;

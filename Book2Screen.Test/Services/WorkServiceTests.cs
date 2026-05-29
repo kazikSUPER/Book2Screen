@@ -6,6 +6,7 @@ using Book2Screen.Application.Services;
 using Book2Screen.Domain.Entities;
 using Book2Screen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 
 public class WorkServiceTests : IDisposable
@@ -18,6 +19,7 @@ public class WorkServiceTests : IDisposable
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(x => x.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         _context = new ApplicationDbContext(options);
         _voteService = new VoteService(_context);
@@ -28,6 +30,13 @@ public class WorkServiceTests : IDisposable
     {
         _context.Database.EnsureDeleted();
         _context.Dispose();
+    }
+
+    [Fact]
+    public async Task GetWorkByIdAsync_ThrowsKeyNotFound_WhenWorkDoesNotExist()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.GetWorkByIdAsync(Guid.NewGuid()));
     }
 
     [Fact]

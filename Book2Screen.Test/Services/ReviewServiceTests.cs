@@ -3,8 +3,10 @@ namespace Book2Screen.Tests.Services;
 using Book2Screen.Application.DTOs;
 using Book2Screen.Application.Services;
 using Book2Screen.Domain.Entities;
+using Book2Screen.Domain.Exceptions;
 using Book2Screen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 
 public class ReviewServiceTests : IDisposable
@@ -16,6 +18,7 @@ public class ReviewServiceTests : IDisposable
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(x => x.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         _context = new ApplicationDbContext(options);
         _service = new ReviewService(_context);
@@ -97,5 +100,187 @@ public class ReviewServiceTests : IDisposable
         Assert.Equal(2, result.Count);
         Assert.Equal("New Review", result[0].Text);
         Assert.Equal("Old Review", result[1].Text);
+    }
+
+    [Fact]
+    public async Task UpdateReviewAsync_UpdatesReview_WhenUserIsOwner()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var reviewId = Guid.NewGuid();
+        var workId = Guid.NewGuid();
+        var review = new Review 
+        { 
+            Id = reviewId, 
+            UserId = userId, 
+            WorkId = workId,
+            Text = "Original Text", 
+            Rating = 5.0, 
+            TargetType = "book" 
+        };
+        await _context.Reviews.AddAsync(review);
+        await _context.SaveChangesAsync();
+
+        var request = new ReviewRequest 
+        { 
+            WorkId = workId,
+            Text = "Updated Text", 
+            Rating = 8.0, 
+            IsSpoiler = true, 
+            TargetType = "adaptation" 
+        };
+
+        // Act
+        var result = await _service.UpdateReviewAsync(userId, reviewId, request);
+
+        // Assert
+        Assert.True(result);
+        var updatedReview = await _context.Reviews.FindAsync(reviewId);
+        Assert.Equal("Updated Text", updatedReview!.Text);
+        Assert.Equal(8.0, updatedReview.Rating);
+        Assert.True(updatedReview.IsSpoiler);
+        Assert.Equal("adaptation", updatedReview.TargetType);
+    }
+
+    [Fact]
+    public async Task UpdateReviewAsync_ThrowsForbidden_WhenUserIsNotOwner()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        var reviewId = Guid.NewGuid();
+        var workId = Guid.NewGuid();
+        var review = new Review { Id = reviewId, UserId = otherUserId, WorkId = workId, Text = "Original Text", TargetType = "book" };
+        await _context.Reviews.AddAsync(review);
+        await _context.SaveChangesAsync();
+
+        var request = new ReviewRequest 
+        { 
+            WorkId = workId, 
+            Text = "Updated Text", 
+            IsSpoiler = false, 
+            Rating = 5.0,
+            TargetType = "book" 
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ForbiddenException>(() => _service.UpdateReviewAsync(userId, reviewId, request));
+    }
+
+    [Fact]
+    public async Task DeleteReviewAsync_DeletesReview_WhenUserIsOwner()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var reviewId = Guid.NewGuid();
+        var review = new Review { Id = reviewId, UserId = userId, WorkId = Guid.NewGuid(), Text = "To delete", TargetType = "book" };
+        await _context.Reviews.AddAsync(review);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.DeleteReviewAsync(userId, reviewId);
+
+        // Assert
+        Assert.True(result);
+        Assert.Null(await _context.Reviews.FindAsync(reviewId));
+    }
+
+    [Fact]
+    public async Task DeleteReviewAsync_ThrowsForbidden_WhenUserIsNotOwner()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        var reviewId = Guid.NewGuid();
+        var review = new Review { Id = reviewId, UserId = otherUserId, WorkId = Guid.NewGuid(), Text = "To delete", TargetType = "book" };
+        await _context.Reviews.AddAsync(review);
+        await _context.SaveChangesAsync();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ForbiddenException>(() => _service.DeleteReviewAsync(userId, reviewId));
+    }
+
+    [Fact]
+    public async Task GetUserReviewsAsync_ReturnsOnlyUserReviews()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        
+        var r1 = new Review { UserId = userId, WorkId = Guid.NewGuid(), Text = "My Review", TargetType = "book" };
+        var r2 = new Review { UserId = otherUserId, WorkId = Guid.NewGuid(), Text = "Other Review", TargetType = "book" };
+        
+        await _context.Reviews.AddRangeAsync(r1, r2);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = (await _service.GetUserReviewsAsync(userId)).ToList();
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("My Review", result[0].Text);
+    }
+
+    [Fact]
+    public async Task ReportReviewAsync_CreatesReport()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var reviewId = Guid.NewGuid();
+        var reason = "Spam";
+
+        // Act
+        await _service.ReportReviewAsync(userId, reviewId, reason);
+
+        // Assert
+        var report = await _context.Reports.FirstOrDefaultAsync(r => r.ReviewId == reviewId);
+        Assert.NotNull(report);
+        Assert.Equal(reason, report.Reason);
+        Assert.Equal("Pending", report.Status);
+    }
+
+    [Fact]
+    public async Task ModerateReviewAsync_Approve_RemovesReview()
+    {
+        // Arrange
+        var reviewId = Guid.NewGuid();
+        var review = new Review { Id = reviewId, Text = "Bad text", TargetType = "book" };
+        var reportId = Guid.NewGuid();
+        var report = new Report { Id = reportId, ReviewId = reviewId, Status = "Pending", Reason = "X" };
+        
+        await _context.Reviews.AddAsync(review);
+        await _context.Reports.AddAsync(report);
+        await _context.SaveChangesAsync();
+
+        // Act
+        await _service.ModerateReviewAsync(reportId, "approve");
+
+        // Assert
+        Assert.Null(await _context.Reviews.FindAsync(reviewId));
+        var updatedReport = await _context.Reports.FindAsync(reportId);
+        Assert.Equal("Resolved", updatedReport!.Status);
+    }
+
+    [Fact]
+    public async Task ModerateReviewAsync_Spoiler_SetsIsSpoiler()
+    {
+        // Arrange
+        var reviewId = Guid.NewGuid();
+        var review = new Review { Id = reviewId, Text = "Plot twist inside", IsSpoiler = false, TargetType = "book" };
+        var reportId = Guid.NewGuid();
+        var report = new Report { Id = reportId, ReviewId = reviewId, Status = "Pending", Reason = "Spoiler" };
+        
+        await _context.Reviews.AddAsync(review);
+        await _context.Reports.AddAsync(report);
+        await _context.SaveChangesAsync();
+
+        // Act
+        await _service.ModerateReviewAsync(reportId, "spoiler");
+
+        // Assert
+        var updatedReview = await _context.Reviews.FindAsync(reviewId);
+        Assert.True(updatedReview!.IsSpoiler);
+        var updatedReport = await _context.Reports.FindAsync(reportId);
+        Assert.Equal("Resolved", updatedReport!.Status);
     }
 }

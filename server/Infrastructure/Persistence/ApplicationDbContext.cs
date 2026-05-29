@@ -87,6 +87,11 @@ public class ApplicationDbContext : DbContext
     /// </summary>
     public DbSet<Difference> Differences => this.Set<Difference>();
 
+    /// <summary>
+    /// Gets the set of reports.
+    /// </summary>
+    public DbSet<Report> Reports => this.Set<Report>();
+
     /// <inheritdoc/>
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -228,6 +233,22 @@ public class ApplicationDbContext : DbContext
                 .WithMany(w => w.Favorites)
                 .HasForeignKey(f => f.WorkId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Налаштування Report
+        modelBuilder.Entity<Report>(entity =>
+        {
+            entity.HasOne(r => r.Review)
+                .WithMany()
+                .HasForeignKey(r => r.ReviewId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.ToTable(t => t.HasCheckConstraint("CK_Report_Status", "\"Status\" IN ('Pending', 'Resolved', 'Dismissed')"));
         });
     }
 }

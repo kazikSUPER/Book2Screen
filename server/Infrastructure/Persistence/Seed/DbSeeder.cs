@@ -12,8 +12,14 @@ using Microsoft.EntityFrameworkCore;
 /// </summary>
 public static class DbSeeder
 {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarLint", "S1075:URIs should not be hardcoded", Justification = "Seed data requires hardcoded URLs for development posters.")]
-    private static readonly string DunePosterUrl = "https://upload.wikimedia.org/wikipedia/uk/7/71/%D0%94%D1%8E%D0%BD%D0%B0_%282021%29_%D0%BF%D0%BE%D1%81%D1%82%D0%B5%D1%80.jpg";
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarLint", "S1075:URIs should not be hardcoded", Justification = "Seed data requires hardcoded URLs for development avatars and posters.")]
+    private const string DunePosterUrl = "https://m.media-amazon.com/images/M/MV5BMDQ0NjgyN2YtNWU4Ny00YjZlLWIzMTktMzljZWM2MTgzY2RhXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_.jpg";
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarLint", "S1075:URIs should not be hardcoded", Justification = "Seed data requires hardcoded URLs for development avatars.")]
+    private const string AdminAvatarUrl = "https://ui-avatars.com/api/?name=Admin&background=random";
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarLint", "S1075:URIs should not be hardcoded", Justification = "Seed data requires hardcoded URLs for development avatars.")]
+    private const string UserAvatarUrl = "https://ui-avatars.com/api/?name=John+Doe&background=random";
 
     /// <summary>
     /// Наповнює базу даних, якщо вона порожня.
@@ -22,7 +28,7 @@ public static class DbSeeder
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public static async Task SeedAsync(ApplicationDbContext context)
     {
-        // 1. Перевірка користувачів (за Email, бо він Unique)
+        // 1. Перевірка користувачів
         if (!await context.Users.AnyAsync(u => u.Email == "admin@book2screen.com"))
         {
             var admin = new User
@@ -32,6 +38,7 @@ public static class DbSeeder
                 Email = "admin@book2screen.com",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
                 Role = "admin",
+                AvatarUrl = AdminAvatarUrl,
                 IsActive = true,
             };
 
@@ -42,16 +49,18 @@ public static class DbSeeder
                 Email = "john@example.com",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("User123!"),
                 Role = "user",
+                AvatarUrl = UserAvatarUrl,
                 IsActive = true,
             };
 
             await context.Users.AddRangeAsync(admin, user);
+            await context.SaveChangesAsync();
         }
 
-        // 2. Перевірка контенту (за назвою книги, щоб уникнути дублів у 1:1 Work)
+        // 2. Перевірка контенту
         if (!await context.Books.AnyAsync(b => b.Title == "Dune"))
         {
-            // Створюємо автора
+            // ... (author, actor, book, adaptation creation logic remains same)
             var author = new Author
             {
                 Id = Guid.NewGuid(),
@@ -60,7 +69,6 @@ public static class DbSeeder
                 Biography = "American science fiction novelist best known for the novel Dune.",
             };
 
-            // Створюємо актора
             var actor = new Actor
             {
                 Id = Guid.NewGuid(),
@@ -69,7 +77,6 @@ public static class DbSeeder
                 Biography = "Academy Award-nominated actor.",
             };
 
-            // Створюємо книгу
             var book = new Book
             {
                 Id = Guid.NewGuid(),
@@ -81,7 +88,6 @@ public static class DbSeeder
                 Authors = new List<Author> { author },
             };
 
-            // Створюємо адаптацію
             var adaptation = new Adaptation
             {
                 Id = Guid.NewGuid(),
@@ -95,7 +101,6 @@ public static class DbSeeder
                 PosterUrl = DunePosterUrl,
             };
 
-            // Створюємо Work (головний об'єкт порівняння)
             var work = new Work
             {
                 Id = Guid.NewGuid(),
@@ -105,7 +110,6 @@ public static class DbSeeder
                 Summary = "A comparison between Frank Herbert's masterpiece and Villeneuve's adaptation.",
             };
 
-            // Створюємо зв'язок Актор-Адаптація через проміжну сутність
             var adaptationActor = new AdaptationActor
             {
                 Adaptation = adaptation,
@@ -113,7 +117,6 @@ public static class DbSeeder
                 RoleName = "Paul Atreides",
             };
 
-            // Створюємо рейтинг
             var rating = new Rating
             {
                 Id = Guid.NewGuid(),
@@ -123,31 +126,43 @@ public static class DbSeeder
                 VotesCount = 1,
             };
 
-            // Додаємо все в контекст
-            // EF Core автоматично підтягне залежні об'єкти (author, actor),
-            // якщо вони додані до властивостей основних об'єктів
             await context.Works.AddAsync(work);
             await context.Set<AdaptationActor>().AddAsync(adaptationActor);
             await context.Ratings.AddAsync(rating);
 
-            // Опційно: додаємо відгук, якщо користувач вже існує або був створений вище
-            var existingUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "john_doe");
-            if (existingUser != null)
+            var johnUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "john_doe");
+            var adminUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
+
+            if (johnUser != null)
             {
                 var review = new Review
                 {
                     Id = Guid.NewGuid(),
-                    User = existingUser,
-                    Work = work,
+                    UserId = johnUser.Id,
+                    WorkId = work.Id,
                     TargetType = "comparison",
-                    Text = "The movie is visually stunning, but the book offers much more world-building.",
+                    Text = "The movie is visually stunning, but the book offers much more world-building. Spoiler: Paul survives!",
+                    IsSpoiler = false, // Initial state, will be reported
                     LikesCount = 10,
                 };
                 await context.Reviews.AddAsync(review);
+
+                // Додаємо скаргу на цей відгук
+                if (adminUser != null)
+                {
+                    var report = new Report
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = adminUser.Id,
+                        ReviewId = review.Id,
+                        Reason = "Contains hidden spoilers without tag",
+                        Status = "Pending",
+                    };
+                    await context.Reports.AddAsync(report);
+                }
             }
         }
 
-        // Один загальний SaveChanges для всієї транзакції сідінгу
         await context.SaveChangesAsync();
     }
 }

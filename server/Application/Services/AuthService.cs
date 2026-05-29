@@ -7,6 +7,7 @@ namespace Book2Screen.Application.Services;
 using Book2Screen.Application.DTOs;
 using Book2Screen.Application.Interfaces;
 using Book2Screen.Domain.Entities;
+using Book2Screen.Domain.Exceptions;
 using Book2Screen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,7 +41,7 @@ public class AuthService : IAuthService
 
         if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
         {
-            return null;
+            throw new UnauthorizedException("Invalid email or password.");
         }
 
         return new AuthResponse
@@ -61,28 +62,39 @@ public class AuthService : IAuthService
 
         if (userExists)
         {
-            return null;
+            throw new ConflictException("User with this username or email already exists.");
         }
 
-        var user = new User
+        using var transaction = await this.context.Database.BeginTransactionAsync();
+        try
         {
-            Username = registerRequest.Nickname,
-            Email = registerRequest.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password),
-            Role = "user", // Default role
-        };
+            var user = new User
+            {
+                Username = registerRequest.Nickname,
+                Email = registerRequest.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password),
+                Role = "user",
+            };
 
-        await this.context.Users.AddAsync(user);
-        await this.context.SaveChangesAsync();
+            await this.context.Users.AddAsync(user);
+            await this.context.SaveChangesAsync();
 
-        return new AuthResponse
+            await transaction.CommitAsync();
+
+            return new AuthResponse
+            {
+                Token = this.tokenService.CreateToken(user),
+                UserId = user.Id.ToString(),
+                Email = user.Email,
+                Nickname = user.Username,
+                Role = user.Role,
+            };
+        }
+        catch
         {
-            Token = this.tokenService.CreateToken(user),
-            UserId = user.Id.ToString(),
-            Email = user.Email,
-            Nickname = user.Username,
-            Role = user.Role,
-        };
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     /// <inheritdoc/>
@@ -149,20 +161,31 @@ public class AuthService : IAuthService
             return null;
         }
 
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-        token.IsUsed = true;
-
-        this.context.Users.Update(user);
-        this.context.PasswordResetTokens.Update(token);
-        await this.context.SaveChangesAsync();
-
-        return new AuthResponse
+        using var transaction = await this.context.Database.BeginTransactionAsync();
+        try
         {
-            Token = this.tokenService.CreateToken(user),
-            UserId = user.Id.ToString(),
-            Email = user.Email,
-            Nickname = user.Username,
-            Role = user.Role,
-        };
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            token.IsUsed = true;
+
+            this.context.Users.Update(user);
+            this.context.PasswordResetTokens.Update(token);
+            await this.context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+
+            return new AuthResponse
+            {
+                Token = this.tokenService.CreateToken(user),
+                UserId = user.Id.ToString(),
+                Email = user.Email,
+                Nickname = user.Username,
+                Role = user.Role,
+            };
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }

@@ -10,10 +10,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 /// <summary>
-/// Контролер для адміністративних дій.
+/// Контролер для адміністративних дій з адаптаціями.
 /// </summary>
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("api/v1/admin/adaptations")]
 [Authorize(Roles = "admin")]
 [Produces("application/json")]
 public class AdminController : ControllerBase
@@ -34,7 +34,7 @@ public class AdminController : ControllerBase
     /// </summary>
     /// <param name="adaptationDto">Дані адаптації.</param>
     /// <returns>Створена адаптація.</returns>
-    [HttpPost("adaptations")]
+    [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(AdaptationDto))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -49,17 +49,12 @@ public class AdminController : ControllerBase
     /// </summary>
     /// <param name="id">ID адаптації.</param>
     /// <returns>Адаптація.</returns>
-    [HttpGet("adaptations/{id:guid}")]
+    [HttpGet("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AdaptationDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAdaptationById(Guid id)
     {
         var result = await this.adaptationService.GetAdaptationByIdAsync(id);
-        if (result == null)
-        {
-            return this.NotFound();
-        }
-
         return this.Ok(result);
     }
 
@@ -69,17 +64,12 @@ public class AdminController : ControllerBase
     /// <param name="id">ID адаптації.</param>
     /// <param name="adaptationDto">Нові дані.</param>
     /// <returns>Оновлена адаптація.</returns>
-    [HttpPut("adaptations/{id:guid}")]
+    [HttpPut("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AdaptationDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateAdaptation(Guid id, [FromBody] AdaptationDto adaptationDto)
     {
         var result = await this.adaptationService.UpdateAdaptationAsync(id, adaptationDto);
-        if (result == null)
-        {
-            return this.NotFound();
-        }
-
         return this.Ok(result);
     }
 
@@ -88,17 +78,12 @@ public class AdminController : ControllerBase
     /// </summary>
     /// <param name="id">ID адаптації.</param>
     /// <returns>NoContent.</returns>
-    [HttpDelete("adaptations/{id:guid}")]
+    [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteAdaptation(Guid id)
     {
-        var success = await this.adaptationService.DeleteAdaptationAsync(id);
-        if (!success)
-        {
-            return this.NotFound();
-        }
-
+        await this.adaptationService.DeleteAdaptationAsync(id);
         return this.NoContent();
     }
 }
