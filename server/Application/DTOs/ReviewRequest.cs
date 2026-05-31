@@ -27,20 +27,17 @@ public class ReviewRequest
     /// <summary>
     /// Gets or sets a value indicating whether чи містить відгук спойлери.
     /// </summary>
-    [Required]
     public required bool IsSpoiler { get; set; }
 
     /// <summary>
     /// Gets or sets оцінка користувача (від 0 до 10).
     /// </summary>
-    [Required]
     [Range(0, 10)]
     public required double Rating { get; set; }
 
     /// <summary>
     /// Gets or sets тип об'єкта відгуку (book, adaptation, comparison).
     /// </summary>
-    [Required]
     [RegularExpression("^(book|adaptation|comparison)$")]
-    public string TargetType { get; set; } = "comparison";
+    public required string TargetType { get; set; } = "comparison";
 }

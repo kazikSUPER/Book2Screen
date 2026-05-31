@@ -18,7 +18,7 @@ import { ALL_ITEMS } from './items';
  * видимі впродовж сесії. Скидається при перезавантаженні.
  */
 
-const USE_MOCK_FALLBACK = true;
+const USE_MOCK_FALLBACK = false;
 
 const localBooks: BookScreenItem[] = [...ALL_ITEMS];
 

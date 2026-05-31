@@ -199,14 +199,14 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
+app.UseSerilogRequestLogging();
+
 app.UseCors("AllowAll");
 
 app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.UseSerilogRequestLogging();
 
 app.MapControllers();
 

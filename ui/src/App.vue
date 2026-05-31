@@ -17,6 +17,7 @@ const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
 const filtersStore = useFiltersStore();
+const wishlistStore = useWishlistStore();
 
 // storeToRefs — стандартний спосіб отримати реактивні значення з Pinia store у компоненті.
 // Без нього email/token — объєкт Ref, а не рядок, і includes() повертає false.
@@ -49,6 +50,10 @@ onMounted(async () => {
     await checkHealth();
     backendStatus.value = 'up';
     console.info('[Book2Screen] Backend /health: OK');
+
+    if (userStore.isAuthenticated) {
+      await wishlistStore.syncWithBackend();
+    }
   } catch (err) {
     backendStatus.value = 'down';
     console.warn('[Book2Screen] Backend /health: FAILED', err);

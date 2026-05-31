@@ -185,6 +185,17 @@ public class ReviewService : IReviewService
                 Status = r.Status,
                 CreatedAt = r.CreatedAt,
                 ReviewText = r.Review != null ? r.Review.Text : "Review deleted",
+                Review = r.Review != null ? new ReviewResponse
+                {
+                    ReviewId = r.Review.Id,
+                    WorkId = r.Review.WorkId,
+                    UserId = r.Review.UserId ?? Guid.Empty,
+                    Text = r.Review.Text,
+                    IsSpoiler = r.Review.IsSpoiler,
+                    Rating = r.Review.Rating,
+                    TargetType = r.Review.TargetType,
+                    CreatedAt = r.Review.CreatedAt,
+                } : null,
             })
             .ToListAsync();
     }

@@ -144,7 +144,7 @@ public class ReviewsController : ControllerBase
     /// Поскаржитись на відгук (потрібна авторизація).
     /// </summary>
     /// <param name="id">ID відгуку.</param>
-    /// <param name="reason">Причина скарги.</param>
+    /// <param name="request">Дані скарги (причина).</param>
     /// <response code="200">Скаргу успішно надіслано.</response>
     /// <response code="401">Не авторизований.</response>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -152,7 +152,7 @@ public class ReviewsController : ControllerBase
     [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> ReportReview(Guid id, [FromBody] string reason)
+    public async Task<IActionResult> ReportReview(Guid id, [FromBody] ReportRequest request)
     {
         var userIdClaim = this.User.FindFirst(ClaimTypes.NameIdentifier);
         if (userIdClaim == null)
@@ -161,7 +161,7 @@ public class ReviewsController : ControllerBase
         }
 
         var userId = Guid.Parse(userIdClaim.Value);
-        await this.reviewService.ReportReviewAsync(userId, id, reason);
+        await this.reviewService.ReportReviewAsync(userId, id, request.Reason);
 
         return this.Ok(new { message = "Report submitted successfully." });
     }

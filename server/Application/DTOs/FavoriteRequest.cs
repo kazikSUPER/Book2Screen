@@ -16,4 +16,9 @@ public class FavoriteRequest
     /// </summary>
     [Required]
     public Guid? WorkId { get; set; }
+
+    /// <summary>
+    /// Gets or sets тип (read/watch).
+    /// </summary>
+    public string Kind { get; set; } = "favorite";
 }

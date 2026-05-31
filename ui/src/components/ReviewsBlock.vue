@@ -65,8 +65,8 @@ async function onSubmit(): Promise<void> {
     return;
   }
   const trimmed = text.value.trim();
-  if (!trimmed) {
-    notifications.pushWarning('Введіть текст відгуку');
+  if (trimmed.length < 10) {
+    notifications.pushWarning('Відгук має бути не менше 10 символів');
     return;
   }
   isSubmitting.value = true;
@@ -81,6 +81,7 @@ async function onSubmit(): Promise<void> {
       text: trimmed,
       isSpoiler: isSpoiler.value,
       rating,
+      targetType: 'comparison',
     });
     // Додаємо у початок (найновіший зверху).
     reviews.value.unshift(created);

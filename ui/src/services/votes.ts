@@ -12,7 +12,7 @@ import type { VoteRequest, VoteResponse, VoteType } from './types';
  * не зламає UI (зберігає відсотки книги/фільму довкола 50/50).
  */
 
-const USE_MOCK_FALLBACK = true;
+const USE_MOCK_FALLBACK = false;
 
 export async function submitVote(workId: string, type: VoteType): Promise<VoteResponse> {
   const body: VoteRequest = { workId, voteType: type };

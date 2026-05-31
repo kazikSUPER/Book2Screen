@@ -15,7 +15,7 @@ export interface FetchWorksParams {
   onlyWithMap?: boolean | null;
 }
 
-const USE_MOCK_FALLBACK = true;
+const USE_MOCK_FALLBACK = false;
 
 /**
  * GET /api/v1/works

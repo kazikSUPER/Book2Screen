@@ -13,7 +13,7 @@ import type { ReviewResponse } from './types';
  * сидових даних, які seed'ить services/reviews.ts.
  */
 
-const USE_MOCK_FALLBACK = true;
+const USE_MOCK_FALLBACK = false;
 
 export async function fetchMyReviews(): Promise<ReviewResponse[]> {
   try {

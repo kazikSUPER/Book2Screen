@@ -72,7 +72,8 @@ public class ReviewServiceTests : IDisposable
             WorkId = Guid.NewGuid(), 
             Text = "Review for non-existent work", 
             IsSpoiler = false, 
-            Rating = 5.0 
+            Rating = 5.0,
+            TargetType = "book"
         };
 
         // Act & Assert

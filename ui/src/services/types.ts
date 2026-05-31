@@ -129,6 +129,7 @@ export interface ReviewRequest {
   text: string;
   isSpoiler: boolean;
   rating: number;
+  targetType?: string;
 }
 
 export interface ReviewResponse {

@@ -12,7 +12,7 @@ import type { ReviewRequest, ReviewResponse } from './types';
  * (закумулюється на час сесії, скидається при перезавантаженні).
  */
 
-const USE_MOCK_FALLBACK = true;
+const USE_MOCK_FALLBACK = false;
 
 // In-memory лог mock-відгуків. Ключ — workId, значення — масив відгуків.
 const mockReviewsByWork: Map<string, ReviewResponse[]> = new Map();
@@ -22,7 +22,7 @@ seedMockReviews();
 
 export async function fetchReviews(workId: string): Promise<ReviewResponse[]> {
   try {
-    const response = await apiClient.get<ReviewResponse[]>(`/api/v1/reviews/${workId}`);
+    const response = await apiClient.get<ReviewResponse[]>(`/api/v1/reviews/work/${workId}`);
     return response.data;
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
