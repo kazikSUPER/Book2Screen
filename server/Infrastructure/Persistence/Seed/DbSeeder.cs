@@ -58,46 +58,45 @@ public static class DbSeeder
         }
 
         // 2. Перевірка контенту
-        if (!await context.Books.AnyAsync(b => b.Title == "Dune"))
+        if (!await context.Books.AnyAsync(b => b.Title == "Дюна"))
         {
-            // ... (author, actor, book, adaptation creation logic remains same)
             var author = new Author
             {
                 Id = Guid.NewGuid(),
-                FullName = "Frank Herbert",
-                Nationality = "American",
-                Biography = "American science fiction novelist best known for the novel Dune.",
+                FullName = "Френк Герберт",
+                Nationality = "Американець",
+                Biography = "Американський письменник-фантаст, найбільш відомий як автор науково-фантастичного роману «Дюна».",
             };
 
             var actor = new Actor
             {
                 Id = Guid.NewGuid(),
-                FullName = "Timothée Chalamet",
-                Nationality = "American/French",
-                Biography = "Academy Award-nominated actor.",
+                FullName = "Тімоті Шаламе",
+                Nationality = "Американець/Француз",
+                Biography = "Актор, номінований на премію «Оскар».",
             };
 
             var book = new Book
             {
                 Id = Guid.NewGuid(),
-                Title = "Dune",
-                Description = "A story about a young man's journey to the desert planet Arrakis.",
-                Genre = "Sci-Fi",
+                Title = "Дюна",
+                Description = "Історія про подорож юнака до пустельної планети Арракіс.",
+                Genre = "Наукова фантастика",
                 PublicationYear = 1965,
-                Language = "English",
+                Language = "Українська",
                 Authors = new List<Author> { author },
             };
 
             var adaptation = new Adaptation
             {
                 Id = Guid.NewGuid(),
-                Title = "Dune: Part One",
+                Title = "Дюна: Частина перша",
                 Type = "movie",
-                Description = "Denis Villeneuve's 2021 epic science fiction film.",
+                Description = "Епічний науково-фантастичний фільм Дені Вільньова 2021 року.",
                 ReleaseYear = 2021,
                 DurationMinutes = 155,
                 Studio = "Legendary Pictures",
-                Country = "USA",
+                Country = "США",
                 PosterUrl = DunePosterUrl,
             };
 
@@ -106,15 +105,15 @@ public static class DbSeeder
                 Id = Guid.NewGuid(),
                 Book = book,
                 Adaptation = adaptation,
-                Title = "Dune: Book vs 2021 Movie",
-                Summary = "A comparison between Frank Herbert's masterpiece and Villeneuve's adaptation.",
+                Title = "Дюна: Книга проти фільму 2021 року",
+                Summary = "Порівняння шедевра Френка Герберта та екранізації Вільньова.",
             };
 
             var adaptationActor = new AdaptationActor
             {
                 Adaptation = adaptation,
                 Actor = actor,
-                RoleName = "Paul Atreides",
+                RoleName = "Пол Атрід",
             };
 
             var rating = new Rating
@@ -141,8 +140,8 @@ public static class DbSeeder
                     UserId = johnUser.Id,
                     WorkId = work.Id,
                     TargetType = "comparison",
-                    Text = "The movie is visually stunning, but the book offers much more world-building. Spoiler: Paul survives!",
-                    IsSpoiler = false, // Initial state, will be reported
+                    Text = "Фільм візуально приголомшливий, але книга пропонує набагато глибшу проробку світу. Спойлер: Пол виживає!",
+                    IsSpoiler = false, // Початковий стан, буде позначено скаргою
                     LikesCount = 10,
                 };
                 await context.Reviews.AddAsync(review);
@@ -155,7 +154,7 @@ public static class DbSeeder
                         Id = Guid.NewGuid(),
                         UserId = adminUser.Id,
                         ReviewId = review.Id,
-                        Reason = "Contains hidden spoilers without tag",
+                        Reason = "Містить приховані спойлери без відповідного тегу",
                         Status = "Pending",
                     };
                     await context.Reports.AddAsync(report);

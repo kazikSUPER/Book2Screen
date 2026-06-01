@@ -12,6 +12,7 @@ import IconUser from './components/IconUser.vue';
 import { checkHealth } from './services/health';
 import { useUserStore } from './state/user';
 import { useFiltersStore } from './state/filters';
+import { useWishlistStore } from './state/wishlist';
 
 const router = useRouter();
 const route = useRoute();

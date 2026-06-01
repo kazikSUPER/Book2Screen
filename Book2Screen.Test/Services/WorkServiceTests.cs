@@ -43,18 +43,18 @@ public class WorkServiceTests : IDisposable
     public async Task GetTopWorksAsync_ReturnsSortedWorksByRating()
     {
         // Arrange
-        var book1 = new Book { Id = Guid.NewGuid(), Title = "Book 1" };
-        var adaptation1 = new Adaptation { Id = Guid.NewGuid(), Title = "Movie 1", Type = "movie" };
-        var work1 = new Work { Id = Guid.NewGuid(), Title = "Work 1", Book = book1, Adaptation = adaptation1 };
+        var book1 = new Book { Id = Guid.NewGuid(), Title = "Книга 1" };
+        var adaptation1 = new Adaptation { Id = Guid.NewGuid(), Title = "Фільм 1", Type = "movie" };
+        var work1 = new Work { Id = Guid.NewGuid(), Title = "Твір 1", Book = book1, Adaptation = adaptation1 };
 
-        var book2 = new Book { Id = Guid.NewGuid(), Title = "Book 2" };
-        var adaptation2 = new Adaptation { Id = Guid.NewGuid(), Title = "Movie 2", Type = "movie" };
-        var work2 = new Work { Id = Guid.NewGuid(), Title = "Work 2", Book = book2, Adaptation = adaptation2 };
+        var book2 = new Book { Id = Guid.NewGuid(), Title = "Книга 2" };
+        var adaptation2 = new Adaptation { Id = Guid.NewGuid(), Title = "Фільм 2", Type = "movie" };
+        var work2 = new Work { Id = Guid.NewGuid(), Title = "Твір 2", Book = book2, Adaptation = adaptation2 };
 
         await _context.Works.AddRangeAsync(work1, work2);
 
-        var review1 = new Review { WorkId = work1.Id, Rating = 9.0, TargetType = "adaptation", Text = "Good" };
-        var review2 = new Review { WorkId = work2.Id, Rating = 7.0, TargetType = "adaptation", Text = "Okay" };
+        var review1 = new Review { WorkId = work1.Id, Rating = 9.0, TargetType = "adaptation", Text = "Чудово" };
+        var review2 = new Review { WorkId = work2.Id, Rating = 7.0, TargetType = "adaptation", Text = "Нормально" };
 
         await _context.Reviews.AddRangeAsync(review1, review2);
         await _context.SaveChangesAsync();
@@ -64,9 +64,9 @@ public class WorkServiceTests : IDisposable
 
         // Assert
         Assert.Equal(2, result.Count);
-        Assert.Equal("Work 1", result[0].Title);
+        Assert.Equal("Твір 1", result[0].Title);
         Assert.Equal(9.0, result[0].FilmRating);
-        Assert.Equal("Work 2", result[1].Title);
+        Assert.Equal("Твір 2", result[1].Title);
         Assert.Equal(7.0, result[1].FilmRating);
     }
 
@@ -74,13 +74,13 @@ public class WorkServiceTests : IDisposable
     public async Task GetTopWorksAsync_AveragesMultipleReviews()
     {
         // Arrange
-        var book = new Book { Id = Guid.NewGuid(), Title = "Book" };
-        var adaptation = new Adaptation { Id = Guid.NewGuid(), Title = "Movie", Type = "movie" };
-        var work = new Work { Id = Guid.NewGuid(), Title = "Work", Book = book, Adaptation = adaptation };
+        var book = new Book { Id = Guid.NewGuid(), Title = "Книга" };
+        var adaptation = new Adaptation { Id = Guid.NewGuid(), Title = "Фільм", Type = "movie" };
+        var work = new Work { Id = Guid.NewGuid(), Title = "Твір", Book = book, Adaptation = adaptation };
         await _context.Works.AddAsync(work);
 
-        var review1 = new Review { WorkId = work.Id, Rating = 10.0, TargetType = "adaptation", Text = "Great" };
-        var review2 = new Review { WorkId = work.Id, Rating = 8.0, TargetType = "adaptation", Text = "Good" };
+        var review1 = new Review { WorkId = work.Id, Rating = 10.0, TargetType = "adaptation", Text = "Супер" };
+        var review2 = new Review { WorkId = work.Id, Rating = 8.0, TargetType = "adaptation", Text = "Добре" };
         await _context.Reviews.AddRangeAsync(review1, review2);
         await _context.SaveChangesAsync();
 
@@ -96,21 +96,21 @@ public class WorkServiceTests : IDisposable
     public async Task GetWorkByIdAsync_ReturnsWorkWithDifferences()
     {
         // Arrange
-        var book = new Book { Id = Guid.NewGuid(), Title = "Book" };
-        var adaptation = new Adaptation { Id = Guid.NewGuid(), Title = "Movie", Type = "movie" };
+        var book = new Book { Id = Guid.NewGuid(), Title = "Книга" };
+        var adaptation = new Adaptation { Id = Guid.NewGuid(), Title = "Фільм", Type = "movie" };
         var workId = Guid.NewGuid();
-        var work = new Work { Id = workId, Title = "Work", Book = book, Adaptation = adaptation };
+        var work = new Work { Id = workId, Title = "Твір", Book = book, Adaptation = adaptation };
         
         var mapId = Guid.NewGuid();
         var map = new DifferenceMap 
         { 
             Id = mapId, 
             WorkId = workId, 
-            Title = "Map",
+            Title = "Карта",
             Differences = new List<Difference>
             {
-                new Difference { Id = Guid.NewGuid(), MapId = mapId, DifferenceType = "Cut Scene", Description = "Scene cut from movie", ImportanceLevel = "low" },
-                new Difference { Id = Guid.NewGuid(), MapId = mapId, DifferenceType = "Plot Change", Description = "Changed ending", ImportanceLevel = "high" }
+                new Difference { Id = Guid.NewGuid(), MapId = mapId, DifferenceType = "Вирізана сцена", Description = "Сцена, яку вирізали з фільму", ImportanceLevel = "low" },
+                new Difference { Id = Guid.NewGuid(), MapId = mapId, DifferenceType = "Зміна сюжету", Description = "Змінений фінал", ImportanceLevel = "high" }
             }
         };
         work.DifferenceMap = map;
@@ -125,8 +125,8 @@ public class WorkServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.True(result.HasMap);
         Assert.Equal(2, result.Differences.Count);
-        Assert.Contains(result.Differences, d => d.Title == "Plot Change" && d.IsSpoiler);
-        Assert.Contains(result.Differences, d => d.Title == "Cut Scene" && !d.IsSpoiler);
+        Assert.Contains(result.Differences, d => d.Title == "Зміна сюжету" && d.IsSpoiler);
+        Assert.Contains(result.Differences, d => d.Title == "Вирізана сцена" && !d.IsSpoiler);
     }
 
     [Fact]
@@ -136,18 +136,18 @@ public class WorkServiceTests : IDisposable
         var work1 = new Work 
         { 
             Id = Guid.NewGuid(), 
-            Title = "With Map", 
-            Book = new Book { Title = "B1" }, 
-            Adaptation = new Adaptation { Title = "A1", Type = "movie" } 
+            Title = "З картою", 
+            Book = new Book { Title = "Б1" }, 
+            Adaptation = new Adaptation { Title = "А1", Type = "movie" } 
         };
-        work1.DifferenceMap = new DifferenceMap { Id = Guid.NewGuid(), Title = "Map" };
+        work1.DifferenceMap = new DifferenceMap { Id = Guid.NewGuid(), Title = "Карта" };
         
         var work2 = new Work 
         { 
             Id = Guid.NewGuid(), 
-            Title = "Without Map", 
-            Book = new Book { Title = "B2" }, 
-            Adaptation = new Adaptation { Title = "A2", Type = "movie" } 
+            Title = "Без карти", 
+            Book = new Book { Title = "Б2" }, 
+            Adaptation = new Adaptation { Title = "А2", Type = "movie" } 
         };
 
         await _context.Works.AddRangeAsync(work1, work2);
@@ -158,6 +158,6 @@ public class WorkServiceTests : IDisposable
 
         // Assert
         Assert.Single(result);
-        Assert.Equal("With Map", result.First().Title);
+        Assert.Equal("З картою", result.First().Title);
     }
 }

@@ -35,7 +35,7 @@ public class ReviewServiceTests : IDisposable
     {
         // Arrange
         var workId = Guid.NewGuid();
-        var work = new Work { Id = workId, Title = "Test Work" };
+        var work = new Work { Id = workId, Title = "Тестовий твір" };
         await _context.Works.AddAsync(work);
         await _context.SaveChangesAsync();
 
@@ -43,7 +43,7 @@ public class ReviewServiceTests : IDisposable
         var request = new ReviewRequest 
         { 
             WorkId = workId, 
-            Text = "This is a great adaptation!", 
+            Text = "Це чудова екранізація!", 
             IsSpoiler = false, 
             Rating = 9.5,
             TargetType = "adaptation"
@@ -70,7 +70,7 @@ public class ReviewServiceTests : IDisposable
         var request = new ReviewRequest 
         { 
             WorkId = Guid.NewGuid(), 
-            Text = "Review for non-existent work", 
+            Text = "Відгук для неіснуючого твору", 
             IsSpoiler = false, 
             Rating = 5.0,
             TargetType = "book"
@@ -85,11 +85,11 @@ public class ReviewServiceTests : IDisposable
     {
         // Arrange
         var workId = Guid.NewGuid();
-        var work = new Work { Id = workId, Title = "Ordered Reviews Work" };
+        var work = new Work { Id = workId, Title = "Твір з впорядкованими відгуками" };
         await _context.Works.AddAsync(work);
 
-        var r1 = new Review { WorkId = workId, Text = "Old Review", CreatedAt = DateTime.UtcNow.AddHours(-1), TargetType = "book" };
-        var r2 = new Review { WorkId = workId, Text = "New Review", CreatedAt = DateTime.UtcNow, TargetType = "book" };
+        var r1 = new Review { WorkId = workId, Text = "Старий відгук", CreatedAt = DateTime.UtcNow.AddHours(-1), TargetType = "book" };
+        var r2 = new Review { WorkId = workId, Text = "Новий відгук", CreatedAt = DateTime.UtcNow, TargetType = "book" };
         
         await _context.Reviews.AddRangeAsync(r1, r2);
         await _context.SaveChangesAsync();
@@ -99,8 +99,8 @@ public class ReviewServiceTests : IDisposable
 
         // Assert
         Assert.Equal(2, result.Count);
-        Assert.Equal("New Review", result[0].Text);
-        Assert.Equal("Old Review", result[1].Text);
+        Assert.Equal("Новий відгук", result[0].Text);
+        Assert.Equal("Старий відгук", result[1].Text);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class ReviewServiceTests : IDisposable
             Id = reviewId, 
             UserId = userId, 
             WorkId = workId,
-            Text = "Original Text", 
+            Text = "Оригінальний текст", 
             Rating = 5.0, 
             TargetType = "book" 
         };
@@ -125,7 +125,7 @@ public class ReviewServiceTests : IDisposable
         var request = new ReviewRequest 
         { 
             WorkId = workId,
-            Text = "Updated Text", 
+            Text = "Оновлений текст", 
             Rating = 8.0, 
             IsSpoiler = true, 
             TargetType = "adaptation" 
@@ -137,7 +137,7 @@ public class ReviewServiceTests : IDisposable
         // Assert
         Assert.True(result);
         var updatedReview = await _context.Reviews.FindAsync(reviewId);
-        Assert.Equal("Updated Text", updatedReview!.Text);
+        Assert.Equal("Оновлений текст", updatedReview!.Text);
         Assert.Equal(8.0, updatedReview.Rating);
         Assert.True(updatedReview.IsSpoiler);
         Assert.Equal("adaptation", updatedReview.TargetType);
