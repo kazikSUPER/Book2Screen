@@ -22,9 +22,9 @@ public class WorkServiceTests : IDisposable
             .ConfigureWarnings(x => x.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         _context = new ApplicationDbContext(options);
-        _voteService = new VoteService(_context);
-        _service = new WorkService(_context, _voteService);
+        _service = new WorkService(_context);
     }
+
 
     public void Dispose()
     {

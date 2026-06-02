@@ -257,6 +257,12 @@ using (var scope = app.Services.CreateScope())
             }
 
             logger.LogInformation("Database is ready.");
+
+            // Warmup EF Core and JIT (BUG-001)
+            logger.LogInformation("Warming up application...");
+            _ = await db.Works.AsNoTracking().FirstOrDefaultAsync();
+            _ = await db.Votes.AsNoTracking().FirstOrDefaultAsync();
+            logger.LogInformation("Warmup completed.");
             break;
         }
         catch (Exception ex)

@@ -17,17 +17,14 @@ using Microsoft.EntityFrameworkCore;
 public class WorkService : IWorkService
 {
     private readonly ApplicationDbContext context;
-    private readonly IVoteService voteService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkService"/> class.
     /// </summary>
     /// <param name="context">Контекст бази даних.</param>
-    /// <param name="voteService">Сервіс голосування.</param>
-    public WorkService(ApplicationDbContext context, IVoteService voteService)
+    public WorkService(ApplicationDbContext context)
     {
         this.context = context;
-        this.voteService = voteService;
     }
 
     /// <inheritdoc/>
@@ -37,6 +34,8 @@ public class WorkService : IWorkService
             .Include(w => w.Book)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
+            .Include(w => w.Votes)
+            .Include(w => w.DifferenceMap)
             .AsQueryable();
 
         if (filter != null)
@@ -63,16 +62,7 @@ public class WorkService : IWorkService
         }
 
         var works = await query.ToListAsync();
-        var dtos = new List<BookScreenItemDto>();
-
-        foreach (var w in works)
-        {
-            var dto = this.MapToDto(w);
-            dto.VoteStats = await this.voteService.GetVoteStatsAsync(w.Id);
-            dtos.Add(dto);
-        }
-
-        return dtos;
+        return works.Select(this.MapToDto).ToList();
     }
 
     /// <inheritdoc/>
@@ -82,6 +72,7 @@ public class WorkService : IWorkService
             .Include(w => w.Book)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
+            .Include(w => w.Votes)
             .Include(w => w.DifferenceMap)
                 .ThenInclude(dm => dm!.Differences)
             .FirstOrDefaultAsync(w => w.Id == id);
@@ -92,7 +83,6 @@ public class WorkService : IWorkService
         }
 
         var dto = this.MapToDto(work);
-        dto.VoteStats = await this.voteService.GetVoteStatsAsync(work.Id);
 
         if (work.DifferenceMap != null)
         {
@@ -117,23 +107,23 @@ public class WorkService : IWorkService
             .Include(w => w.Book)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
+            .Include(w => w.Votes)
             .Include(w => w.DifferenceMap)
             .ToListAsync();
 
-        var dtos = new List<BookScreenItemDto>();
-        foreach (var w in works)
-        {
-            var dto = this.MapToDto(w);
-            dto.VoteStats = await this.voteService.GetVoteStatsAsync(w.Id);
-            dto.HasMap = w.DifferenceMap != null;
-            dtos.Add(dto);
-        }
-
-        return dtos.OrderByDescending(d => d.FilmRating).Take(count);
+        return works
+            .Select(this.MapToDto)
+            .OrderByDescending(d => d.FilmRating)
+            .Take(count)
+            .ToList();
     }
 
     private BookScreenItemDto MapToDto(Work w)
     {
+        var total = w.Votes.Count;
+        var bookVotes = w.Votes.Count(v => v.SelectedOption == "book");
+        var movieVotes = w.Votes.Count(v => v.SelectedOption == "movie" || v.SelectedOption == "adaptation");
+
         return new BookScreenItemDto
         {
             Id = w.Id,
@@ -153,6 +143,15 @@ public class WorkService : IWorkService
             FilmCountry = w.Adaptation.Country,
             FilmPoster = w.Adaptation.PosterUrl,
             HasMap = w.DifferenceMap != null,
+            VoteStats = new VoteResponse
+            {
+                WorkId = w.Id,
+                TotalVotes = total,
+                BookVotes = bookVotes,
+                MovieVotes = movieVotes,
+                BookPercentage = total > 0 ? (double)bookVotes / total * 100 : 0,
+                MoviePercentage = total > 0 ? (double)movieVotes / total * 100 : 0,
+            },
         };
     }
 }
