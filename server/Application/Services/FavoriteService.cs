@@ -8,6 +8,7 @@ using AutoMapper;
 using Book2Screen.Application.DTOs;
 using Book2Screen.Application.Interfaces;
 using Book2Screen.Domain.Entities;
+using Book2Screen.Domain.Exceptions;
 using Book2Screen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -44,7 +45,7 @@ public class FavoriteService : IFavoriteService
 
         if (alreadyFavorite)
         {
-            return true;
+            throw new ConflictException($"Work with ID {workId} is already in favorites with kind '{kind}'.");
         }
 
         var favorite = new Favorite
