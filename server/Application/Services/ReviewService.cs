@@ -37,6 +37,12 @@ public class ReviewService : IReviewService
             throw new KeyNotFoundException($"Work with ID {request.WorkId} not found.");
         }
 
+        var user = await this.context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null)
+        {
+            throw new UnauthorizedException("User not found.");
+        }
+
         using var transaction = await this.context.Database.BeginTransactionAsync();
         try
         {
@@ -59,6 +65,8 @@ public class ReviewService : IReviewService
                 ReviewId = review.Id,
                 WorkId = review.WorkId,
                 UserId = review.UserId ?? Guid.Empty,
+                UserNickname = user.Username,
+                UserAvatar = user.AvatarUrl,
                 Text = review.Text,
                 IsSpoiler = review.IsSpoiler,
                 Rating = review.Rating,
@@ -77,6 +85,7 @@ public class ReviewService : IReviewService
     public async Task<IEnumerable<ReviewResponse>> GetReviewsByWorkIdAsync(Guid workId)
     {
         return await this.context.Reviews
+            .Include(r => r.User)
             .Where(r => r.WorkId == workId)
             .OrderByDescending(r => r.CreatedAt)
             .Select(r => new ReviewResponse
@@ -84,6 +93,8 @@ public class ReviewService : IReviewService
                 ReviewId = r.Id,
                 WorkId = r.WorkId,
                 UserId = r.UserId ?? Guid.Empty,
+                UserNickname = r.User != null ? r.User.Username : "Deleted User",
+                UserAvatar = r.User != null ? r.User.AvatarUrl : null,
                 Text = r.Text,
                 IsSpoiler = r.IsSpoiler,
                 Rating = r.Rating,
@@ -139,6 +150,7 @@ public class ReviewService : IReviewService
     public async Task<IEnumerable<ReviewResponse>> GetUserReviewsAsync(Guid userId)
     {
         return await this.context.Reviews
+            .Include(r => r.User)
             .Where(r => r.UserId == userId)
             .OrderByDescending(r => r.CreatedAt)
             .Select(r => new ReviewResponse
@@ -146,6 +158,8 @@ public class ReviewService : IReviewService
                 ReviewId = r.Id,
                 WorkId = r.WorkId,
                 UserId = r.UserId ?? Guid.Empty,
+                UserNickname = r.User != null ? r.User.Username : "Deleted User",
+                UserAvatar = r.User != null ? r.User.AvatarUrl : null,
                 Text = r.Text,
                 IsSpoiler = r.IsSpoiler,
                 Rating = r.Rating,
@@ -175,6 +189,7 @@ public class ReviewService : IReviewService
     {
         return await this.context.Reports
             .Include(r => r.Review)
+                .ThenInclude(rev => rev!.User)
             .OrderByDescending(r => r.CreatedAt)
             .Select(r => new ReportResponse
             {
@@ -190,6 +205,8 @@ public class ReviewService : IReviewService
                     ReviewId = r.Review.Id,
                     WorkId = r.Review.WorkId,
                     UserId = r.Review.UserId ?? Guid.Empty,
+                    UserNickname = r.Review.User != null ? r.Review.User.Username : "Deleted User",
+                    UserAvatar = r.Review.User != null ? r.Review.User.AvatarUrl : null,
                     Text = r.Review.Text,
                     IsSpoiler = r.Review.IsSpoiler,
                     Rating = r.Review.Rating,

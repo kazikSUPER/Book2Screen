@@ -37,9 +37,19 @@ public class ReviewServiceTests : IDisposable
         var workId = Guid.NewGuid();
         var work = new Work { Id = workId, Title = "Тестовий твір" };
         await _context.Works.AddAsync(work);
-        await _context.SaveChangesAsync();
 
         var userId = Guid.NewGuid();
+        var user = new User 
+        { 
+            Id = userId, 
+            Username = "test_user", 
+            Email = "test@example.com",
+            PasswordHash = "hash",
+            AvatarUrl = "http://avatar.com/1" 
+        };
+        await _context.Users.AddAsync(user);
+        await _context.SaveChangesAsync();
+
         var request = new ReviewRequest 
         { 
             WorkId = workId, 
@@ -57,6 +67,8 @@ public class ReviewServiceTests : IDisposable
         Assert.Equal(request.Text, result.Text);
         Assert.Equal(request.Rating, result.Rating);
         Assert.Equal("adaptation", result.TargetType);
+        Assert.Equal("test_user", result.UserNickname);
+        Assert.Equal("http://avatar.com/1", result.UserAvatar);
         
         var reviewInDb = await _context.Reviews.FirstOrDefaultAsync(r => r.Id == result.ReviewId);
         Assert.NotNull(reviewInDb);

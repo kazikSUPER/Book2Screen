@@ -25,6 +25,16 @@ public class ReviewResponse
     public Guid UserId { get; set; }
 
     /// <summary>
+    /// Gets or sets нікнейм автора.
+    /// </summary>
+    public string UserNickname { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets URL аватара автора.
+    /// </summary>
+    public string? UserAvatar { get; set; }
+
+    /// <summary>
     /// Gets or sets текст відгуку.
     /// </summary>
     public string Text { get; set; } = null!;
