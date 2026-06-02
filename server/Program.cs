@@ -199,7 +199,7 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-app.UseSerilogRequestLogging();
+app.UseExceptionHandler();
 
 app.UseCors("AllowAll");
 
@@ -208,9 +208,20 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
+app.UseSerilogRequestLogging(options =>
+{
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        var user = httpContext.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            diagnosticContext.Set("UserEmail", user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value);
+            diagnosticContext.Set("UserId", user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
+        }
+    };
+});
 
-app.UseExceptionHandler();
+app.MapControllers();
 
 if (app.Environment.IsDevelopment())
 {
