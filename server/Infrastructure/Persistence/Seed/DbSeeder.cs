@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 public static class DbSeeder
 {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarLint", "S1075:URIs should not be hardcoded", Justification = "Seed data requires hardcoded URLs for development avatars and posters.")]
-    private const string DunePosterUrl = "https://m.media-amazon.com/images/M/MV5BMDQ0NjgyN2YtNWU4Ny00YjZlLWIzMTktMzljZWM2MTgzY2RhXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_.jpg";
+    private const string DunePosterUrl = "https://image.tmdb.org/t/p/original/d5NXSklZfs7qykvpU7YSJq5Ias4.jpg";
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarLint", "S1075:URIs should not be hardcoded", Justification = "Seed data requires hardcoded URLs for development avatars.")]
     private const string AdminAvatarUrl = "https://ui-avatars.com/api/?name=Admin&background=random";
