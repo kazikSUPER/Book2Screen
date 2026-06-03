@@ -109,6 +109,12 @@ const filmCountryLabel = computed(() => item.value?.filmCountry ?? item.value?.c
 const bookSummary = computed(() => item.value?.bookSummary ?? item.value?.description ?? '');
 const filmSummary = computed(() => item.value?.filmSummary ?? item.value?.description ?? '');
 
+watch(item, (newItem) => {
+  if (newItem) {
+    document.title = `${newItem.title} — порівняння книги та екранізації — Book2Screen`;
+  }
+}, { immediate: true });
+
 const goBack = () => router.push({ name: 'home' });
 </script>
 
@@ -130,6 +136,7 @@ const goBack = () => router.push({ name: 'home' });
     <p v-else-if="!item" class="detail__status">{{ t.notFound }}</p>
 
     <template v-else>
+      <h1 class="sr-only">Порівняння твору: {{ item.title }} (книга та екранізація)</h1>
       <!-- ── Дві картки порівняння ─────────────────────────── -->
       <!-- ── Дві картки порівняння ─────────────────────────── -->
       <section class="detail__compare">
@@ -259,8 +266,13 @@ const goBack = () => router.push({ name: 'home' });
   color: inherit;
   font-size: 20px;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 8px 16px;
   line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .detail__crumb-back:hover {

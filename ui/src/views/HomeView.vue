@@ -1,5 +1,6 @@
 <template>
   <div class="home">
+    <h1 class="sr-only">Book2Screen — порівняння книг та екранізацій</h1>
     <section class="hero">
       <img :src="heroImg" :alt="STR.home.heroAlt" class="hero-image" />
       <button type="button" class="hero-btn" @click="goToTop">
@@ -369,7 +370,7 @@ export default defineComponent({
   }
 
   .card-meta {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .card-btn {

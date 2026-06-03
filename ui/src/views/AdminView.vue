@@ -256,9 +256,9 @@ onMounted(() => {
   <div v-if="userStore.isAuthenticated" class="admin">
     <!-- ═════════ Стрічка-заголовок ═════════ -->
     <div class="admin__stripe">
-      <span v-if="mode === 'books'">{{ t.panelTitle }}</span>
-      <span v-else-if="mode === 'comments'">{{ t.moderationTitle }}</span>
-      <span v-else>{{ form.id ? t.editBookTitle : t.addBookTitle }}</span>
+      <h1 v-if="mode === 'books'" class="admin__stripe-title">{{ t.panelTitle }}</h1>
+      <h1 v-else-if="mode === 'comments'" class="admin__stripe-title">{{ t.moderationTitle }}</h1>
+      <h1 v-else class="admin__stripe-title">{{ form.id ? t.editBookTitle : t.addBookTitle }}</h1>
     </div>
 
     <!-- ═════════ Mode: книги ═════════ -->
@@ -544,6 +544,13 @@ onMounted(() => {
   font-family: var(--font-display);
   font-size: 18px;
   margin: -16px -16px 24px -16px;
+}
+
+.admin__stripe-title {
+  font-size: inherit;
+  font-weight: inherit;
+  margin: 0;
+  display: inline;
 }
 
 /* ── Layout (sidebar + main) ───────────────────────────── */

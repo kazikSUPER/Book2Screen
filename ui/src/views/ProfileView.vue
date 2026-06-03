@@ -131,11 +131,7 @@ function cancelEditing(): void {
   editing.value = false;
 }
 
-// ── Вихід (за Figma — кнопка усередині профілю) ──────────────
-function handleLogout(): void {
-  userStore.logout();
-  router.push({ name: 'home' });
-}
+
 
 // ── Avatar (mock через FileReader → base64 у localStorage) ───
 const avatarInput = ref<HTMLInputElement | null>(null);
@@ -203,7 +199,6 @@ onMounted(() => {
   <div v-if="userStore.isAuthenticated" class="profile">
     <header class="profile__top">
       <h1 class="profile__title">{{ t.title }}</h1>
-      <button type="button" class="profile__logout" @click="handleLogout">Вийти</button>
     </header>
 
     <!-- ═════════════ Шапка профілю ═════════════ -->
@@ -399,32 +394,10 @@ onMounted(() => {
   color: var(--text-on-light);
 }
 
-.profile__logout {
-  position: absolute;
-  right: 0;
-  background: transparent;
-  color: var(--text-on-light);
-  border: 1px solid var(--color-card);
-  border-radius: var(--radius-sm);
-  padding: 6px 16px;
-  font-family: var(--font-display);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.profile__logout:hover {
-  background: var(--color-card);
-  color: var(--text-on-dark);
-}
-
 @media (max-width: 600px) {
   .profile__top {
     flex-direction: column;
     gap: 8px;
-  }
-  .profile__logout {
-    position: static;
   }
 }
 

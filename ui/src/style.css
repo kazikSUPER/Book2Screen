@@ -179,3 +179,16 @@ input:-webkit-autofill:active {
   caret-color: var(--text-on-light);
   transition: background-color 9999s ease-in-out 0s;
 }
+
+/* ── Screen Readers Only (SEO utility) ── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

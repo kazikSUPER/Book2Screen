@@ -59,6 +59,7 @@ onMounted(loadItems);
 
 <template>
   <div class="top-page">
+    <h1 class="sr-only">Рейтинг адаптацій книг та фільмів — Book2Screen</h1>
     <TopFilterBar />
 
     <p v-if="isLoading" class="top-page__status">{{ STR.common.loading }}</p>
