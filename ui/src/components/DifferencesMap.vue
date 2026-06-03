@@ -196,6 +196,17 @@ function setActive(i: number): void {
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
+.diff-map__point::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  pointer-events: auto;
+}
+
 .diff-map__point:hover {
   transform: scale(1.1);
 }
