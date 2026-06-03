@@ -15,6 +15,7 @@ import {
 import type { BookScreenItem, DifferencePoint } from '../services/types';
 import { extractErrorMessage } from '../services/error';
 import { GENRES, STR } from '../constants';
+import { onImgError } from '../composables/useImageFallback';
 
 /**
  * SCRUM-143 — Admin Panel.
@@ -58,6 +59,8 @@ const filteredBooks = computed(() => {
 const selectedBook = ref<BookScreenItem | null>(null);
 
 // ── Форма додавання/редагування ─────────────────────────────
+
+/** Додаткова адаптація — для кнопки "Додати екранізацію". */
 interface ExtraAdaptation {
   id: string; // тимчасовий клієнтський id
   type: string; // movie | series | anime
@@ -80,6 +83,9 @@ interface BookForm {
   description: string;
   hasMap: boolean;
   differences: DifferencePoint[];
+  // BUG-045: бек вимагає type = 'movie' | 'series' | 'anime'.
+  type: string;
+  /** Список додаткових адаптацій (опціонально — серіал + фільм). */
   extraAdaptations: ExtraAdaptation[];
 }
 
@@ -96,6 +102,7 @@ const emptyForm = (): BookForm => ({
   description: '',
   hasMap: false,
   differences: [],
+  type: 'movie',
   extraAdaptations: [],
 });
 
@@ -176,6 +183,7 @@ function startEdit(book: BookScreenItem): void {
     description: book.description,
     hasMap: book.hasMap ?? false,
     differences: book.differences ? JSON.parse(JSON.stringify(book.differences)) : [],
+    type: 'movie', // BUG-045: бек не повертає type у /Works/{id}, тому дефолт.
     extraAdaptations: [],
   };
   mode.value = 'book-form';
@@ -195,13 +203,15 @@ async function onDelete(book: BookScreenItem): Promise<void> {
 }
 
 async function submitForm(): Promise<void> {
-  if (!form.value.title || !form.value.year) {
-    notifications.pushWarning(t.fillTitleAndYear);
+  // BUG-045: type теж обов'язковий поряд із title і year.
+  if (!form.value.title || !form.value.year || !form.value.type) {
+    notifications.pushWarning(t.fillTitleYearType);
     return;
   }
   isSubmitting.value = true;
   try {
-    const payload: Omit<BookScreenItem, 'id'> = {
+    // BUG-045: передаємо type в admin.createBook/updateBook (мапиться в AdaptationDto.type).
+    const payload = {
       title: form.value.title,
       author: form.value.author || undefined,
       year: form.value.year ?? 0,
@@ -213,6 +223,7 @@ async function submitForm(): Promise<void> {
       description: form.value.description,
       hasMap: form.value.differences.length > 0,
       differences: form.value.differences.length > 0 ? form.value.differences : undefined,
+      type: form.value.type,
     };
     if (form.value.id) {
       const updated = await updateBook(form.value.id, payload);
@@ -232,7 +243,22 @@ async function submitForm(): Promise<void> {
   }
 }
 
+/**
+ * BUG-046: підтвердження перед скасуванням форми.
+ * Запитуємо тільки якщо форма має непорожні поля — щоб не дратувати при чистому формі.
+ */
 function cancelForm(): void {
+  const isDirty =
+    form.value.title.trim() !== '' ||
+    form.value.author.trim() !== '' ||
+    form.value.year !== null ||
+    form.value.genre !== '' ||
+    form.value.country.trim() !== '' ||
+    form.value.poster.trim() !== '' ||
+    form.value.description.trim() !== '' ||
+    form.value.differences.length > 0;
+
+  if (isDirty && !confirm(t.confirmCancelForm)) return;
   mode.value = 'books';
 }
 
@@ -251,14 +277,13 @@ function removePoint(index: number): void {
   form.value.differences.splice(index, 1);
 }
 
-// ── Comment moderation actions ──────────────────────────────
+// ── Comment moderation actions (BUG-041) ─────────────────
 async function moderate(reportId: string, action: 'approve' | 'reject' | 'spoiler'): Promise<void> {
   try {
     await moderateReport(reportId, action);
-    const r = reports.value.find((x) => x.reportId === reportId);
-    if (r) {
-      r.status = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'marked-spoiler';
-    }
+    // BUG-041: одразу прибираємо запис зі списку, щоб UI оновився
+    // (раніше тільки міняли status, а кнопка лишалась видимою з disabled).
+    reports.value = reports.value.filter((x) => x.reportId !== reportId);
     const labels = {
       approve: t.commentDeleted,
       reject: t.reportRejected,
@@ -284,47 +309,24 @@ onMounted(() => {
   <div v-if="userStore.isAuthenticated" class="admin">
     <!-- ═════════ Стрічка-заголовок ═════════ -->
     <div class="admin__stripe">
-      <h1 v-if="mode === 'books'" class="admin__stripe-title">{{ t.panelTitle }}</h1>
-      <h1 v-else-if="mode === 'comments'" class="admin__stripe-title">{{ t.moderationTitle }}</h1>
-      <h1 v-else class="admin__stripe-title">{{ form.id ? t.editBookTitle : t.addBookTitle }}</h1>
+      <span v-if="mode === 'books'">{{ t.panelTitle }}</span>
+      <span v-else-if="mode === 'comments'">{{ t.moderationTitle }}</span>
+      <span v-else>{{ form.id ? t.editBookTitle : t.addBookTitle }}</span>
     </div>
 
     <!-- ═════════ Mode: книги ═════════ -->
     <template v-if="mode === 'books'">
-      <div class="admin__layout">
-        <!-- Sidebar з діями -->
-        <aside class="admin__sidebar">
+      <div class="admin__top-section">
+        <!-- Лівий бокс з діями -->
+        <div class="admin__actions-box">
           <button class="admin__action" @click="startCreate">{{ t.addBook }}</button>
-          <button class="admin__action admin__action--secondary" @click="switchToComments">
+          <button class="admin__action" @click="switchToComments">
             {{ t.moderation }}
           </button>
+        </div>
 
-          <!-- Картка-прев'ю обраної книги -->
-          <article v-if="selectedBook" class="admin__preview">
-            <div class="admin__preview-poster">
-              <img :src="selectedBook.poster" :alt="selectedBook.title" />
-            </div>
-            <div class="admin__preview-meta">
-              <h3>{{ selectedBook.title }}</h3>
-              <p><strong>Рік:</strong> {{ selectedBook.year }}</p>
-              <p><strong>Жанр:</strong> {{ selectedBook.genre }}</p>
-              <p><strong>Країна:</strong> {{ selectedBook.country }}</p>
-              <p v-if="selectedBook.author"><strong>Автор:</strong> {{ selectedBook.author }}</p>
-              <p><strong>Рейтинг:</strong> {{ selectedBook.bookRating }} / 10</p>
-            </div>
-            <div class="admin__preview-actions">
-              <button class="admin__btn admin__btn--primary" @click="startEdit(selectedBook)">
-                {{ STR.common.edit }}
-              </button>
-              <button class="admin__btn admin__btn--dark" @click="onDelete(selectedBook)">
-                {{ STR.common.delete }}
-              </button>
-            </div>
-          </article>
-        </aside>
-
-        <!-- Main: пошук + таблиця -->
-        <section class="admin__main">
+        <!-- Правий бокс: пошук + картка-прев'ю -->
+        <div class="admin__preview-section">
           <div class="admin__search">
             <input v-model="searchQuery" type="text" :placeholder="t.searchPlaceholder" class="admin__search-input" />
             <span class="admin__search-icon" aria-hidden="true">
@@ -335,42 +337,73 @@ onMounted(() => {
             </span>
           </div>
 
-          <p v-if="isLoading" class="admin__status">{{ STR.common.loading }}</p>
+          <article v-if="selectedBook" class="admin__preview-card">
+            <div class="admin__preview-content">
+              <div class="admin__preview-poster">
+                <img :src="selectedBook.poster" :alt="selectedBook.title" @error="onImgError" />
+              </div>
+              <div class="admin__preview-meta">
+                <h3>{{ selectedBook.title }}</h3>
+                <p><strong>Рік:</strong> {{ selectedBook.year }}</p>
+                <p><strong>Жанр:</strong> {{ selectedBook.genre }}</p>
+                <p><strong>Країна:</strong> {{ selectedBook.country }}</p>
+                <p v-if="selectedBook.author"><strong>Автор:</strong> {{ selectedBook.author }}</p>
+                <p><strong>Рейтинг:</strong> {{ selectedBook.bookRating }} / 10</p>
+              </div>
+            </div>
+            <div class="admin__preview-actions">
+              <div class="admin__action-wrapper admin__action-wrapper--left">
+                <button class="admin__btn admin__btn--dark" @click="startEdit(selectedBook)">
+                  {{ STR.common.edit }}
+                </button>
+              </div>
+              <div class="admin__action-wrapper admin__action-wrapper--right">
+                <button class="admin__btn admin__btn--dark" @click="onDelete(selectedBook)">
+                  {{ STR.common.delete }}
+                </button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
 
-          <table v-else class="admin__table" aria-label="Список творів">
-            <thead>
-              <tr>
-                <th>{{ t.idHeader }}</th>
-                <th>{{ t.titleHeader }}</th>
-                <th>{{ t.authorLabel }}</th>
-                <th>{{ t.yearHeader }}</th>
-                <th>{{ t.actionHeader }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(b, i) in filteredBooks"
-                :key="b.id"
-                :class="{ 'admin__row--selected': selectedBook?.id === b.id }"
-                @click="selectedBook = b"
-              >
-                <td>{{ i + 1 }}</td>
-                <td>{{ b.title }}</td>
-                <td>{{ b.author || '—' }}</td>
-                <td>{{ b.year }}</td>
-                <td class="admin__row-actions" @click.stop>
-                  <button class="admin__btn admin__btn--primary" @click="startEdit(b)">
-                    {{ STR.common.edit }}
-                  </button>
-                  <button class="admin__btn admin__btn--primary" @click="onDelete(b)">{{ STR.common.delete }}</button>
-                </td>
-              </tr>
-              <tr v-if="filteredBooks.length === 0">
-                <td colspan="5" class="admin__empty">{{ t.nothingFound }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
+      <!-- Main: таблиця на всю ширину -->
+      <div class="admin__table-section">
+        <p v-if="isLoading" class="admin__status">{{ STR.common.loading }}</p>
+
+        <table v-else class="admin__table" aria-label="Список творів">
+          <thead>
+            <tr>
+              <th>{{ t.idHeader }}</th>
+              <th>{{ t.titleHeader }}</th>
+              <th>{{ t.authorLabel }}</th>
+              <th>{{ t.yearHeader }}</th>
+              <th>{{ t.actionHeader }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(b, i) in filteredBooks"
+              :key="b.id"
+              :class="{ 'admin__row--selected': selectedBook?.id === b.id }"
+              @click="selectedBook = b"
+            >
+              <td>{{ i + 1 }}</td>
+              <td>{{ b.title }}</td>
+              <td>{{ b.author || '—' }}</td>
+              <td>{{ b.year }}</td>
+              <td class="admin__row-actions" @click.stop>
+                <button class="admin__btn admin__btn--primary" @click="startEdit(b)">
+                  {{ STR.common.edit }}
+                </button>
+                <button class="admin__btn admin__btn--dark" @click="onDelete(b)">{{ STR.common.delete }}</button>
+              </td>
+            </tr>
+            <tr v-if="filteredBooks.length === 0">
+              <td colspan="5" class="admin__empty">{{ t.nothingFound }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </template>
 
@@ -456,6 +489,16 @@ onMounted(() => {
               </select>
             </label>
 
+            <!-- BUG-045: тип адаптації (обов'язкове поле бекенду). -->
+            <label class="admin-form__field">
+              <span>{{ t.typeLabel }}</span>
+              <select v-model="form.type" class="admin-form__input" required>
+                <option value="movie">{{ t.typeMovie }}</option>
+                <option value="series">{{ t.typeSeries }}</option>
+                <option value="anime">{{ t.typeAnime }}</option>
+              </select>
+            </label>
+
             <label class="admin-form__field">
               <span>{{ t.countryLabel }}</span>
               <input v-model="form.country" type="text" class="admin-form__input" />
@@ -467,7 +510,7 @@ onMounted(() => {
             </label>
 
             <div v-if="form.poster" class="admin-form__poster">
-              <img :src="form.poster" :alt="t.posterPreviewAlt" />
+              <img :src="form.poster" :alt="t.posterPreviewAlt" @error="onImgError" />
             </div>
 
             <label class="admin-form__field">
@@ -502,18 +545,10 @@ onMounted(() => {
 
             <!-- ── Додаткові адаптації (опціонально: серіал + фільм) ── -->
             <ol v-if="form.extraAdaptations.length" class="admin-form__extras">
-              <li
-                v-for="(a, i) in form.extraAdaptations"
-                :key="a.id"
-                class="admin-form__extra"
-              >
+              <li v-for="(a, i) in form.extraAdaptations" :key="a.id" class="admin-form__extra">
                 <header class="admin-form__extra-head">
-                  <span class="admin-form__extra-title">Адаптація {{ i + 2 }}</span>
-                  <button
-                    type="button"
-                    class="admin-form__point-remove"
-                    @click="removeAdaptation(i)"
-                  >
+                  <span class="admin-form__extra-title">{{ t.extraAdaptationTitle(i + 2) }}</span>
+                  <button type="button" class="admin-form__point-remove" @click="removeAdaptation(i)">
                     {{ STR.common.delete }}
                   </button>
                 </header>
@@ -528,12 +563,7 @@ onMounted(() => {
                 <div class="admin-form__row">
                   <label class="admin-form__field">
                     <span>{{ t.yearLabel }}</span>
-                    <input
-                      v-model.number="a.releaseYear"
-                      type="number"
-                      min="1900"
-                      class="admin-form__input"
-                    />
+                    <input v-model.number="a.releaseYear" type="number" min="1900" class="admin-form__input" />
                   </label>
                   <label class="admin-form__field">
                     <span>{{ t.countryLabel }}</span>
@@ -541,24 +571,19 @@ onMounted(() => {
                   </label>
                 </div>
                 <label class="admin-form__field">
-                  <span>Студія</span>
+                  <span>{{ t.studioLabel }}</span>
                   <input v-model="a.studio" type="text" class="admin-form__input" />
                 </label>
                 <label class="admin-form__field">
                   <span>{{ t.posterLabel }}</span>
-                  <input
-                    v-model="a.posterUrl"
-                    type="url"
-                    class="admin-form__input"
-                    placeholder="https://…"
-                  />
+                  <input v-model="a.posterUrl" type="url" class="admin-form__input" placeholder="https://…" />
                 </label>
               </li>
             </ol>
 
             <!-- Кнопка "Додати екранізацію" (під лівою колонкою як у Figma). -->
             <button type="button" class="admin-form__add-adaptation" @click="addAdaptation">
-              + Додати екранізацію
+              {{ t.addAdaptation }}
             </button>
           </div>
 
@@ -632,102 +657,170 @@ onMounted(() => {
   padding: 12px 24px;
   font-family: var(--font-display);
   font-size: 18px;
-  margin: -16px -16px 24px -16px;
+  margin: 0 0 24px 0;
 }
 
-.admin__stripe-title {
-  font-size: inherit;
-  font-weight: inherit;
-  margin: 0;
-  display: inline;
+/* ── Layout (Top + Table) ───────────────────────────── */
+.admin__top-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 80px;
+  padding: 0 32px;
+  margin-bottom: 40px;
 }
 
-/* ── Layout (sidebar + main) ───────────────────────────── */
-.admin__layout {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 24px;
-  padding: 0 16px;
-}
-
-.admin__sidebar {
+.admin__actions-box {
+  background: var(--color-panel);
+  padding: 32px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
+  height: fit-content;
+  width: 420px; /* Збільшена ширина */
+  flex-shrink: 0;
+  margin-top: 60px; /* Відкориговано, щоб зрівнятися з верхнім краєм картки */
+}
+
+.admin__preview-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Притискає всередині все до лівого краю */
+  gap: 24px;
+  flex: 1;
+  width: 100%;
+  max-width: 850px; /* Обгортка для пошуку та картки */
+  margin-left: auto; /* Зсуває весь правий блок максимально вправо */
 }
 
 .admin__main {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 0 16px;
 }
 
-/* ── Sidebar buttons ────────────────────────────────────── */
+/* ── Action buttons ────────────────────────────────────── */
 .admin__action {
-  background: var(--color-card);
-  color: var(--text-on-dark);
-  border: 2px solid var(--color-card);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
-  font-family: var(--font-display);
-  font-size: 14px;
+  background: var(--color-header);
+  color: var(--text-on-primary);
+  border: none;
+  border-radius: 4px;
+  padding: 20px 24px;
+  font-family: var(--font-body);
+  font-size: 20px;
+  font-weight: 500;
   cursor: pointer;
   text-align: center;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.4);
   transition: all 0.15s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .admin__action:hover {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-}
-
-.admin__action--secondary {
-  background: var(--color-card);
+  opacity: 0.9;
 }
 
 /* ── Картка-прев'ю ──────────────────────────────────────── */
-.admin__preview {
-  background: var(--color-card);
-  color: var(--text-on-dark);
-  border-radius: var(--radius-md);
-  padding: 12px;
+.admin__preview-card {
+  background: var(--color-panel);
+  border-radius: var(--radius-sm);
+  padding: 32px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  box-shadow: var(--shadow-sm);
+  gap: 24px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 600px; /* Картка обмежена і притиснута зліва */
+}
+
+.admin__preview-content {
+  display: flex;
+  flex-direction: row;
+  gap: 32px;
+}
+
+@media (max-width: 500px) {
+  .admin__preview-content {
+    flex-direction: column;
+  }
 }
 
 .admin__preview-poster {
-  width: 100%;
-  height: 220px;
+  flex: 0 0 250px;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
-  border-radius: var(--radius-xs);
-  background: var(--color-header);
+  background: transparent;
 }
 
 .admin__preview-poster img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+}
+
+.admin__preview-meta {
+  flex: 1;
+  background: var(--color-primary);
+  color: var(--text-on-primary);
+  padding: 24px;
+  border-radius: var(--radius-xs);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .admin__preview-meta h3 {
   font-family: var(--font-body);
-  font-size: 14px;
-  margin: 0 0 6px 0;
-  font-weight: 600;
+  font-size: 18px; /* Збільшено шрифт */
+  margin: 0 0 16px 0;
+  font-weight: 500;
+  text-align: center;
 }
 
 .admin__preview-meta p {
-  margin: 2px 0;
-  font-size: 12px;
+  margin: 8px 0;
+  font-size: 14px; /* Збільшено текст */
+  text-align: left;
 }
 
 .admin__preview-actions {
   display: flex;
-  gap: 8px;
+  flex-direction: row;
+  gap: 28px; /* Такий самий відступ, як між постером і текстом */
+}
+
+.admin__action-wrapper {
+  display: flex;
+  justify-content: center;
+}
+
+.admin__action-wrapper--left {
+  flex: 0 0 250px; /* Точно під постером */
+}
+
+.admin__action-wrapper--right {
+  flex: 1; /* Точно під червоним блоком деталей */
+}
+
+.admin__preview-actions .admin__btn {
+  width: 140px; /* Акуратна фіксована ширина як на макеті */
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: 4px;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.4);
+  background: var(--color-header);
+  color: var(--text-on-primary);
+}
+
+.admin__preview-actions .admin__btn:hover {
+  opacity: 0.9;
 }
 
 /* ── Buttons ────────────────────────────────────────────── */
@@ -782,18 +875,20 @@ onMounted(() => {
 /* ── Search ─────────────────────────────────────────────── */
 .admin__search {
   position: relative;
-  max-width: 600px;
+  width: 100%; /* Повністю розтягнеться на всі 850px */
 }
 
 .admin__search-input {
   width: 100%;
-  padding: 9px 36px 9px 14px;
+  padding: 10px 44px 10px 16px; /* Ще трохи зменшені відступи */
   border: 1px solid var(--border-input);
   border-radius: var(--radius-sm);
   background: var(--color-input-bg);
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 15px; /* Трохи менший шрифт */
   outline: none;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
 }
 
 .admin__search-input:focus {
@@ -802,13 +897,23 @@ onMounted(() => {
 
 .admin__search-icon {
   position: absolute;
-  right: 10px;
+  right: 14px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--text-on-light);
 }
 
+.admin__search-icon svg {
+  width: 18px; /* Відповідно трохи менша іконка */
+  height: 18px;
+}
+
 /* ── Table ──────────────────────────────────────────────── */
+.admin__table-section {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .admin__table {
   width: 100%;
   border-collapse: collapse;
@@ -973,13 +1078,27 @@ onMounted(() => {
 }
 
 /* ── Карта точок ────────────────────────────────────────── */
+/* Таймлайн точок відмінностей — з кружком (1-ша) і ромбами (інші) ліворуч. */
 .admin-form__points {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 0 0 36px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  position: relative;
+}
+
+/* Вертикальна лінія, що з'єднує всі маркери. */
+.admin-form__points::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background: var(--color-card);
+  z-index: 0;
 }
 
 .admin-form__point {
@@ -990,6 +1109,31 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative;
+}
+
+/* Маркер ліворуч: 1-ша точка — круг, інші — ромб (квадрат повернутий на 45°). */
+.admin-form__point::before {
+  content: '';
+  position: absolute;
+  left: -32px;
+  top: 14px;
+  width: 14px;
+  height: 14px;
+  background: var(--color-card);
+  /* Ромб за замовчуванням. */
+  transform: rotate(45deg);
+  z-index: 1;
+}
+
+.admin-form__point:first-child::before {
+  /* Перша точка — круг. */
+  border-radius: 50%;
+  transform: none;
+  width: 16px;
+  height: 16px;
+  left: -33px;
+  top: 13px;
 }
 
 .admin-form__point-head {
@@ -1049,7 +1193,7 @@ onMounted(() => {
 /* ── Додаткові адаптації (екранізації) ────────────────── */
 .admin-form__extras {
   list-style: none;
-  margin: 16px 0 0 0;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -1090,7 +1234,7 @@ onMounted(() => {
   font-family: var(--font-display);
   font-size: 15px;
   cursor: pointer;
-  margin-top: 16px;
+  margin-top: 8px;
   transition: background 0.15s;
 }
 
