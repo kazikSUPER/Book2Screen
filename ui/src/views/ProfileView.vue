@@ -40,9 +40,8 @@ const isLoading = ref(false);
 // "Редагувати" профіль у режимі inline.
 const editing = ref(false);
 const editForm = ref({
-  fullName: '',
+  username: '',
   nickname: '',
-  birthDate: '',
 });
 
 // "Показати більше" для відгуків.
@@ -92,8 +91,15 @@ const stats = computed(() => ({
 
 // ── Helpers для відображення ─────────────────────────────────
 const initial = computed(() =>
-  (userStore.fullName || userStore.nickname || userStore.email || '?').charAt(0).toUpperCase()
+  (userStore.username || userStore.nickname || userStore.email || '?').charAt(0).toUpperCase()
 );
+
+const joinedDateLabel = computed(() => {
+  if (!userStore.joinedAt) return '';
+  const d = new Date(userStore.joinedAt);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
+});
 
 function findWork(id: string): BookScreenItem | undefined {
   return allWorks.value.find((w) => w.id === id);
@@ -102,21 +108,23 @@ function findWork(id: string): BookScreenItem | undefined {
 // ── Edit profile ─────────────────────────────────────────────
 function startEditing(): void {
   editForm.value = {
-    fullName: userStore.fullName,
+    username: userStore.username,
     nickname: userStore.nickname,
-    birthDate: userStore.birthDate,
   };
   editing.value = true;
 }
 
-function saveProfile(): void {
-  userStore.updateProfile({
-    fullName: editForm.value.fullName.trim(),
-    nickname: editForm.value.nickname.trim(),
-    birthDate: editForm.value.birthDate.trim(),
-  });
-  editing.value = false;
-  notifications.pushSuccess(t.profileUpdated);
+async function saveProfile(): Promise<void> {
+  try {
+    // PUT /api/v1/users/me з полем username.
+    await userStore.updateProfile({
+      username: editForm.value.username.trim(),
+    });
+    editing.value = false;
+    notifications.pushSuccess(t.profileUpdated);
+  } catch (err) {
+    notifications.pushError(extractErrorMessage(err));
+  }
 }
 
 function cancelEditing(): void {
@@ -227,11 +235,11 @@ onMounted(() => {
         <div v-if="!editing" class="profile-card__body">
           <p class="profile-card__row">
             <span class="profile-card__label">{{ t.username }}</span>
-            <span class="profile-card__value">{{ userStore.fullName || userStore.nickname || '—' }}</span>
+            <span class="profile-card__value">{{ userStore.username || userStore.nickname || '—' }}</span>
           </p>
           <p class="profile-card__row">
-            <span class="profile-card__label">{{ t.birthDate }}</span>
-            <span class="profile-card__value">{{ userStore.birthDate || '—' }}</span>
+            <span class="profile-card__label">{{ t.joinedAt }}</span>
+            <span class="profile-card__value">{{ joinedDateLabel || '—' }}</span>
           </p>
           <p class="profile-card__row">
             <span class="profile-card__label">{{ t.email }}</span>
@@ -243,15 +251,7 @@ onMounted(() => {
         <form v-else class="profile-card__body" @submit.prevent="saveProfile">
           <label class="profile-card__edit-row">
             <span class="profile-card__label">{{ t.name }}</span>
-            <input v-model="editForm.fullName" type="text" class="profile-card__input" />
-          </label>
-          <label class="profile-card__edit-row">
-            <span class="profile-card__label">Username</span>
-            <input v-model="editForm.nickname" type="text" class="profile-card__input" />
-          </label>
-          <label class="profile-card__edit-row">
-            <span class="profile-card__label">{{ t.birthDate }}</span>
-            <input v-model="editForm.birthDate" type="date" class="profile-card__input" />
+            <input v-model="editForm.username" type="text" class="profile-card__input" />
           </label>
           <div class="profile-card__edit-actions">
             <button type="submit" class="profile-card__edit">{{ STR.common.save }}</button>
