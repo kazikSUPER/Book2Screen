@@ -561,12 +561,21 @@ onMounted(() => {
   align-self: flex-start;
   background: transparent;
   color: var(--text-on-dark);
-  border: 1px solid var(--text-on-dark);
+  /* 2px border щоб збігатись з .profile-card__edit (Зберегти). */
+  border: 2px solid var(--text-on-dark);
   border-radius: var(--radius-sm);
   padding: 6px 16px;
   font-family: var(--font-display);
   font-size: 13px;
   cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.profile-card__cancel:hover {
+  background: var(--text-on-dark);
+  color: var(--color-card);
 }
 
 .profile-card__edit-row {
@@ -588,7 +597,16 @@ onMounted(() => {
 
 .profile-card__edit-actions {
   display: flex;
+  align-items: stretch;
   gap: 8px;
+  margin-top: 8px;
+}
+
+/* Усередині actions — прибираємо margin-top у кнопок (це робить контейнер). */
+.profile-card__edit-actions .profile-card__edit,
+.profile-card__edit-actions .profile-card__cancel {
+  align-self: auto;
+  margin-top: 0;
 }
 
 /* ── Секції ────────────────────────────────────────────── */
