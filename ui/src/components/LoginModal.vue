@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useUserStore } from '../state/user';
 import { extractErrorMessage } from '../services/error';
+import { STR } from '../constants';
 
 const emit = defineEmits<{
   close: [];
@@ -10,6 +11,7 @@ const emit = defineEmits<{
 }>();
 
 const userStore = useUserStore();
+const t = STR.auth;
 
 const login = ref('');
 const password = ref('');
@@ -22,12 +24,12 @@ const validate = (): boolean => {
   let isValid = true;
 
   if (!login.value) {
-    errors.value.login = 'Введіть логін';
+    errors.value.login = t.emptyLogin;
     isValid = false;
   }
 
   if (!password.value) {
-    errors.value.password = 'Введіть пароль';
+    errors.value.password = t.emptyPassword;
     isValid = false;
   }
 
@@ -49,51 +51,70 @@ const handleLogin = async () => {
     isSubmitting.value = false;
   }
 };
+
+// Безпечне закриття overlay: модалка не закривається, якщо користувач
+// почав drag всередині модалки і випадково відпустив кнопку поза нею.
+const mouseDownOnOverlay = { value: false };
+function onOverlayMouseDown(e: MouseEvent) {
+  mouseDownOnOverlay.value = e.target === e.currentTarget;
+}
+function onOverlayClick(e: MouseEvent) {
+  if (mouseDownOnOverlay.value && e.target === e.currentTarget) {
+    emit('close');
+  }
+  mouseDownOnOverlay.value = false;
+}
 </script>
 
 <template>
-  <div class="modal-overlay" @click.self="emit('close')">
-    <div class="modal">
-      <button class="modal-close" @click="emit('close')">✕</button>
+  <div class="modal-overlay" @mousedown="onOverlayMouseDown" @click="onOverlayClick">
+    <div class="modal-frame" @click.stop @mousedown.stop>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="login-title">
+        <button class="modal-close" type="button" :aria-label="STR.common.close" @click="emit('close')">✕</button>
 
-      <h2 class="modal-title">Вхід</h2>
+        <h2 id="login-title" class="modal-title">{{ t.loginTitle }}</h2>
 
-      <div class="modal-body">
-        <div class="field">
-          <label class="field-label">Логін</label>
-          <input
-            v-model="login"
-            type="text"
-            class="field-input"
-            :class="{ error: errors.login }"
-            placeholder="Введіть логін"
-            :disabled="isSubmitting"
-          />
-          <span v-if="errors.login" class="error-text">{{ errors.login }}</span>
-        </div>
+        <div class="modal-body">
+          <div class="field">
+            <label class="field-label">{{ t.login }}</label>
+            <input
+              v-model="login"
+              type="text"
+              class="field-input"
+              :class="{ error: errors.login }"
+              :placeholder="t.loginPlaceholder"
+              :disabled="isSubmitting"
+            />
+            <span v-if="errors.login" class="error-text">{{ errors.login }}</span>
+          </div>
 
-        <div class="field">
-          <label class="field-label">Пароль</label>
-          <input
-            v-model="password"
-            type="password"
-            class="field-input"
-            :class="{ error: errors.password }"
-            placeholder="Введіть пароль"
-            :disabled="isSubmitting"
-          />
-          <span v-if="errors.password" class="error-text">{{ errors.password }}</span>
-        </div>
+          <div class="field">
+            <label class="field-label">{{ t.password }}</label>
+            <input
+              v-model="password"
+              type="password"
+              class="field-input"
+              :class="{ error: errors.password }"
+              :placeholder="t.passwordPlaceholder"
+              :disabled="isSubmitting"
+            />
+            <span v-if="errors.password" class="error-text">{{ errors.password }}</span>
+          </div>
 
-        <p v-if="apiError" class="api-error">{{ apiError }}</p>
+          <p v-if="apiError" class="api-error">{{ apiError }}</p>
 
-        <p class="forgot-link" @click="emit('openReset')">Забули пароль?</p>
-
-        <div class="btn-row">
-          <button class="btn-login" :disabled="isSubmitting" @click="handleLogin">
-            {{ isSubmitting ? 'Вхід...' : 'Ввійти' }}
+          <button type="button" class="forgot-link" @click="emit('openReset')">
+            {{ t.forgotPassword }}
           </button>
-          <button class="btn-register" :disabled="isSubmitting" @click="emit('openRegister')">Зареєструватись</button>
+
+          <div class="btn-row">
+            <button type="button" class="btn-login" :disabled="isSubmitting" @click="handleLogin">
+              {{ isSubmitting ? t.submitting : t.submitLogin }}
+            </button>
+            <button type="button" class="btn-register" :disabled="isSubmitting" @click="emit('openRegister')">
+              {{ t.submitRegister }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -104,20 +125,30 @@ const handleLogin = async () => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(49, 22, 32, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
+  padding: 16px;
+}
+
+.modal-frame {
+  background: #3d0f1a;
+  padding: 30px;
+  border-radius: var(--radius-md);
+  max-width: 440px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .modal {
-  background-color: var(--pink-light);
-  border-radius: 12px;
-  width: 100%;
-  max-width: 380px;
+  background-color: var(--color-modal-bg);
+  border: 2px solid var(--color-card);
+  /* border-radius: var(--radius-md); */
   padding: 32px;
   position: relative;
+  box-shadow: var(--shadow-md);
 }
 
 .modal-close {
@@ -127,19 +158,26 @@ const handleLogin = async () => {
   background: none;
   border: none;
   font-size: 18px;
-  color: var(--dark-card);
+  color: var(--text-on-light);
   cursor: pointer;
+  line-height: 1;
 }
 
 .modal-close:hover {
-  color: var(--accent);
+  color: var(--color-primary);
+}
+
+.modal-close:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .modal-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--dark-card);
-  font-family: 'Georgia', serif;
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--text-on-light);
+  font-family: var(--font-display);
   margin: 0 0 24px;
   text-align: center;
 }
@@ -158,33 +196,33 @@ const handleLogin = async () => {
 
 .field-label {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--dark-card);
-  font-family: 'Georgia', serif;
+  font-weight: 500;
+  color: var(--text-on-light);
+  font-family: var(--font-display);
 }
 
 .field-input {
-  background-color: #fff;
-  border: 1px solid var(--pink-mid);
-  border-radius: 6px;
+  background-color: #ffffff;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
   padding: 10px 14px;
-  color: var(--dark-card);
+  color: var(--text-on-light);
   font-size: 14px;
-  font-family: 'Georgia', serif;
+  font-family: var(--font-body);
   outline: none;
   transition: border-color 0.2s;
 }
 
 .field-input::placeholder {
-  color: #aaa;
+  color: var(--text-muted);
 }
 
 .field-input:focus {
-  border-color: var(--accent);
+  border-color: var(--color-primary);
 }
 
 .field-input.error {
-  border-color: #ff6b6b;
+  border-color: var(--text-error);
 }
 
 .field-input:disabled {
@@ -193,31 +231,41 @@ const handleLogin = async () => {
 }
 
 .error-text {
-  color: #cc0000;
+  color: var(--text-error);
   font-size: 12px;
+  font-family: var(--font-body);
 }
 
 .api-error {
-  color: #cc0000;
+  color: var(--text-error);
   font-size: 13px;
   text-align: center;
   padding: 6px 8px;
-  background: rgba(204, 0, 0, 0.08);
-  border-radius: 4px;
+  background: rgba(198, 40, 40, 0.08);
+  border-radius: var(--radius-xs);
   margin: 0;
+  font-family: var(--font-body);
 }
 
 .forgot-link {
-  text-align: right;
+  align-self: flex-end;
+  background: none;
+  border: none;
   font-size: 13px;
-  color: var(--accent);
+  color: var(--color-primary);
   cursor: pointer;
-  margin: 0;
+  padding: 0;
+  font-family: var(--font-display);
   text-decoration: underline;
 }
 
 .forgot-link:hover {
-  color: var(--dark-card);
+  color: var(--color-primary-hover);
+}
+
+.forgot-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .btn-row {
@@ -226,22 +274,36 @@ const handleLogin = async () => {
   margin-top: 4px;
 }
 
-.btn-login {
+.btn-login,
+.btn-register {
   flex: 1;
-  background-color: var(--accent);
-  color: var(--pink-light);
-  border: none;
-  border-radius: 6px;
-  padding: 12px;
-  font-size: 15px;
-  font-family: 'Georgia', serif;
-  font-weight: 600;
+  border: 2px solid var(--color-primary-dark);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  font-size: 14px;
+  font-family: var(--font-display);
+  font-weight: 400;
   cursor: pointer;
+  color: var(--text-on-primary);
   transition: background 0.2s;
 }
 
+.btn-login {
+  background-color: var(--color-primary);
+}
+
 .btn-login:hover:not(:disabled) {
-  background-color: #a82040;
+  background-color: var(--color-primary-hover);
+}
+
+.btn-register {
+  background-color: var(--color-card);
+  border-color: var(--color-card);
+}
+
+.btn-register:hover:not(:disabled) {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary-dark);
 }
 
 .btn-login:disabled,
@@ -250,22 +312,10 @@ const handleLogin = async () => {
   cursor: not-allowed;
 }
 
-.btn-register {
-  flex: 1;
-  background-color: var(--dark-card);
-  color: var(--pink-light);
-  border: none;
-  border-radius: 6px;
-  padding: 12px;
-  font-size: 15px;
-  font-family: 'Georgia', serif;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btn-register:hover:not(:disabled) {
-  background-color: #5a0000;
+.btn-login:focus-visible,
+.btn-register:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 /* ── Адаптив ── */
@@ -283,12 +333,6 @@ const handleLogin = async () => {
   .btn-row {
     flex-direction: column;
     gap: 8px;
-  }
-
-  .btn-login,
-  .btn-register {
-    flex: none;
-    width: 100%;
   }
 }
 </style>

@@ -6,6 +6,9 @@ import { useVotesStore } from '../state/votes';
 import { useUserStore } from '../state/user';
 import { useNotificationsStore } from '../state/notifications';
 import { extractErrorMessage } from '../services/error';
+import { STR } from '../constants';
+
+const t = STR.detail;
 
 /**
  * SCRUM-70 / SCRUM-71 — блок голосування "Книга vs Фільм".
@@ -56,7 +59,7 @@ async function loadResults(): Promise<void> {
 
 async function vote(type: VoteType): Promise<void> {
   if (!userStore.isAuthenticated) {
-    notifications.pushWarning('Увійдіть, щоб голосувати');
+    notifications.pushWarning(t.voteNeedAuth);
     return;
   }
   if (isSubmitting.value) return;
@@ -66,7 +69,7 @@ async function vote(type: VoteType): Promise<void> {
     const response = await submitVote(props.workId, type);
     result.value = response;
     votesStore.setMyVote(props.workId, type);
-    notifications.pushSuccess('Дякуємо за ваш голос!');
+    notifications.pushSuccess(t.voteThanks);
   } catch (err) {
     notifications.pushError(extractErrorMessage(err));
   } finally {
@@ -95,7 +98,7 @@ watch(
 
 <template>
   <section class="voting" aria-label="Голосування Книга vs Фільм">
-    <h2 class="voting__title">Що, на вашу думку, вдалося краще?</h2>
+    <h2 class="voting__title">{{ t.voteTitle }}</h2>
 
     <!-- ── Кнопки ─────────────────────────────────────── -->
     <div class="voting__buttons">
@@ -103,36 +106,36 @@ watch(
         type="button"
         class="voting__btn voting__btn--book"
         :class="{
-          'voting__btn--active': myVote === 'BOOK',
-          'voting__btn--inactive': myVote && myVote !== 'BOOK',
+          'voting__btn--active': myVote === 'book',
+          'voting__btn--inactive': myVote && myVote !== 'book',
         }"
         :disabled="isSubmitting"
-        :aria-pressed="myVote === 'BOOK'"
-        @click="vote('BOOK')"
+        :aria-pressed="myVote === 'book'"
+        @click="vote('book')"
       >
-        Книга
+        {{ t.voteBook }}
       </button>
 
-      <span class="voting__vs" aria-hidden="true">VS</span>
+      <span class="voting__vs" aria-hidden="true">{{ t.voteVs }}</span>
 
       <button
         type="button"
         class="voting__btn voting__btn--film"
         :class="{
-          'voting__btn--active': myVote === 'MOVIE',
-          'voting__btn--inactive': myVote && myVote !== 'MOVIE',
+          'voting__btn--active': myVote === 'movie',
+          'voting__btn--inactive': myVote && myVote !== 'movie',
         }"
         :disabled="isSubmitting"
-        :aria-pressed="myVote === 'MOVIE'"
-        @click="vote('MOVIE')"
+        :aria-pressed="myVote === 'movie'"
+        @click="vote('movie')"
       >
-        Фільми
+        {{ t.voteFilm }}
       </button>
     </div>
 
     <!-- ── Результати (SCRUM-71): прогрес-бар з % ────── -->
     <div v-if="showResults" class="voting__results">
-      <div class="voting__bar" :aria-label="`Книга ${bookPct}%, фільм ${moviePct}%`">
+      <div class="voting__bar" :aria-label="`${t.voteBook} ${bookPct}%, ${t.voteFilm} ${moviePct}%`">
         <div class="voting__bar-book" :style="{ width: bookPct + '%' }">
           <span v-if="bookPct >= 8" class="voting__bar-pct">{{ bookPct }}%</span>
         </div>
@@ -140,10 +143,10 @@ watch(
           <span v-if="moviePct >= 8" class="voting__bar-pct">{{ moviePct }}%</span>
         </div>
       </div>
-      <p class="voting__total">Всього голосів: {{ totalVotes }}</p>
+      <p class="voting__total">{{ t.voteTotal(totalVotes) }}</p>
     </div>
 
-    <p v-else-if="myVote" class="voting__hint">Завантажуємо результати…</p>
+    <p v-else-if="myVote" class="voting__hint">{{ t.voteLoadingResults }}</p>
   </section>
 </template>
 

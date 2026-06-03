@@ -8,6 +8,9 @@ import { useNotificationsStore } from '../state/notifications';
 import { extractErrorMessage } from '../services/error';
 import ReviewItem from './ReviewItem.vue';
 import ReportCommentModal from './ReportCommentModal.vue';
+import { STR } from '../constants';
+
+const t = STR.detail;
 
 /**
  * SCRUM-72 (US 6.1) — блок коментарів на сторінці деталей твору.
@@ -42,6 +45,9 @@ const visibleCount = ref(PAGE_SIZE);
 const visibleReviews = computed(() => reviews.value.slice(0, visibleCount.value));
 const hasMore = computed(() => reviews.value.length > visibleCount.value);
 
+// BUG-037: live-індикатор перевищення довжини.
+const isTooLong = computed(() => text.value.length > 2000);
+
 // ── Модалка скарги ─────────────────────────────────────────
 const reportingReviewId = ref<string | null>(null);
 
@@ -61,20 +67,27 @@ async function loadReviews(): Promise<void> {
 
 async function onSubmit(): Promise<void> {
   if (!userStore.isAuthenticated) {
-    notifications.pushWarning('Увійдіть, щоб написати відгук');
+    notifications.pushWarning(t.commentNeedAuth);
     return;
   }
   const trimmed = text.value.trim();
+  // BUG-037 / BUG-030: бек чекає 10..2000 символів. Валідуємо клієнтсько.
   if (trimmed.length < 10) {
-    notifications.pushWarning('Відгук має бути не менше 10 символів');
+    notifications.pushWarning(t.commentTooShort);
+    return;
+  }
+  if (trimmed.length > 2000) {
+    notifications.pushWarning(t.commentTooLong);
     return;
   }
   isSubmitting.value = true;
   try {
-    // Прив'язуємо рейтинг із userRatings store (середнє між book/film, якщо обидва є).
+    // Прив'язуємо рейтинг із userRatings (середнє між book/film, якщо обидва є).
+    // У store рейтинг 1..5, на бекенді ReviewRequest очікує 0..10 — конвертуємо ×2.
     const my = userRatings.getRating(props.workId, 'book');
     const myFilm = userRatings.getRating(props.workId, 'film');
-    const rating = my && myFilm ? Math.round((my + myFilm) / 2) : my || myFilm || 0;
+    const stars = my && myFilm ? (my + myFilm) / 2 : my || myFilm || 0;
+    const rating = Math.round(stars * 2); // 1..5 → 2..10
 
     const created = await submitReview({
       workId: props.workId,
@@ -87,7 +100,7 @@ async function onSubmit(): Promise<void> {
     reviews.value.unshift(created);
     text.value = '';
     isSpoiler.value = false;
-    notifications.pushSuccess('Відгук опубліковано');
+    notifications.pushSuccess(t.commentPublished);
   } catch (err) {
     notifications.pushError(extractErrorMessage(err));
   } finally {
@@ -119,7 +132,7 @@ watch(
 
 <template>
   <section class="reviews">
-    <h2 class="reviews__title">Коментарі</h2>
+    <h2 class="reviews__title">{{ t.commentsTitle }}</h2>
 
     <!-- ── Форма ────────────────────────────────────────── -->
     <form class="reviews__form" @submit.prevent="onSubmit">
@@ -131,34 +144,38 @@ watch(
           v-model="text"
           type="text"
           class="reviews__input"
-          placeholder="Залиште коментар"
+          :class="{ 'reviews__input--error': isTooLong }"
+          :placeholder="t.commentPlaceholder"
+          :maxlength="2200"
           :disabled="isSubmitting"
           @keyup.enter="onSubmit"
         />
-        <button
-          type="submit"
-          class="reviews__submit"
-          :disabled="isSubmitting || !text.trim()"
-        >
-          {{ isSubmitting ? '…' : 'Надіслати' }}
+        <button type="submit" class="reviews__submit" :disabled="isSubmitting || !text.trim() || isTooLong">
+          {{ isSubmitting ? '…' : STR.common.submit }}
         </button>
       </div>
-      <label class="reviews__spoiler-toggle">
-        <input v-model="isSpoiler" type="checkbox" :disabled="isSubmitting" />
-        <span>Позначити як спойлер</span>
-      </label>
+      <div class="reviews__row-meta">
+        <label class="reviews__spoiler-toggle">
+          <input v-model="isSpoiler" type="checkbox" :disabled="isSubmitting" />
+          <span>{{ t.markSpoiler }}</span>
+        </label>
+        <!-- BUG-037: лічильник символів. Червоніє при перевищенні. -->
+        <span class="reviews__counter" :class="{ 'reviews__counter--error': isTooLong }">
+          {{ text.length }} / 2000
+        </span>
+      </div>
     </form>
 
     <!-- ── Список ───────────────────────────────────────── -->
-    <p v-if="isLoading" class="reviews__status">Завантаження…</p>
+    <p v-if="isLoading" class="reviews__status">{{ STR.common.loading }}</p>
 
     <div v-else-if="errorMessage" class="reviews__status">
       <p>⚠ {{ errorMessage }}</p>
-      <button type="button" class="reviews__retry" @click="loadReviews">Повторити</button>
+      <button type="button" class="reviews__retry" @click="loadReviews">{{ STR.common.retry }}</button>
     </div>
 
     <p v-else-if="reviews.length === 0" class="reviews__status">
-      Будьте першим, хто залишить відгук
+      {{ t.commentEmptyList }}
     </p>
 
     <ul v-else class="reviews__list">
@@ -167,21 +184,12 @@ watch(
       </li>
     </ul>
 
-    <button
-      v-if="hasMore"
-      type="button"
-      class="reviews__more"
-      @click="showMore"
-    >
-      Показати більше
+    <button v-if="hasMore" type="button" class="reviews__more" @click="showMore">
+      {{ STR.common.showMore }}
     </button>
 
     <!-- ── Модалка скарги ──────────────────────────────── -->
-    <ReportCommentModal
-      v-if="reportingReviewId"
-      :review-id="reportingReviewId"
-      @close="closeReport"
-    />
+    <ReportCommentModal v-if="reportingReviewId" :review-id="reportingReviewId" @close="closeReport" />
   </section>
 </template>
 
@@ -284,6 +292,34 @@ watch(
 .reviews__spoiler-toggle input {
   accent-color: var(--color-primary);
   cursor: pointer;
+}
+
+/* BUG-037: рядок під полем — чекбокс зліва + лічильник справа. */
+.reviews__row-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-left: 50px;
+}
+
+.reviews__row-meta .reviews__spoiler-toggle {
+  margin-left: 0;
+}
+
+.reviews__counter {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.reviews__counter--error {
+  color: var(--text-error);
+  font-weight: 600;
+}
+
+.reviews__input--error {
+  border-color: var(--text-error) !important;
 }
 
 /* ── Список ─────────────────────────────────────────────── */

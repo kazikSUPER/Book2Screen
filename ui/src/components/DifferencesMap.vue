@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { DifferencePoint } from '../services/types';
+import { STR } from '../constants';
+
+const t = STR.detail;
 
 /**
  * SCRUM-68 — Інтерактивна карта відмінностей між книгою і екранізацією.
@@ -50,7 +53,7 @@ function setActive(i: number): void {
 
 <template>
   <section v-if="points.length > 0" class="diff-map">
-    <h2 class="diff-map__title">Карта відмінностей</h2>
+    <h2 class="diff-map__title">{{ t.differencesTitle }}</h2>
 
     <!-- ── Горизонтальна вісь точок ─────────────────────── -->
     <div class="diff-map__axis" role="tablist">
@@ -78,18 +81,18 @@ function setActive(i: number): void {
 
       <div class="diff-map__columns" :class="{ 'diff-map__columns--blurred': !isRevealed }">
         <div class="diff-map__col">
-          <div class="diff-map__col-label">Книга</div>
+          <div class="diff-map__col-label">{{ t.voteBook }}</div>
           <p class="diff-map__col-text">{{ activePoint.bookText }}</p>
         </div>
         <div class="diff-map__col">
-          <div class="diff-map__col-label">Екранізація</div>
+          <div class="diff-map__col-label">{{ t.adapted }}</div>
           <p class="diff-map__col-text">{{ activePoint.filmText }}</p>
         </div>
       </div>
 
       <div v-if="!isRevealed" class="diff-map__spoiler-overlay">
-        <p class="diff-map__spoiler-msg">⚠ Цей пункт містить спойлер</p>
-        <button class="diff-map__reveal" type="button" @click="reveal">Показати</button>
+        <p class="diff-map__spoiler-msg">{{ t.spoilerWarning }}</p>
+        <button class="diff-map__reveal" type="button" @click="reveal">{{ t.spoilerReveal }}</button>
       </div>
     </article>
   </section>
