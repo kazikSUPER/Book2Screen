@@ -156,17 +156,21 @@ watch(
   flex-direction: column;
   align-items: center;
   gap: 18px;
-  padding: 24px 16px;
-  margin: 0 16px;
-  background: var(--color-page);
+  padding: 24px;
+  margin: 24px auto;
+  background-color: #391418;
+  border-radius: var(--radius-md);
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
 }
 
 .voting__title {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-family: var(--font-display);
   font-weight: 400;
-  color: var(--text-on-light);
+  color: #fff;
   text-align: center;
 }
 
@@ -178,10 +182,10 @@ watch(
 }
 
 .voting__btn {
-  background: var(--color-card);
-  color: var(--text-on-dark);
-  border: 2px solid var(--color-card);
-  border-radius: var(--radius-md);
+  background-color: #721c24;
+  color: #fff;
+  border: 1px solid #5a141c;
+  border-radius: var(--radius-sm);
   padding: 10px 28px;
   font-family: var(--font-display);
   font-size: 16px;
@@ -192,8 +196,7 @@ watch(
 }
 
 .voting__btn:hover:not(:disabled) {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background-color: #8c232c;
 }
 
 .voting__btn:disabled {
@@ -202,21 +205,20 @@ watch(
 }
 
 .voting__btn--active {
-  background: var(--color-primary);
-  border-color: var(--color-primary-dark);
-  box-shadow: var(--shadow-md);
+  background-color: #5a141c;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
 }
 
 .voting__btn--inactive {
-  background: var(--color-card);
+  background-color: #721c24;
   opacity: 0.6;
 }
 
 .voting__vs {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-primary);
+  font-size: 20px;
+  font-weight: 500;
+  color: #fff;
 }
 
 /* ── Прогрес-бар результатів (SCRUM-71) ──────────────── */
