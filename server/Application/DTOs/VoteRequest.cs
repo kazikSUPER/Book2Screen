@@ -21,6 +21,6 @@ public class VoteRequest
     /// Gets or sets тип голосу: "book" (книга краща) або "movie" (адаптація краща).
     /// </summary>
     [Required]
-    [RegularExpression("^(book|movie)$", ErrorMessage = "VoteType must be 'book' or 'movie'")]
+    [RegularExpression("^(book|movie|BOOK|MOVIE)$", ErrorMessage = "VoteType must be 'book' or 'movie'")]
     public string VoteType { get; set; } = null!;
 }
