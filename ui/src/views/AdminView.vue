@@ -58,6 +58,15 @@ const filteredBooks = computed(() => {
 const selectedBook = ref<BookScreenItem | null>(null);
 
 // ── Форма додавання/редагування ─────────────────────────────
+interface ExtraAdaptation {
+  id: string; // тимчасовий клієнтський id
+  type: string; // movie | series | anime
+  releaseYear: number | null;
+  posterUrl: string;
+  studio: string;
+  country: string;
+}
+
 interface BookForm {
   id: string | null; // null = create
   title: string;
@@ -71,6 +80,7 @@ interface BookForm {
   description: string;
   hasMap: boolean;
   differences: DifferencePoint[];
+  extraAdaptations: ExtraAdaptation[];
 }
 
 const emptyForm = (): BookForm => ({
@@ -86,7 +96,24 @@ const emptyForm = (): BookForm => ({
   description: '',
   hasMap: false,
   differences: [],
+  extraAdaptations: [],
 });
+
+// Додає блок ще однієї екранізації під формою.
+function addAdaptation(): void {
+  form.value.extraAdaptations.push({
+    id: `adapt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    type: 'series',
+    releaseYear: null,
+    posterUrl: '',
+    studio: '',
+    country: '',
+  });
+}
+
+function removeAdaptation(index: number): void {
+  form.value.extraAdaptations.splice(index, 1);
+}
 
 const form = ref<BookForm>(emptyForm());
 const isSubmitting = ref(false);
@@ -149,6 +176,7 @@ function startEdit(book: BookScreenItem): void {
     description: book.description,
     hasMap: book.hasMap ?? false,
     differences: book.differences ? JSON.parse(JSON.stringify(book.differences)) : [],
+    extraAdaptations: [],
   };
   mode.value = 'book-form';
 }
@@ -471,6 +499,67 @@ onMounted(() => {
                 />
               </label>
             </div>
+
+            <!-- ── Додаткові адаптації (опціонально: серіал + фільм) ── -->
+            <ol v-if="form.extraAdaptations.length" class="admin-form__extras">
+              <li
+                v-for="(a, i) in form.extraAdaptations"
+                :key="a.id"
+                class="admin-form__extra"
+              >
+                <header class="admin-form__extra-head">
+                  <span class="admin-form__extra-title">Адаптація {{ i + 2 }}</span>
+                  <button
+                    type="button"
+                    class="admin-form__point-remove"
+                    @click="removeAdaptation(i)"
+                  >
+                    {{ STR.common.delete }}
+                  </button>
+                </header>
+                <label class="admin-form__field">
+                  <span>{{ t.typeLabel }}</span>
+                  <select v-model="a.type" class="admin-form__input">
+                    <option value="movie">{{ t.typeMovie }}</option>
+                    <option value="series">{{ t.typeSeries }}</option>
+                    <option value="anime">{{ t.typeAnime }}</option>
+                  </select>
+                </label>
+                <div class="admin-form__row">
+                  <label class="admin-form__field">
+                    <span>{{ t.yearLabel }}</span>
+                    <input
+                      v-model.number="a.releaseYear"
+                      type="number"
+                      min="1900"
+                      class="admin-form__input"
+                    />
+                  </label>
+                  <label class="admin-form__field">
+                    <span>{{ t.countryLabel }}</span>
+                    <input v-model="a.country" type="text" class="admin-form__input" />
+                  </label>
+                </div>
+                <label class="admin-form__field">
+                  <span>Студія</span>
+                  <input v-model="a.studio" type="text" class="admin-form__input" />
+                </label>
+                <label class="admin-form__field">
+                  <span>{{ t.posterLabel }}</span>
+                  <input
+                    v-model="a.posterUrl"
+                    type="url"
+                    class="admin-form__input"
+                    placeholder="https://…"
+                  />
+                </label>
+              </li>
+            </ol>
+
+            <!-- Кнопка "Додати екранізацію" (під лівою колонкою як у Figma). -->
+            <button type="button" class="admin-form__add-adaptation" @click="addAdaptation">
+              + Додати екранізацію
+            </button>
           </div>
 
           <!-- Права колонка — карта відмінностей -->
@@ -953,6 +1042,59 @@ onMounted(() => {
 }
 
 .admin-form__add-point:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* ── Додаткові адаптації (екранізації) ────────────────── */
+.admin-form__extras {
+  list-style: none;
+  margin: 16px 0 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-form__extra {
+  background: var(--color-panel-box);
+  border: 1px solid var(--color-card);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-form__extra-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-form__extra-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* Кнопка "+ Додати екранізацію" — темно-винна, на всю ширину колонки. */
+.admin-form__add-adaptation {
+  width: 100%;
+  background: var(--color-card);
+  color: var(--text-on-dark);
+  border: 2px solid var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 14px 20px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  cursor: pointer;
+  margin-top: 16px;
+  transition: background 0.15s;
+}
+
+.admin-form__add-adaptation:hover {
   background: var(--color-primary);
   border-color: var(--color-primary);
 }
