@@ -1,45 +1,46 @@
 import { apiClient } from './api';
 import type { ReviewRequest, ReviewResponse } from './types';
+import { USE_MOCK_FALLBACK } from './env';
 
 /**
- * SCRUM-72 (US 6.1) — Writing Review.
+ * Reviews API (Book2Screen v1).
  *
- * Backend: POST /api/v1/reviews         — створити відгук
- *          GET  /api/v1/reviews/:workId — список відгуків для твору
- *          POST /api/v1/reviews/:id/report — поскаржитись (адмінська модерація)
+ * Endpoints (Swagger):
+ *   GET    /api/v1/Reviews/work/{workId}   — список відгуків до твору
+ *   POST   /api/v1/Reviews                 — створити відгук
+ *   PUT    /api/v1/Reviews/{id}            — оновити свій відгук
+ *   DELETE /api/v1/Reviews/{id}            — видалити свій відгук
+ *   POST   /api/v1/Reviews/{id}/report     — поскаржитись (body: рядок з причиною)
  *
- * Поки бекенд не готовий — mock-fallback тримає список у пам'яті
- * (закумулюється на час сесії, скидається при перезавантаженні).
+ * ReviewRequest вимагає targetType: 'book' | 'adaptation' | 'comparison'.
+ * За замовчуванням у UI використовуємо 'comparison' (відгук про твір цілком).
  */
 
-const USE_MOCK_FALLBACK = false;
-
-// In-memory лог mock-відгуків. Ключ — workId, значення — масив відгуків.
 const mockReviewsByWork: Map<string, ReviewResponse[]> = new Map();
+if (USE_MOCK_FALLBACK) seedMockReviews();
 
-// Стартові mock-відгуки для демонстрації UI.
-seedMockReviews();
-
+// GET /api/v1/Reviews/work/{workId}
 export async function fetchReviews(workId: string): Promise<ReviewResponse[]> {
   try {
-    const response = await apiClient.get<ReviewResponse[]>(`/api/v1/reviews/work/${workId}`);
+    const response = await apiClient.get<ReviewResponse[]>(`/api/v1/Reviews/work/${workId}`);
     return response.data;
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
-      console.warn('[reviews] Backend unavailable, returning mock list', err);
+      console.warn('[reviews] Backend unavailable, returning mock', err);
       return [...(mockReviewsByWork.get(workId) ?? [])];
     }
     throw err;
   }
 }
 
+// POST /api/v1/Reviews
 export async function submitReview(req: ReviewRequest): Promise<ReviewResponse> {
   try {
-    const response = await apiClient.post<ReviewResponse>('/api/v1/reviews', req);
+    const response = await apiClient.post<ReviewResponse>('/api/v1/Reviews', req);
     return response.data;
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
-      console.warn('[reviews] Backend unavailable, saving review locally', err);
+      console.warn('[reviews] Backend unavailable, saving locally', err);
       const fake: ReviewResponse = {
         reviewId: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         workId: req.workId,
@@ -48,6 +49,7 @@ export async function submitReview(req: ReviewRequest): Promise<ReviewResponse> 
         text: req.text,
         isSpoiler: req.isSpoiler,
         rating: req.rating,
+        targetType: req.targetType,
         createdAt: new Date().toISOString(),
       };
       const list = mockReviewsByWork.get(req.workId) ?? [];
@@ -59,12 +61,36 @@ export async function submitReview(req: ReviewRequest): Promise<ReviewResponse> 
   }
 }
 
+// PUT /api/v1/Reviews/{id}
+export async function updateReview(reviewId: string, req: ReviewRequest): Promise<void> {
+  try {
+    await apiClient.put(`/api/v1/Reviews/${reviewId}`, req);
+  } catch (err) {
+    if (!USE_MOCK_FALLBACK) throw err;
+    console.warn('[reviews] Mock update:', reviewId);
+  }
+}
+
+// DELETE /api/v1/Reviews/{id}
+export async function deleteReview(reviewId: string): Promise<void> {
+  try {
+    await apiClient.delete(`/api/v1/Reviews/${reviewId}`);
+  } catch (err) {
+    if (!USE_MOCK_FALLBACK) throw err;
+    console.warn('[reviews] Mock delete:', reviewId);
+  }
+}
+
+// POST /api/v1/Reviews/{id}/report — тіло: просто рядок з причиною
 export async function reportReview(reviewId: string, reason: string): Promise<void> {
   try {
-    await apiClient.post(`/api/v1/reviews/${reviewId}/report`, { reason });
+    // Бек чекає просто рядок як JSON body (без обгортки). axios передасть JSON.stringify(reason).
+    await apiClient.post(`/api/v1/Reviews/${reviewId}/report`, reason, {
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
-      console.warn('[reviews] Report sent locally (mock):', { reviewId, reason });
+      console.warn('[reviews] Mock report:', { reviewId, reason });
       return;
     }
     throw err;
@@ -81,7 +107,8 @@ function seedMockReviews(): void {
       userNickname: 'Світлана',
       text: 'Книга глибша, але фільм — чарівний для дітей! Дуже сподобалось.',
       isSpoiler: false,
-      rating: 5,
+      rating: 9,
+      targetType: 'comparison',
       createdAt: '2024-12-10T14:32:00.000Z',
     },
     {
@@ -89,9 +116,10 @@ function seedMockReviews(): void {
       workId: hpId,
       userId: 'u-002',
       userNickname: 'Андрій',
-      text: 'У книзі Гаррі більше думає, у фільмі більше дії. Обоє хороші, але...',
+      text: 'У книзі Гаррі більше думає, у фільмі більше дії. Обоє хороші, але…',
       isSpoiler: true,
-      rating: 4,
+      rating: 8,
+      targetType: 'comparison',
       createdAt: '2024-12-08T19:11:00.000Z',
     },
     {
@@ -101,7 +129,8 @@ function seedMockReviews(): void {
       userNickname: 'Ольга',
       text: 'Перечитала до перегляду — книга все одно краща.',
       isSpoiler: false,
-      rating: 5,
+      rating: 10,
+      targetType: 'book',
       createdAt: '2024-12-01T08:00:00.000Z',
     },
   ];

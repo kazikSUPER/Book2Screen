@@ -1,32 +1,30 @@
-// ===== Доменні сутності (Domain Entities) =====
-
 /**
- * Точка інтерактивної карти відмінностей між книгою і екранізацією.
- * SCRUM-68 (US 3.2 Book Details).
+ * Доменні сутності + DTO для API.
+ * Узгоджено зі Swagger (Book2Screen API v1).
+ *
+ * Schemas: LoginDto, RegisterRequest, AuthResponse,
+ *   ForgotPasswordRequest, VerifyCodeRequest, ResetPasswordRequest,
+ *   BookScreenItemDto, AdaptationDto, DifferenceDto,
+ *   UserProfileDto, FavoriteRequest,
+ *   ReviewRequest, ReviewResponse, ReportResponse,
+ *   VoteRequest, VoteResponse, ProblemDetails.
  */
+
+// ===== Domain entities =====
+
+/** Swagger: DifferenceDto */
 export interface DifferencePoint {
   id: string;
-  // Заголовок сцени, наприклад "Перше знайомство з Драко Малфоєм".
   title: string;
-  // Текст для колонки "Книга".
   bookText: string;
-  // Текст для колонки "Екранізація".
   filmText: string;
-  // Чи позначена точка як спойлер. Тоді текст показуємо blur'ом.
   isSpoiler?: boolean;
 }
 
-/**
- * Твір (книга + її екранізація) — основна сутність Book2Screen.
- *
- * Більшість полів описують саму книгу (year, country тощо).
- * Поля з префіксом film* — атрибути екранізації, коли вони відрізняються.
- * Якщо filmYear/filmCountry не задані — на UI вживаємо year/country.
- */
+/** Swagger: BookScreenItemDto */
 export interface BookScreenItem {
   id: string;
   title: string;
-  // Рік видання книги
   year: number;
   genre: string;
   country: string;
@@ -34,85 +32,88 @@ export interface BookScreenItem {
   bookRating: number;
   filmRating: number;
   description: string;
-
-  // Автор книги (для картки книги).
   author?: string;
-
-  // Атрибути екранізації, якщо відрізняються від книги.
   filmYear?: number;
   filmCountry?: string;
   filmPoster?: string;
   director?: string;
-
-  // Окремі короткі описи (book/film). Якщо не задано — fallback на description.
   bookSummary?: string;
   filmSummary?: string;
-
-  // SCRUM-67: фільтр "Лише з картою відмінностей" (true якщо differences не пустий).
   hasMap?: boolean;
-
-  // SCRUM-68: інтерактивна карта відмінностей (опційно).
   differences?: DifferencePoint[];
-
-  // Статистика голосувань (UC-04).
+  /** Вбудована статистика голосування (бек може повертати разом з твором). */
   voteStats?: VoteResponse;
 }
 
 // ===== Auth DTO =====
 
+/** Swagger: LoginDto */
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+/**
+ * Swagger: RegisterRequest.
+ * Бек вимагає пароль: regex `^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*$`, мін. 8 символів.
+ * Нікнейм: 1..50 символів.
+ */
 export interface RegisterRequest {
   email: string;
   nickname: string;
   password: string;
 }
 
-export interface RegisterResponse {
+/** Swagger: AuthResponse — спільна відповідь для login / register / reset-password. */
+export interface AuthResponse {
   token: string;
   userId: string;
   email: string;
   nickname: string;
-  role: string;
+  /** 'user' | 'admin' | 'moderator' — використовуємо для route-guard на /admin. */
+  role?: string;
 }
 
-export interface LoginRequest {
+// Backward-compat для існуючого коду.
+export type LoginResponse = AuthResponse;
+export type RegisterResponse = AuthResponse;
+
+// ── Password reset (3-step flow) ─────
+
+/** Swagger: ForgotPasswordRequest — крок 1: запит коду. */
+export interface ForgotPasswordRequest {
   email: string;
-  password: string;
 }
 
-export interface LoginResponse {
-  token: string;
-  userId: string;
+/** Swagger: VerifyCodeRequest — крок 2: перевірити код. */
+export interface VerifyCodeRequest {
   email: string;
-  nickname: string;
-  role: string;
+  code: string;
 }
 
-// POST /api/v1/auth/password-reset/confirm
-export interface PasswordResetConfirmRequest {
+/** Swagger: ResetPasswordRequest — крок 3: встановити новий пароль (мін. 6). */
+export interface ResetPasswordRequest {
   email: string;
   code: string;
   newPassword: string;
 }
 
-// Якщо бекенд повертає токен після підтвердження — відразу авторизуємо.
-// Якщо ні (тільки 200 OK) — треба явно викликати login() після.
-export interface PasswordResetConfirmResponse {
-  token: string;
-  userId: string;
-  email: string;
-  nickname: string;
-  role: string;
-}
+// Backward-compat.
+export type PasswordResetConfirmRequest = VerifyCodeRequest;
+export type PasswordResetConfirmResponse = AuthResponse;
 
-// ===== Vote DTO (UC-04) =====
+// ===== Vote DTO =====
 
-export type VoteType = 'BOOK' | 'MOVIE';
+/** ВАЖЛИВО: бек чекає lowercase 'book' | 'movie' (не 'BOOK'/'MOVIE'). */
+export type VoteType = 'book' | 'movie';
 
+/** Swagger: VoteRequest */
 export interface VoteRequest {
   workId: string;
   voteType: VoteType;
 }
 
+/** Swagger: VoteResponse */
 export interface VoteResponse {
   workId: string;
   totalVotes: number;
@@ -122,33 +123,101 @@ export interface VoteResponse {
   moviePercentage: number;
 }
 
-// ===== Review DTO (UC-05) =====
+// ===== Review DTO =====
 
+/** Бек: 'book' | 'adaptation' | 'comparison'. */
+export type ReviewTargetType = 'book' | 'adaptation' | 'comparison';
+
+/** Swagger: ReviewRequest. Текст 10..2000 символів, rating 0..10. */
 export interface ReviewRequest {
   workId: string;
   text: string;
   isSpoiler: boolean;
   rating: number;
-  targetType?: string;
+  targetType: ReviewTargetType;
 }
 
+/** Swagger: ReviewResponse */
 export interface ReviewResponse {
   reviewId: string;
   workId: string;
   userId: string;
+  /** historical поле — бек не завжди повертає, лишаємо для UI. */
   userNickname?: string;
   text: string;
   isSpoiler: boolean;
   rating: number;
+  targetType?: ReviewTargetType;
   createdAt: string;
 }
 
-// ===== Global Error Schema =====
+// ===== Report DTO =====
 
-export interface ApiError {
-  timestamp: string;
-  errorCode: string;
-  message: string;
-  path: string;
-  details?: Array<{ field: string; issue: string }>;
+/** Swagger: ReportResponse */
+export interface ReportResponse {
+  reportId: string;
+  reviewId: string;
+  userId: string;
+  reason: string;
+  status: string;
+  createdAt: string;
+  /** Текст відгуку, на який скаржаться (для зручності модерації). */
+  reviewText?: string;
 }
+
+// ===== User Profile DTO =====
+
+/** Swagger: UserProfileDto */
+export interface UserProfileDto {
+  username: string;
+  email: string;
+  avatarUrl?: string;
+  /** ISO date-time. */
+  joinedAt: string;
+}
+
+// ===== Favorites DTO =====
+
+/** Swagger: FavoriteRequest */
+export interface FavoriteRequest {
+  workId: string;
+}
+
+// ===== Admin: Adaptation DTO =====
+
+/**
+ * Swagger: AdaptationDto.
+ * Окрема сутність для адмінської CRUD на /admin/adaptations.
+ * type — 'movie' | 'series' | 'anime'.
+ */
+export interface AdaptationDto {
+  id?: string;
+  title: string;
+  type: string;
+  description?: string;
+  releaseYear?: number;
+  durationMinutes?: number;
+  posterUrl?: string;
+  studio?: string;
+  country?: string;
+}
+
+// ===== ProblemDetails =====
+
+/** Swagger: ProblemDetails (RFC 7807). */
+export interface ProblemDetails {
+  type?: string;
+  title?: string;
+  status?: number;
+  detail?: string;
+  instance?: string;
+  errors?: Record<string, string[]>;
+  /** Поля для нашого власного формату, якщо бекенд віддасть. */
+  errorCode?: string;
+  message?: string;
+  path?: string;
+  timestamp?: string;
+}
+
+// Backward-compat для існуючих імпортів.
+export type ApiError = ProblemDetails;

@@ -1,16 +1,19 @@
 import { apiClient } from './api';
 
+/**
+ * Health-check бекенду.
+ *
+ * Бек не має окремого /health endpoint (станом на v1 Swagger).
+ * Замість нього робимо легкий HEAD/GET на /Works — якщо повертає 200/304,
+ * бекенд живий. Це не ідеально, але працює до появи /health.
+ */
 export interface HealthResponse {
   status: 'UP' | 'DOWN' | string;
-  db?: string;
-  timestamp?: string;
 }
 
-/**
- * Перевірка стану бекенду.
- * Endpoint: GET /health (без авторизації).
- */
 export async function checkHealth(): Promise<HealthResponse> {
-  const response = await apiClient.get<HealthResponse>('/health');
-  return response.data;
+  // GET /api/v1/Works — найдешевший публічний endpoint без авторизації.
+  // Якщо бек відповість будь-чим — він "UP".
+  await apiClient.get('/api/v1/Works', { timeout: 5000 });
+  return { status: 'UP' };
 }

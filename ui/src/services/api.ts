@@ -2,9 +2,10 @@ import axios, { AxiosError } from 'axios';
 import { useUserStore } from '../state/user';
 import { useNotificationsStore } from '../state/notifications';
 import type { ApiError } from './types';
+import { API_URL } from './env';
 
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
