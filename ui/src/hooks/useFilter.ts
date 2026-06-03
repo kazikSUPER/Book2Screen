@@ -1,75 +1,8 @@
-import { computed, type Ref } from 'vue';
-import type { BookScreenItem } from '../services/types';
-import { useFiltersStore, type SortOption } from '../state/filters';
-
 /**
- * Client-side фільтрація + сортування списку творів.
+ * @deprecated
+ * Файл переїхав у `src/composables/useFilter.ts` (Етап 5: Architecture Update).
+ * Цей re-export лишений, щоб не зламати існуючі імпорти.
  *
- * Параметри читаються з useFiltersStore (Pinia). Компонент передає лише
- * сам список items.
+ * Нові імпорти — пишіть напряму з '../composables/useFilter'.
  */
-export function useFilter(items: Ref<BookScreenItem[]> | BookScreenItem[]) {
-  const filters = useFiltersStore();
-
-  const filteredItems = computed(() => {
-    const list = Array.isArray(items) ? items : items.value;
-    const query = filters.searchQuery.toLowerCase().trim();
-
-    const matched = list.filter((item) => {
-      const matchesSearch =
-        !query ||
-        item.title.toLowerCase().includes(query) ||
-        item.genre.toLowerCase().includes(query) ||
-        item.country.toLowerCase().includes(query) ||
-        String(item.year).includes(query) ||
-        item.description.toLowerCase().includes(query);
-
-      const matchesGenre =
-        !filters.genre || item.genre.toLowerCase().includes(filters.genre.toLowerCase());
-
-      const matchesCountry = !filters.country || item.country === filters.country;
-
-      const matchesYearMin = filters.yearMin === null || item.year >= filters.yearMin;
-      const matchesYearMax = filters.yearMax === null || item.year <= filters.yearMax;
-
-      const matchesRating =
-        filters.minRating === null ||
-        Math.max(item.bookRating, item.filmRating) >= filters.minRating;
-
-      // SCRUM-67: "Лише з картою відмінностей".
-      const matchesMap = !filters.onlyWithMap || item.hasMap === true;
-
-      return (
-        matchesSearch &&
-        matchesGenre &&
-        matchesCountry &&
-        matchesYearMin &&
-        matchesYearMax &&
-        matchesRating &&
-        matchesMap
-      );
-    });
-
-    return sortItems(matched, filters.sortBy);
-  });
-
-  return { filteredItems };
-}
-
-function sortItems(list: BookScreenItem[], sort: SortOption): BookScreenItem[] {
-  const sorted = [...list];
-  switch (sort) {
-    case 'rating-desc':
-      return sorted.sort(
-        (a, b) =>
-          Math.max(b.bookRating, b.filmRating) - Math.max(a.bookRating, a.filmRating)
-      );
-    case 'year-desc':
-      return sorted.sort((a, b) => b.year - a.year);
-    case 'year-asc':
-      return sorted.sort((a, b) => a.year - b.year);
-    case 'popular':
-    default:
-      return sorted;
-  }
-}
+export { useFilter } from '../composables/useFilter';
