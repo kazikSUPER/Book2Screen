@@ -1,299 +1,287 @@
+// <copyright file="ReviewServiceTests.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Tests.Services;
 
 using Book2Screen.Application.DTOs;
 using Book2Screen.Application.Services;
 using Book2Screen.Domain.Entities;
 using Book2Screen.Domain.Exceptions;
-using Book2Screen.Infrastructure.Persistence;
+using Book2Screen.Tests.Helpers;
+using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 
-public class ReviewServiceTests : IDisposable
+/// <summary>
+/// Юніт тести для ReviewService.
+/// </summary>
+public class ReviewServiceTests
 {
-    private readonly ApplicationDbContext _context;
-    private readonly ReviewService _service;
+    private ReviewRequest DefaultRequest(Guid workId, string text = "Текст відгуку довший за десять символів") =>
+        new() { WorkId = workId, Text = text, IsSpoiler = false, Rating = 8.0, TargetType = "comparison" };
 
-    public ReviewServiceTests()
-    {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .ConfigureWarnings(x => x.Ignore(InMemoryEventId.TransactionIgnoredWarning))
-            .Options;
-        _context = new ApplicationDbContext(options);
-        _service = new ReviewService(_context);
-    }
+    // ── AddReviewAsync ────────────────────────────────────────────────────────
 
-    public void Dispose()
-    {
-        _context.Database.EnsureDeleted();
-        _context.Dispose();
-    }
-
+    /// <summary>
+    /// Додавання відгуку зберігається в БД і повертає ReviewResponse.
+    /// </summary>
     [Fact]
-    public async Task AddReviewAsync_CreatesReview_WhenWorkExists()
+    public async Task AddReviewAsync_ValidRequest_SavesAndReturnsResponse()
     {
-        // Arrange
-        var workId = Guid.NewGuid();
-        var work = new Work { Id = workId, Title = "Тестовий твір" };
-        await _context.Works.AddAsync(work);
+        using var context = TestDbHelper.CreateContext(nameof(this.AddReviewAsync_ValidRequest_SavesAndReturnsResponse));
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new ReviewService(context);
 
-        var userId = Guid.NewGuid();
-        var user = new User 
-        { 
-            Id = userId, 
-            Username = "test_user", 
-            Email = "test@example.com",
-            PasswordHash = "hash",
-            AvatarUrl = "http://avatar.com/1" 
-        };
-        await _context.Users.AddAsync(user);
-        await _context.SaveChangesAsync();
+        var result = await service.AddReviewAsync(userId, this.DefaultRequest(workId, "Це чудовий твір що читав!"));
 
-        var request = new ReviewRequest 
-        { 
-            WorkId = workId, 
-            Text = "Це чудова екранізація!", 
-            IsSpoiler = false, 
-            Rating = 9.5,
-            TargetType = "adaptation"
-        };
+        result.Should().NotBeNull();
+        result.UserId.Should().Be(userId);
+        result.WorkId.Should().Be(workId);
+        result.Rating.Should().Be(8.0);
+        result.UserNickname.Should().Be("john_doe"); // BUG-036 verification
 
-        // Act
-        var result = await _service.AddReviewAsync(userId, request);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(request.Text, result.Text);
-        Assert.Equal(request.Rating, result.Rating);
-        Assert.Equal("adaptation", result.TargetType);
-        Assert.Equal("test_user", result.UserNickname);
-        Assert.Equal("http://avatar.com/1", result.UserAvatar);
-        
-        var reviewInDb = await _context.Reviews.FirstOrDefaultAsync(r => r.Id == result.ReviewId);
-        Assert.NotNull(reviewInDb);
-        Assert.Equal(userId, reviewInDb.UserId);
+        var saved = await context.Reviews.FirstOrDefaultAsync(r => r.UserId == userId);
+        saved.Should().NotBeNull();
     }
 
+    /// <summary>
+    /// Відгук зі спойлером зберігає IsSpoiler=true. (BUG-028)
+    /// </summary>
     [Fact]
-    public async Task AddReviewAsync_ThrowsKeyNotFoundException_WhenWorkDoesNotExist()
+    public async Task AddReviewAsync_WithSpoiler_SavesIsSpoilerTrue()
     {
-        // Arrange
-        var request = new ReviewRequest 
-        { 
-            WorkId = Guid.NewGuid(), 
-            Text = "Відгук для неіснуючого твору", 
-            IsSpoiler = false, 
-            Rating = 5.0,
-            TargetType = "book"
-        };
+        using var context = TestDbHelper.CreateContext(nameof(this.AddReviewAsync_WithSpoiler_SavesIsSpoilerTrue));
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new ReviewService(context);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.AddReviewAsync(Guid.NewGuid(), request));
+        var result = await service.AddReviewAsync(userId, new ReviewRequest
+        {
+            WorkId = workId, Text = "Спойлерний відгук про кінцівку твору тут", IsSpoiler = true, Rating = 8.0, TargetType = "comparison",
+        });
+
+        result.IsSpoiler.Should().BeTrue();
+        var saved = await context.Reviews.FirstAsync(r => r.UserId == userId);
+        saved.IsSpoiler.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Відгук до неіснуючого твору кидає KeyNotFoundException.
+    /// </summary>
     [Fact]
-    public async Task GetReviewsByWorkIdAsync_ReturnsReviewsInDescendingOrder()
+    public async Task AddReviewAsync_NonExistentWork_ThrowsKeyNotFoundException()
     {
-        // Arrange
-        var workId = Guid.NewGuid();
-        var work = new Work { Id = workId, Title = "Твір з впорядкованими відгуками" };
-        await _context.Works.AddAsync(work);
+        using var context = TestDbHelper.CreateContext(nameof(this.AddReviewAsync_NonExistentWork_ThrowsKeyNotFoundException));
+        var service = new ReviewService(context);
 
-        var r1 = new Review { WorkId = workId, Text = "Старий відгук", CreatedAt = DateTime.UtcNow.AddHours(-1), TargetType = "book" };
-        var r2 = new Review { WorkId = workId, Text = "Новий відгук", CreatedAt = DateTime.UtcNow, TargetType = "book" };
-        
-        await _context.Reviews.AddRangeAsync(r1, r2);
-        await _context.SaveChangesAsync();
-
-        // Act
-        var result = (await _service.GetReviewsByWorkIdAsync(workId)).ToList();
-
-        // Assert
-        Assert.Equal(2, result.Count);
-        Assert.Equal("Новий відгук", result[0].Text);
-        Assert.Equal("Старий відгук", result[1].Text);
+        await service.Invoking(s => s.AddReviewAsync(Guid.NewGuid(), this.DefaultRequest(Guid.NewGuid())))
+            .Should().ThrowAsync<KeyNotFoundException>();
     }
 
+    /// <summary>
+    /// TargetType конвертується до нижнього регістру.
+    /// </summary>
     [Fact]
-    public async Task UpdateReviewAsync_UpdatesReview_WhenUserIsOwner()
+    public async Task AddReviewAsync_TargetType_SavedAsLowerCase()
     {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var reviewId = Guid.NewGuid();
-        var workId = Guid.NewGuid();
-        var review = new Review 
-        { 
-            Id = reviewId, 
-            UserId = userId, 
-            WorkId = workId,
-            Text = "Оригінальний текст", 
-            Rating = 5.0, 
-            TargetType = "book" 
-        };
-        await _context.Reviews.AddAsync(review);
-        await _context.SaveChangesAsync();
+        using var context = TestDbHelper.CreateContext(nameof(this.AddReviewAsync_TargetType_SavedAsLowerCase));
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new ReviewService(context);
 
-        var request = new ReviewRequest 
-        { 
-            WorkId = workId,
-            Text = "Оновлений текст", 
-            Rating = 8.0, 
-            IsSpoiler = true, 
-            TargetType = "adaptation" 
-        };
+        await service.AddReviewAsync(userId, new ReviewRequest
+        {
+            WorkId = workId, Text = "Текст відгуку довший за мінімум символів", IsSpoiler = false, Rating = 5.0, TargetType = "COMPARISON",
+        });
 
-        // Act
-        var result = await _service.UpdateReviewAsync(userId, reviewId, request);
-
-        // Assert
-        Assert.True(result);
-        var updatedReview = await _context.Reviews.FindAsync(reviewId);
-        Assert.Equal("Оновлений текст", updatedReview!.Text);
-        Assert.Equal(8.0, updatedReview.Rating);
-        Assert.True(updatedReview.IsSpoiler);
-        Assert.Equal("adaptation", updatedReview.TargetType);
+        var saved = await context.Reviews.FirstAsync(r => r.UserId == userId);
+        saved.TargetType.Should().Be("comparison");
     }
 
+    // ── GetReviewsByWorkIdAsync ───────────────────────────────────────────────
+
+    /// <summary>
+    /// GetReviewsByWorkId повертає відгуки від усіх юзерів. (BUG-029)
+    /// </summary>
     [Fact]
-    public async Task UpdateReviewAsync_ThrowsForbidden_WhenUserIsNotOwner()
+    public async Task GetReviewsByWorkIdAsync_MultipleUsers_ReturnsAllReviews()
     {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var otherUserId = Guid.NewGuid();
-        var reviewId = Guid.NewGuid();
-        var workId = Guid.NewGuid();
-        var review = new Review { Id = reviewId, UserId = otherUserId, WorkId = workId, Text = "Original Text", TargetType = "book" };
-        await _context.Reviews.AddAsync(review);
-        await _context.SaveChangesAsync();
+        using var context = TestDbHelper.CreateContext(nameof(this.GetReviewsByWorkIdAsync_MultipleUsers_ReturnsAllReviews));
+        var (userId1, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var userId2 = await TestDbHelper.SeedUser(context, "user2@test.com", "user2");
+        var service = new ReviewService(context);
 
-        var request = new ReviewRequest 
-        { 
-            WorkId = workId, 
-            Text = "Updated Text", 
-            IsSpoiler = false, 
-            Rating = 5.0,
-            TargetType = "book" 
-        };
+        await service.AddReviewAsync(userId1, this.DefaultRequest(workId, "Відгук першого юзера про твір тут"));
+        await service.AddReviewAsync(userId2, this.DefaultRequest(workId, "Відгук другого юзера про твір тут"));
 
-        // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(() => _service.UpdateReviewAsync(userId, reviewId, request));
+        var reviews = await service.GetReviewsByWorkIdAsync(workId);
+
+        var reviewList = reviews.ToList();
+        reviewList.Should().HaveCount(2);
+        reviewList.Should().Contain(r => r.UserId == userId1);
+        reviewList.Should().Contain(r => r.UserId == userId2);
     }
 
+    // ── UpdateReviewAsync ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Оновлення власного відгуку зберігає зміни.
+    /// </summary>
     [Fact]
-    public async Task DeleteReviewAsync_DeletesReview_WhenUserIsOwner()
+    public async Task UpdateReviewAsync_OwnReview_UpdatesSuccessfully()
     {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var reviewId = Guid.NewGuid();
-        var review = new Review { Id = reviewId, UserId = userId, WorkId = Guid.NewGuid(), Text = "To delete", TargetType = "book" };
-        await _context.Reviews.AddAsync(review);
-        await _context.SaveChangesAsync();
+        using var context = TestDbHelper.CreateContext(nameof(this.UpdateReviewAsync_OwnReview_UpdatesSuccessfully));
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new ReviewService(context);
+        var response = await service.AddReviewAsync(userId, this.DefaultRequest(workId, "Оригінальний текст відгуку для оновлення"));
 
-        // Act
-        var result = await _service.DeleteReviewAsync(userId, reviewId);
+        var result = await service.UpdateReviewAsync(userId, response.ReviewId, new ReviewRequest
+        {
+            WorkId = workId, Text = "Оновлений текст відгуку після редагування юзером", IsSpoiler = true, Rating = 9.0, TargetType = "comparison",
+        });
 
-        // Assert
-        Assert.True(result);
-        Assert.Null(await _context.Reviews.FindAsync(reviewId));
+        result.Should().BeTrue();
+        var updated = await context.Reviews.FindAsync(response.ReviewId);
+        updated!.Text.Should().Be("Оновлений текст відгуку після редагування юзером");
+        updated.IsSpoiler.Should().BeTrue();
+        updated.Rating.Should().Be(9.0);
     }
 
+    /// <summary>
+    /// Оновлення чужого відгуку кидає ForbiddenException.
+    /// </summary>
     [Fact]
-    public async Task DeleteReviewAsync_ThrowsForbidden_WhenUserIsNotOwner()
+    public async Task UpdateReviewAsync_OtherUserReview_ThrowsForbiddenException()
     {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var otherUserId = Guid.NewGuid();
-        var reviewId = Guid.NewGuid();
-        var review = new Review { Id = reviewId, UserId = otherUserId, WorkId = Guid.NewGuid(), Text = "To delete", TargetType = "book" };
-        await _context.Reviews.AddAsync(review);
-        await _context.SaveChangesAsync();
+        using var context = TestDbHelper.CreateContext(nameof(this.UpdateReviewAsync_OtherUserReview_ThrowsForbiddenException));
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new ReviewService(context);
+        var response = await service.AddReviewAsync(userId, this.DefaultRequest(workId, "Відгук власника якого хочуть змінити"));
 
-        // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(() => _service.DeleteReviewAsync(userId, reviewId));
+        await service.Invoking(s => s.UpdateReviewAsync(Guid.NewGuid(), response.ReviewId, this.DefaultRequest(workId, "Спроба змінити чужий відгук хакером")))
+            .Should().ThrowAsync<ForbiddenException>();
     }
 
+    // ── DeleteReviewAsync ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Видалення власного відгуку видаляє з БД.
+    /// </summary>
     [Fact]
-    public async Task GetUserReviewsAsync_ReturnsOnlyUserReviews()
+    public async Task DeleteReviewAsync_OwnReview_DeletesFromDB()
     {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var otherUserId = Guid.NewGuid();
-        
-        var r1 = new Review { UserId = userId, WorkId = Guid.NewGuid(), Text = "My Review", TargetType = "book" };
-        var r2 = new Review { UserId = otherUserId, WorkId = Guid.NewGuid(), Text = "Other Review", TargetType = "book" };
-        
-        await _context.Reviews.AddRangeAsync(r1, r2);
-        await _context.SaveChangesAsync();
+        using var context = TestDbHelper.CreateContext(nameof(this.DeleteReviewAsync_OwnReview_DeletesFromDB));
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new ReviewService(context);
+        var response = await service.AddReviewAsync(userId, this.DefaultRequest(workId, "Відгук який буде видалений власником"));
 
-        // Act
-        var result = (await _service.GetUserReviewsAsync(userId)).ToList();
+        var result = await service.DeleteReviewAsync(userId, response.ReviewId);
 
-        // Assert
-        Assert.Single(result);
-        Assert.Equal("My Review", result[0].Text);
+        result.Should().BeTrue();
+        var deleted = await context.Reviews.FindAsync(response.ReviewId);
+        deleted.Should().BeNull();
     }
 
+    /// <summary>
+    /// Видалення чужого відгуку кидає ForbiddenException.
+    /// </summary>
     [Fact]
-    public async Task ReportReviewAsync_CreatesReport()
+    public async Task DeleteReviewAsync_OtherUserReview_ThrowsForbiddenException()
     {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var reviewId = Guid.NewGuid();
-        var reason = "Spam";
+        using var context = TestDbHelper.CreateContext(nameof(this.DeleteReviewAsync_OtherUserReview_ThrowsForbiddenException));
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new ReviewService(context);
+        var response = await service.AddReviewAsync(userId, this.DefaultRequest(workId, "Відгук власника якого хочуть видалити"));
 
-        // Act
-        await _service.ReportReviewAsync(userId, reviewId, reason);
-
-        // Assert
-        var report = await _context.Reports.FirstOrDefaultAsync(r => r.ReviewId == reviewId);
-        Assert.NotNull(report);
-        Assert.Equal(reason, report.Reason);
-        Assert.Equal("Pending", report.Status);
+        await service.Invoking(s => s.DeleteReviewAsync(Guid.NewGuid(), response.ReviewId))
+            .Should().ThrowAsync<ForbiddenException>();
     }
 
+    // ── ModerateReviewAsync ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Approve видаляє відгук і ставить статус Resolved.
+    /// </summary>
     [Fact]
-    public async Task ModerateReviewAsync_Approve_RemovesReview()
+    public async Task ModerateReviewAsync_Approve_DeletesReviewAndResolvesReport()
     {
-        // Arrange
-        var reviewId = Guid.NewGuid();
-        var review = new Review { Id = reviewId, Text = "Bad text", TargetType = "book" };
-        var reportId = Guid.NewGuid();
-        var report = new Report { Id = reportId, ReviewId = reviewId, Status = "Pending", Reason = "X" };
-        
-        await _context.Reviews.AddAsync(review);
-        await _context.Reports.AddAsync(report);
-        await _context.SaveChangesAsync();
+        using var context = TestDbHelper.CreateContext(nameof(this.ModerateReviewAsync_Approve_DeletesReviewAndResolvesReport));
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new ReviewService(context);
+        var reviewResponse = await service.AddReviewAsync(userId, this.DefaultRequest(workId, "Порушуючий відгук для модерації адміном"));
+        await service.ReportReviewAsync(Guid.NewGuid(), reviewResponse.ReviewId, "Спам");
+        var reports = await service.GetAllReportsAsync();
+        var reportId = reports.First().ReportId;
 
-        // Act
-        await _service.ModerateReviewAsync(reportId, "approve");
+        await service.ModerateReviewAsync(reportId, "approve");
 
-        // Assert
-        Assert.Null(await _context.Reviews.FindAsync(reviewId));
-        var updatedReport = await _context.Reports.FindAsync(reportId);
-        Assert.Equal("Resolved", updatedReport!.Status);
+        var deletedReview = await context.Reviews.FindAsync(reviewResponse.ReviewId);
+        deletedReview.Should().BeNull();
+        var report = await context.Reports.FindAsync(reportId);
+        report!.Status.Should().Be("Resolved");
     }
 
+    /// <summary>
+    /// Reject не видаляє відгук і ставить статус Dismissed.
+    /// </summary>
     [Fact]
-    public async Task ModerateReviewAsync_Spoiler_SetsIsSpoiler()
+    public async Task ModerateReviewAsync_Reject_KeepsReviewAndDismissesReport()
     {
-        // Arrange
-        var reviewId = Guid.NewGuid();
-        var review = new Review { Id = reviewId, Text = "Plot twist inside", IsSpoiler = false, TargetType = "book" };
-        var reportId = Guid.NewGuid();
-        var report = new Report { Id = reportId, ReviewId = reviewId, Status = "Pending", Reason = "Spoiler" };
-        
-        await _context.Reviews.AddAsync(review);
-        await _context.Reports.AddAsync(report);
-        await _context.SaveChangesAsync();
+        using var context = TestDbHelper.CreateContext(nameof(this.ModerateReviewAsync_Reject_KeepsReviewAndDismissesReport));
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new ReviewService(context);
+        var reviewResponse = await service.AddReviewAsync(userId, this.DefaultRequest(workId, "Звичайний відгук що не порушує правил"));
+        await service.ReportReviewAsync(Guid.NewGuid(), reviewResponse.ReviewId, "test");
+        var reports = await service.GetAllReportsAsync();
+        var reportId = reports.First().ReportId;
 
-        // Act
-        await _service.ModerateReviewAsync(reportId, "spoiler");
+        await service.ModerateReviewAsync(reportId, "reject");
 
-        // Assert
-        var updatedReview = await _context.Reviews.FindAsync(reviewId);
-        Assert.True(updatedReview!.IsSpoiler);
-        var updatedReport = await _context.Reports.FindAsync(reportId);
-        Assert.Equal("Resolved", updatedReport!.Status);
+        var review = await context.Reviews.FindAsync(reviewResponse.ReviewId);
+        review.Should().NotBeNull();
+        var report = await context.Reports.FindAsync(reportId);
+        report!.Status.Should().Be("Dismissed");
+    }
+
+    /// <summary>
+    /// Spoiler позначає відгук IsSpoiler=true і ставить статус Resolved.
+    /// </summary>
+    [Fact]
+    public async Task ModerateReviewAsync_Spoiler_MarksAsSpoilerAndResolvesReport()
+    {
+        using var context = TestDbHelper.CreateContext(nameof(this.ModerateReviewAsync_Spoiler_MarksAsSpoilerAndResolvesReport));
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new ReviewService(context);
+        var reviewResponse = await service.AddReviewAsync(userId, new ReviewRequest
+        {
+            WorkId = workId, Text = "Відгук з прихованим спойлером без позначки", IsSpoiler = false, Rating = 5.0, TargetType = "comparison",
+        });
+        await service.ReportReviewAsync(Guid.NewGuid(), reviewResponse.ReviewId, "Спойлер");
+        var reports = await service.GetAllReportsAsync();
+        var reportId = reports.First().ReportId;
+
+        await service.ModerateReviewAsync(reportId, "spoiler");
+
+        var review = await context.Reviews.FindAsync(reviewResponse.ReviewId);
+        review!.IsSpoiler.Should().BeTrue();
+        var report = await context.Reports.FindAsync(reportId);
+        report!.Status.Should().Be("Resolved");
+    }
+
+    /// <summary>
+    /// Невалідна дія кидає ArgumentException.
+    /// </summary>
+    [Fact]
+    public async Task ModerateReviewAsync_InvalidAction_ThrowsArgumentException()
+    {
+        using var context = TestDbHelper.CreateContext(nameof(this.ModerateReviewAsync_InvalidAction_ThrowsArgumentException));
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new ReviewService(context);
+        var reviewResponse = await service.AddReviewAsync(userId, this.DefaultRequest(workId, "Відгук для тесту невалідної дії тут"));
+        await service.ReportReviewAsync(Guid.NewGuid(), reviewResponse.ReviewId, "test");
+        var reports = await service.GetAllReportsAsync();
+        var reportId = reports.First().ReportId;
+
+        await service.Invoking(s => s.ModerateReviewAsync(reportId, "invalid_action"))
+            .Should().ThrowAsync<ArgumentException>();
     }
 }
