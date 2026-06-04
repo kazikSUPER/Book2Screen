@@ -65,10 +65,20 @@ builder.Services.AddControllers();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    var allowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")?.Split(',') ?? new[] { "http://localhost:5173" };
+    options.AddPolicy("DefaultPolicy", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
+        if (allowedOrigins.Contains("*"))
+        {
+            policy.AllowAnyOrigin();
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowCredentials();
+        }
+
+        policy.AllowAnyMethod()
               .AllowAnyHeader();
     });
 });
@@ -171,6 +181,16 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? httpContext.Request.Headers.Host.ToString(),
+            factory: partition => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1),
+            }));
+
     options.AddPolicy("auth", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? httpContext.Request.Headers.Host.ToString(),
@@ -195,13 +215,21 @@ builder.Services.AddHealthChecks()
     timeout: TimeSpan.FromSeconds(5))
     .AddDbContextCheck<ApplicationDbContext>(
     name: "EF_Core_Context",
-    tags: new[] { "orm", "efcore" });
+    tags: new[] { "orm", "efcore" })
+    .AddDiskStorageHealthCheck(
+        setup =>
+        {
+            setup.AddDrive("/", 1024); // 1GB minimum
+        },
+        "Disk Space",
+        HealthStatus.Degraded,
+        new[] { "storage" });
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
 
-app.UseCors("AllowAll");
+app.UseCors("DefaultPolicy");
 
 app.UseRateLimiter();
 
