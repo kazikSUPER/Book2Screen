@@ -37,7 +37,7 @@ public class ReviewResponse
     /// <summary>
     /// Gets or sets текст відгуку.
     /// </summary>
-    public string Text { get; set; } = null!;
+    public string? Text { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether наявність спойлерів.

@@ -108,8 +108,8 @@ public class ReviewService : IReviewService
                 ReviewId = r.Id,
                 WorkId = r.WorkId,
                 UserId = r.UserId ?? Guid.Empty,
-                UserNickname = r.User != null ? r.User.Username : "Deleted User",
-                UserAvatar = r.User != null ? r.User.AvatarUrl : null,
+                UserNickname = r.User!.Username,
+                UserAvatar = r.User!.AvatarUrl,
                 Text = r.Text,
                 IsSpoiler = r.IsSpoiler,
                 Rating = r.Rating,
@@ -173,8 +173,8 @@ public class ReviewService : IReviewService
                 ReviewId = r.Id,
                 WorkId = r.WorkId,
                 UserId = r.UserId ?? Guid.Empty,
-                UserNickname = r.User != null ? r.User.Username : "Deleted User",
-                UserAvatar = r.User != null ? r.User.AvatarUrl : null,
+                UserNickname = r.User!.Username,
+                UserAvatar = r.User!.AvatarUrl,
                 Text = r.Text,
                 IsSpoiler = r.IsSpoiler,
                 Rating = r.Rating,
@@ -215,19 +215,19 @@ public class ReviewService : IReviewService
                 Status = r.Status,
                 CreatedAt = r.CreatedAt,
                 ReviewText = r.Review != null ? r.Review.Text : "Review deleted",
-                Review = r.Review != null ? new ReviewResponse
+                Review = r.Review == null ? null : new ReviewResponse
                 {
                     ReviewId = r.Review.Id,
                     WorkId = r.Review.WorkId,
                     UserId = r.Review.UserId ?? Guid.Empty,
-                    UserNickname = r.Review.User != null ? r.Review.User.Username : "Deleted User",
-                    UserAvatar = r.Review.User != null ? r.Review.User.AvatarUrl : null,
+                    UserNickname = r.Review.User!.Username ?? "Deleted User",
+                    UserAvatar = r.Review.User!.AvatarUrl,
                     Text = r.Review.Text,
                     IsSpoiler = r.Review.IsSpoiler,
                     Rating = r.Review.Rating,
                     TargetType = r.Review.TargetType,
                     CreatedAt = r.Review.CreatedAt,
-                } : null,
+                },
             })
             .ToListAsync();
     }
