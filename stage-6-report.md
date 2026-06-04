@@ -157,6 +157,54 @@ ASPNETCORE_ENVIRONMENT = Staging | Production | ReleaseCandidate
 20260605000001_AddPerformanceIndexes   ← новий (Stage 6)
 ```
 
+
+
+
+
 ---
+
+## Data Consistency Fixes
+
+**Файл:** `docs/fix_data_consistency.sql`
+
+Написано SQL-скрипт для виправлення аномалій даних. Скрипт виконується в транзакції (`BEGIN` / `COMMIT`) з можливістю `ROLLBACK`.
+
+| # | FIX | Таблиця | Причина бага |
+|---|-----|---------|-------------|
+| 1 | `IsSpoiler = false` але текст містить `"Spoiler:"` | `Reviews` | `DbSeeder` створює відгук з коментарем `// Initial state, will be reported` — модерація могла не відпрацювати |
+| 2 | `Status = 'Pending'` на видалені відгуки (`ReviewId = NULL`) | `Reports` | `ON DELETE SET NULL` скидає FK але статус не оновлюється |
+| 3 | `SelectedOption = 'movie'` — застарілий варіант | `Votes` | CHECK дозволяє `'movie'`, але API використовує лише `'book'`/`'adaptation'` |
+| 4 | `VotesCount = 0` але рейтинг виставлений | `Ratings` | Повторний seed після скидання даних |
+| 5 | Дублікати (один твір двічі в обраному) | `Favorites` | Могли виникнути до появи UNIQUE індексу в міграції `AddFavoritesAndPasswordReset` |
+| 6 | Протерміновані невикористані токени | `PasswordResetTokens` | Немає TTL / cleanup job |
+| 7 | Користувачі без активності старші 7 днів | `Users` | Незавершена реєстрація або тестові акаунти |
+
+Як запустити:
+```bash
+docker exec -i project_db psql -U $DB_USER -d $DB_NAME < fix_data_consistency.sql
+```
+
+---
+
+## Schema Freezing
+
+**Файл:** `server/Program.cs`
+
+Додано блок перевірки цілісності схеми при старті контейнера (~30 рядків у секції ініціалізації БД).
+
+Логіка:
+- `Development` / `Test` — поведінка без змін, `MigrateAsync()` застосовує міграції автоматично
+- `Staging` / `Production` / `ReleaseCandidate` — викликається `GetPendingMigrationsAsync()`: якщо є pending міграції — сервер **не стартує**, логується `SCHEMA FREEZE VIOLATION` з переліком порушників
+
+Як активувати для RC — у `compose.yaml`:
+```yaml
+- ASPNETCORE_ENVIRONMENT=ReleaseCandidate
+```
+
+
+
+
+
+
 
 *Документ сформовано: 05.06.2026*
