@@ -217,6 +217,63 @@ Work, Rating, Review, Report
 
 
 
+## Етап: DB Engineer — Backup Strategy / Config Update
+
+### Backup Strategy — Фінальний дамп бази даних (Snapshot)
+
+Для забезпечення стабільної демонстрації проєкту було підготовлено фінальний SQL-snapshot бази даних — файл `book2screen_demo_snapshot_v1.sql`, розміщений у папці `docs/`.
+
+Файл містить три логічні блоки:
+
+**Структура бази даних** — повне визначення всіх 16 таблиць у правильному порядку залежностей (від незалежних сутностей до залежних), включаючи всі зовнішні ключі, індекси та CHECK-обмеження. Структура повністю відповідає фінальному стану міграцій EF Core.
+
+**Історія міграцій** — таблиця `__EFMigrationsHistory` заповнена всіма 8 застосованими міграціями, що запобігає повторному їх виконанню при запуску застосунку після відновлення з дампу.
+
+**Seed-дані** — всі демонстраційні записи з `DbSeeder.cs` вставлені з фіксованими UUID, що гарантує коректність зв'язків між таблицями після кожного відновлення. Включено: 2 користувачі (admin, john\_doe), автор, актор, книга, екранізація, work, рейтинг, відгук та скарга.
+
+Файл є ідемпотентним: блок `DROP TABLE IF EXISTS ... CASCADE` на початку та директива `ON CONFLICT DO NOTHING` для seed-даних дозволяють безпечно запускати snapshot повторно без помилок.
+
+Команда для відновлення перед демонстрацією:
+
+```bash
+# Через Docker (відповідно до compose.yaml):
+docker exec -i project_db psql -U postgres -d book2screen \
+  < docs/book2screen_demo_snapshot_v1.sql
+```
+
+---
+
+### Оновлення файлу .env.example
+
+У файлі `.env.example` було усунено всі заглушки та уточнено конфігурацію відповідно до реальних параметрів проєкту. Зміни наведено в таблиці нижче:
+
+| Параметр | До | Після | Причина |
+|---|---|---|---|
+| `DB_CONNECTION_STRING` | `your_database_connection_string_here` | Реальний приклад рядка підключення PostgreSQL | Розробники одразу бачать формат |
+| `JWT_SECRET` | `generate_long_random_string_here` | Опис вимоги (мін. 32 символи) | Усувається неоднозначність |
+| `JWT_ISSUER` | `your_app_name` | `Book2Screen` | Відповідає реальному імені застосунку |
+| `JWT_AUDIENCE` | `your_app_users` | `Book2ScreenUsers` | Відповідає реальній аудиторії токена |
+| `SENDER_EMAIL` | `your-email@gmail.com` | `noreply@book2screen.com` | Відображає реальну адресу відправника |
+| `SENDER_PASSWORD` | `your-app-password` | Опис формату Gmail App Password + посилання на інструкцію | Усувається плутанина з паролем акаунта |
+| `API_URL_EXTERNAL` | Без коментаря | Додано примітку про перехід на `https://` у staging/prod | Попередження про безпеку |
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 фінальна ERD
 https://mermaid.live/edit#pako:eNrdWG1v4jgQ_iuRpf1GqwItb99oae-qbXsVlD3dCmnlJlOwSOKcY9Oy0P--tkNI4pgSLVw_HB-qJvPMeF4ej8dZIZd6gHoI2IDgKcPBJHTkbxwDi51V8qB-QhDPufWcx6_ZuwVm7gwzDQ5xAM7YIrwOMPELEg5v3HnEcfxKmfcnjmdlpSH1ofy2v8AcszHzM9Ezpb5zG_ddThY5DU4CiDkOIueKAebg9blNOI68vPB9Eib_9AWf0erx3wjff5DxGyFeEioTGs2WtqUvCeOzgVzdUHrAnNAQ-4QvjxbOJaXzysE8Ee6bTg0gdhmJlGeG5A8ImYm-w-FU4GnuNQllwcWzT1wd3T-AmaFzRRfAbgOpVSjvgYFLdsx_4B3F3BRZp6F289WQ6pwVZRk9XP4_YkffwxHXdn-XI9vXy6gScxQdhuADjqFIBSUYCKaduSeh4BAb9kZceISWyCNCzpZmh6ExB3ZMOmWZ0gwoM2or30EqrVaW5bueYkoh55s6HC2Ivyk7rBmMRBDgfLa3-0UaGduizqfFABwYzKNP-fUCJG2O3d0UFUfwr4DQhQcRPAMrGxtRwVwosl4vrnIsHThioAPy8gJMOXOPo98tn4rpmzzXC4HmHT5ucTKf9zq8uw5pKJmxYr5T-W0QUcaxlN_BAnxjOZk0ox5b0mr62IQZbW2QA3MzhAWB12p5eZJ_slcelQcpOEPpWTgtDUKjiBIfjJZ6R-YQ6yZpoQhmU-AWDquhzpaW43N7CKp0lUk9lOeGjSEjWSwRGzaSPNvisMR3YBzfKIfKUYzk-edKK38ZfP_k3N_gBWWkgt-fzQlN771ehSIARly9kc0dkcqyfWwidD9URTP2xn_XEtNbzxBiuenoHMJqLUBfosokupJ3N9vy128RYcsnkh86Nw1ClvB4s8SXL2qOS2bHGYni4u1pvT45oaviEN5zJmg7eE9Q_n6yC76ZxBXYhK_Xm3EmxWU281NtCZqfSDK7pop0xpz4bMq5G8FHWsnol62WeLPRyOYYhU2ol9rOAdfmHLAHne6iD2Gr7WG0B5b0tz2grKEUgdYxZqOTHxSUlj6tU-tZanagc4d4ZZ3S2Z65mHz5sGQmaX7pEgXYrswUQMXMfGAtPQ-LsOLcYIGmR90EoRqaMuKhHmcCaki2Qdk-5CPSrWaC-AxkZ0BKycNsrqy_S50Ih98pDVI1RsV0hnov2I_lk9AtYPONaAuB0AOmuyfq1RvaBOqt0BvqNc46p-2Lbr3danU6zfN6s4aWqNfsntYb5912t1lvN1utxsV7Df3Ua56ddtoXZ_JXP290Wo16t4bAI3LP3Cffp_Rnqvdfx4y9vg
 
