@@ -236,16 +236,56 @@ using (var scope = app.Services.CreateScope())
         {
             logger.LogInformation("Applying migrations and seeding (Attempts left: {Count})", retryCount);
 
-            try
+            // ---------------------------------------------------------------
+            // SCHEMA FREEZING — RC integrity check
+            // Перевіряємо, що в білді немає незапланованих pending міграцій.
+            // Якщо знайдено міграції яких немає в БД — старт блокується.
+            // Це захищає Release Candidate від випадкових змін схеми.
+            // ---------------------------------------------------------------
+            var environment = app.Environment.EnvironmentName;
+            var isProductionLike = environment is "Production" or "Staging" or "ReleaseCandidate";
+
+            if (isProductionLike)
             {
-                await db.Database.MigrateAsync();
-                logger.LogInformation("Database migrations applied successfully.");
+                var pendingMigrations = (await db.Database.GetPendingMigrationsAsync()).ToList();
+
+                if (pendingMigrations.Count > 0)
+                {
+                    logger.LogCritical(
+                        "SCHEMA FREEZE VIOLATION: {Count} pending migration(s) detected in {Environment}. " +
+                        "No unplanned schema changes are allowed on Release Candidate. " +
+                        "Pending: {Migrations}",
+                        pendingMigrations.Count,
+                        environment,
+                        string.Join(", ", pendingMigrations));
+
+                    throw new InvalidOperationException(
+                        $"Schema freeze violated: {pendingMigrations.Count} pending migration(s) found. " +
+                        $"Migrations: {string.Join(", ", pendingMigrations)}. " +
+                        "Apply migrations intentionally via a reviewed release process.");
+                }
+
+                logger.LogInformation(
+                    "Schema freeze check passed: database is up to date with {Count} applied migration(s).",
+                    (await db.Database.GetAppliedMigrationsAsync()).Count());
             }
-            catch (Exception migrateEx)
+            else
             {
-                logger.LogWarning(migrateEx, "Migration skipped - database may already be up to date. Message: {Message}", migrateEx.Message);
+                // Development / Test — застосовуємо міграції автоматично як раніше
+                try
+                {
+                    await db.Database.MigrateAsync();
+                    logger.LogInformation("Database migrations applied successfully.");
+                }
+                catch (Exception migrateEx)
+                {
+                    logger.LogWarning(migrateEx, "Migration skipped - database may already be up to date. Message: {Message}", migrateEx.Message);
+                }
             }
 
+            // ---------------------------------------------------------------
+            // Seed
+            // ---------------------------------------------------------------
             try
             {
                 await DbSeeder.SeedAsync(db);
@@ -258,6 +298,11 @@ using (var scope = app.Services.CreateScope())
 
             logger.LogInformation("Database is ready.");
             break;
+        }
+        catch (InvalidOperationException)
+        {
+            // Schema freeze violation — пробрасуємо без retry, одразу зупиняємо
+            throw;
         }
         catch (Exception ex)
         {
