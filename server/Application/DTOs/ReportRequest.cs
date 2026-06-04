@@ -14,6 +14,16 @@ public class ReportRequest
     /// <summary>
     /// Gets or sets причину скарги.
     /// </summary>
-    [Required]
+    [Required(ErrorMessage = "Reason is required")]
     public string Reason { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets iD відгуку (опціонально, якщо передається в тілі).
+    /// </summary>
+    public Guid? ReviewId { get; set; }
+
+    /// <summary>
+    /// Gets or sets текст скарги (аліас для Reason).
+    /// </summary>
+    public string? Text { get; set; }
 }

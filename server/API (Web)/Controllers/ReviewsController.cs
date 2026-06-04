@@ -151,6 +151,7 @@ public class ReviewsController : ControllerBase
     [HttpPost("{id}/report")]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> ReportReview(Guid id, [FromBody] ReportRequest request)
     {
@@ -161,7 +162,8 @@ public class ReviewsController : ControllerBase
         }
 
         var userId = Guid.Parse(userIdClaim.Value);
-        await this.reviewService.ReportReviewAsync(userId, id, request.Reason);
+        var reason = request.Reason ?? request.Text ?? "No reason provided";
+        await this.reviewService.ReportReviewAsync(userId, id, reason);
 
         return this.Ok(new { message = "Report submitted successfully." });
     }
