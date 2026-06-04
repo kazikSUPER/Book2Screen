@@ -203,6 +203,22 @@ docker exec -i project_db psql -U $DB_USER -d $DB_NAME < fix_data_consistency.sq
 
 
 
+Етап: DB Engineer — Dump & Scripts / Config Auditor
+Seed-дані (DbSeeder.cs) — ✅ Виконано
+Клас DbSeeder реалізовано з урахуванням принципу ідемпотентності: обидва блоки наповнення захищені перевірками через AnyAsync, що гарантує безпечний повторний запуск на вже заповненій базі даних без дублювання записів.
+У результаті успішного виконання сідера до бази додаються наступні сутності:
+
+User × 2 (адміністратор та звичайний користувач)
+Author, Actor, Book, Adaptation, AdaptationActor
+Work, Rating, Review, Report
+
+Загалом — 10 пов'язаних записів, які формують повноцінний тестовий сценарій для перевірки основного функціоналу застосунку.
+Окремо варто зазначити, що відгук користувача john_doe містить текст зі спойлером ("Paul survives!"), однак поле IsSpoiler виставлено у false. При цьому адміністратор вже створив скаргу (Report) на цей відгук зі статусом Pending. Це навмисний тестовий кейс, який дозволяє перевірити коректну роботу адміністративного інтерфейсу в частині обробки скарг.
+
+
+
+фінальна ERD
+https://mermaid.live/edit#pako:eNrdWG1v4jgQ_iuRpf1GqwItb99oae-qbXsVlD3dCmnlJlOwSOKcY9Oy0P--tkNI4pgSLVw_HB-qJvPMeF4ej8dZIZd6gHoI2IDgKcPBJHTkbxwDi51V8qB-QhDPufWcx6_ZuwVm7gwzDQ5xAM7YIrwOMPELEg5v3HnEcfxKmfcnjmdlpSH1ofy2v8AcszHzM9Ezpb5zG_ddThY5DU4CiDkOIueKAebg9blNOI68vPB9Eib_9AWf0erx3wjff5DxGyFeEioTGs2WtqUvCeOzgVzdUHrAnNAQ-4QvjxbOJaXzysE8Ee6bTg0gdhmJlGeG5A8ImYm-w-FU4GnuNQllwcWzT1wd3T-AmaFzRRfAbgOpVSjvgYFLdsx_4B3F3BRZp6F289WQ6pwVZRk9XP4_YkffwxHXdn-XI9vXy6gScxQdhuADjqFIBSUYCKaduSeh4BAb9kZceISWyCNCzpZmh6ExB3ZMOmWZ0gwoM2or30EqrVaW5bueYkoh55s6HC2Ivyk7rBmMRBDgfLa3-0UaGduizqfFABwYzKNP-fUCJG2O3d0UFUfwr4DQhQcRPAMrGxtRwVwosl4vrnIsHThioAPy8gJMOXOPo98tn4rpmzzXC4HmHT5ucTKf9zq8uw5pKJmxYr5T-W0QUcaxlN_BAnxjOZk0ox5b0mr62IQZbW2QA3MzhAWB12p5eZJ_slcelQcpOEPpWTgtDUKjiBIfjJZ6R-YQ6yZpoQhmU-AWDquhzpaW43N7CKp0lUk9lOeGjSEjWSwRGzaSPNvisMR3YBzfKIfKUYzk-edKK38ZfP_k3N_gBWWkgt-fzQlN771ehSIARly9kc0dkcqyfWwidD9URTP2xn_XEtNbzxBiuenoHMJqLUBfosokupJ3N9vy128RYcsnkh86Nw1ClvB4s8SXL2qOS2bHGYni4u1pvT45oaviEN5zJmg7eE9Q_n6yC76ZxBXYhK_Xm3EmxWU281NtCZqfSDK7pop0xpz4bMq5G8FHWsnol62WeLPRyOYYhU2ol9rOAdfmHLAHne6iD2Gr7WG0B5b0tz2grKEUgdYxZqOTHxSUlj6tU-tZanagc4d4ZZ3S2Z65mHz5sGQmaX7pEgXYrswUQMXMfGAtPQ-LsOLcYIGmR90EoRqaMuKhHmcCaki2Qdk-5CPSrWaC-AxkZ0BKycNsrqy_S50Ih98pDVI1RsV0hnov2I_lk9AtYPONaAuB0AOmuyfq1RvaBOqt0BvqNc46p-2Lbr3danU6zfN6s4aWqNfsntYb5912t1lvN1utxsV7Df3Ua56ddtoXZ_JXP290Wo16t4bAI3LP3Cffp_Rnqvdfx4y9vg
 
 
 
