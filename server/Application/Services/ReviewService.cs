@@ -46,17 +46,32 @@ public class ReviewService : IReviewService
         using var transaction = await this.context.Database.BeginTransactionAsync();
         try
         {
-            var review = new Review
-            {
-                UserId = userId,
-                WorkId = request.WorkId,
-                Text = request.Text,
-                IsSpoiler = request.IsSpoiler,
-                Rating = request.Rating,
-                TargetType = request.TargetType.ToLower(),
-            };
+            var targetTypeLower = request.TargetType.ToLower();
+            var existingReview = await this.context.Reviews
+                .FirstOrDefaultAsync(r => r.UserId == userId && r.WorkId == request.WorkId && r.TargetType == targetTypeLower);
 
-            await this.context.Reviews.AddAsync(review);
+            Review review;
+            if (existingReview != null)
+            {
+                review = existingReview;
+                review.Text = request.Text ?? review.Text; // Keep old text if new is null
+                review.IsSpoiler = request.IsSpoiler;
+                review.Rating = request.Rating;
+            }
+            else
+            {
+                review = new Review
+                {
+                    UserId = userId,
+                    WorkId = request.WorkId,
+                    Text = request.Text,
+                    IsSpoiler = request.IsSpoiler,
+                    Rating = request.Rating,
+                    TargetType = targetTypeLower,
+                };
+                await this.context.Reviews.AddAsync(review);
+            }
+
             await this.context.SaveChangesAsync();
             await transaction.CommitAsync();
 
