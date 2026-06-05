@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import type { BookScreenItem } from '../services/types';
+import type { BookScreenItem, DifferencePoint } from '../services/types';
 import { fetchWorkById } from '../services/works';
 import { extractErrorMessage } from '../services/error';
 import { useWishlistStore } from '../state/wishlist';
@@ -109,13 +109,26 @@ const filmCountryLabel = computed(() => item.value?.filmCountry ?? item.value?.c
 const bookSummary = computed(() => item.value?.bookSummary ?? item.value?.description ?? '');
 const filmSummary = computed(() => item.value?.filmSummary ?? item.value?.description ?? '');
 
-watch(item, (newItem) => {
-  if (newItem) {
-    document.title = `${newItem.title} — порівняння книги та екранізації — Book2Screen`;
-  }
-}, { immediate: true });
+watch(
+  item,
+  (newItem) => {
+    if (newItem) {
+      document.title = `${newItem.title} — порівняння книги та екранізації — Book2Screen`;
+    }
+  },
+  { immediate: true }
+);
 
 const goBack = () => router.push({ name: 'home' });
+
+const defaultDifferences: DifferencePoint[] = [];
+
+const differencesData = computed(() => {
+  if (item.value?.differences && item.value.differences.length > 0) {
+    return item.value.differences;
+  }
+  return defaultDifferences;
+});
 </script>
 
 <template>
@@ -150,11 +163,26 @@ const goBack = () => router.push({ name: 'home' });
               <div class="compare-card__info">
                 <h2 class="compare-card__title">{{ item.title }}</h2>
                 <dl class="compare-card__meta">
-                  <div class="compare-card__meta-row"><dt>{{ t.bookYear }}</dt><dd>{{ item.year }}</dd></div>
-                  <div class="compare-card__meta-row"><dt>{{ t.bookGenre }}</dt><dd>{{ item.genre }}</dd></div>
-                  <div class="compare-card__meta-row"><dt>{{ t.bookCountry }}</dt><dd>{{ item.country }}</dd></div>
-                  <div v-if="item.author" class="compare-card__meta-row"><dt>{{ t.bookAuthor }}</dt><dd>{{ item.author }}</dd></div>
-                  <div class="compare-card__meta-row"><dt>{{ t.bookRating }}</dt><dd>{{ item.bookRating }} / 5</dd></div>
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookYear }}</dt>
+                    <dd>{{ item.year }}</dd>
+                  </div>
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookGenre }}</dt>
+                    <dd>{{ item.genre }}</dd>
+                  </div>
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookCountry }}</dt>
+                    <dd>{{ item.country }}</dd>
+                  </div>
+                  <div v-if="item.author" class="compare-card__meta-row">
+                    <dt>{{ t.bookAuthor }}</dt>
+                    <dd>{{ item.author }}</dd>
+                  </div>
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookRating }}</dt>
+                    <dd>{{ item.bookRating }} / 5</dd>
+                  </div>
                 </dl>
                 <button
                   class="compare-card__wish"
@@ -182,7 +210,13 @@ const goBack = () => router.push({ name: 'home' });
         <div class="detail__vs" aria-hidden="true">
           <span class="detail__vs-text">{{ t.adapted }}</span>
           <svg width="60" height="20" viewBox="0 0 60 20" fill="none">
-            <path d="M0 10H55M55 10L46 2M55 10L46 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path
+              d="M0 10H55M55 10L46 2M55 10L46 18"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
         </div>
 
@@ -193,11 +227,26 @@ const goBack = () => router.push({ name: 'home' });
               <div class="compare-card__info">
                 <h2 class="compare-card__title">{{ item.title }}</h2>
                 <dl class="compare-card__meta">
-                  <div class="compare-card__meta-row"><dt>{{ t.bookYear }}</dt><dd>{{ filmYearLabel }}</dd></div>
-                  <div class="compare-card__meta-row"><dt>{{ t.bookGenre }}</dt><dd>{{ item.genre }}</dd></div>
-                  <div class="compare-card__meta-row"><dt>{{ t.bookCountry }}</dt><dd>{{ filmCountryLabel }}</dd></div>
-                  <div v-if="item.director" class="compare-card__meta-row"><dt>{{ t.bookDirector }}</dt><dd>{{ item.director }}</dd></div>
-                  <div class="compare-card__meta-row"><dt>{{ t.bookRating }}</dt><dd>{{ item.filmRating }} / 5</dd></div>
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookYear }}</dt>
+                    <dd>{{ filmYearLabel }}</dd>
+                  </div>
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookGenre }}</dt>
+                    <dd>{{ item.genre }}</dd>
+                  </div>
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookCountry }}</dt>
+                    <dd>{{ filmCountryLabel }}</dd>
+                  </div>
+                  <div v-if="item.director" class="compare-card__meta-row">
+                    <dt>{{ t.bookDirector }}</dt>
+                    <dd>{{ item.director }}</dd>
+                  </div>
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookRating }}</dt>
+                    <dd>{{ item.filmRating }} / 5</dd>
+                  </div>
                 </dl>
                 <button
                   class="compare-card__wish"
@@ -226,7 +275,7 @@ const goBack = () => router.push({ name: 'home' });
       </section>
 
       <!-- ── Карта відмінностей (інтерактивна) ─────────────── -->
-      <DifferencesMap :points="item.differences ?? []" />
+      <DifferencesMap :points="differencesData" />
 
       <!-- ── Голосування (SCRUM-70 / SCRUM-71) ─────────────── -->
       <VotingBlock :work-id="item.id" />
@@ -300,7 +349,7 @@ const goBack = () => router.push({ name: 'home' });
 
 .compare-card {
   background-color: #391418; /* Темно-бордовий фон */
-  border: 1px solid #23080A;
+  border: 1px solid #23080a;
   border-radius: var(--radius-sm);
   padding: 16px;
   box-shadow: var(--shadow-md);
@@ -337,7 +386,7 @@ const goBack = () => router.push({ name: 'home' });
   flex-shrink: 0;
   overflow: hidden;
   border-radius: var(--radius-xs);
-  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 .compare-card__poster img {

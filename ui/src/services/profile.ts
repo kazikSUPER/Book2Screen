@@ -49,7 +49,7 @@ export async function updateMyProfile(patch: UserProfileDto): Promise<void> {
 // POST /api/v1/users/me/avatar — body: рядок з URL
 export async function updateMyAvatar(avatarUrl: string): Promise<void> {
   try {
-    await apiClient.post('/api/v1/users/me/avatar', avatarUrl, {
+    await apiClient.post('/api/v1/users/me/avatar', JSON.stringify(avatarUrl), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {

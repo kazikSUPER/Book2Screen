@@ -43,9 +43,7 @@ export async function fetchAdminBook(id: string): Promise<BookScreenItem> {
   return fetchWorkById(id);
 }
 
-export async function createBook(
-  book: Omit<BookScreenItem, 'id'> & { type?: string }
-): Promise<BookScreenItem> {
+export async function createBook(book: Omit<BookScreenItem, 'id'> & { type?: string }): Promise<BookScreenItem> {
   const dto = toAdaptationDto(book);
   try {
     const response = await apiClient.post<AdaptationDto>('/api/v1/admin/adaptations', dto);
@@ -146,10 +144,7 @@ export async function fetchReports(): Promise<ReportedComment[]> {
   }
 }
 
-export async function moderateReport(
-  reportId: string,
-  action: 'approve' | 'reject' | 'spoiler'
-): Promise<void> {
+export async function moderateReport(reportId: string, action: 'approve' | 'reject' | 'spoiler'): Promise<void> {
   try {
     await apiClient.post(`/api/v1/admin/reports/${reportId}/${action}`);
   } catch (err) {

@@ -12,6 +12,7 @@ import type { BookScreenItem, ReviewResponse } from '../services/types';
 import StarRating from '../components/StarRating.vue';
 import WorkCard from '../components/WorkCard.vue';
 import { STR } from '../constants';
+import { onImgError } from '../composables/useImageFallback';
 
 const t = STR.profile;
 
@@ -131,8 +132,6 @@ function cancelEditing(): void {
   editing.value = false;
 }
 
-
-
 // ── Avatar (mock через FileReader → base64 у localStorage) ───
 const avatarInput = ref<HTMLInputElement | null>(null);
 
@@ -140,6 +139,7 @@ function pickAvatar(): void {
   avatarInput.value?.click();
 }
 
+// MH-010: використовуємо setAvatar → POST /api/v1/users/me/avatar замість updateProfile
 function onAvatarChange(e: Event): void {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
@@ -148,10 +148,14 @@ function onAvatarChange(e: Event): void {
     return;
   }
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     if (typeof reader.result === 'string') {
-      userStore.updateProfile({ avatarUrl: reader.result });
-      notifications.pushSuccess(t.avatarUpdated);
+      try {
+        await userStore.setAvatar(reader.result);
+        notifications.pushSuccess(t.avatarUpdated);
+      } catch (err) {
+        notifications.pushError(extractErrorMessage(err));
+      }
     }
   };
   reader.readAsDataURL(file);
@@ -170,6 +174,14 @@ async function deleteReview(reviewId: string): Promise<void> {
 
 function showMoreReviews(): void {
   visibleReviewsCount.value += REVIEWS_PAGE;
+}
+
+// ── Scroll helpers для горизонтальних секцій ─────────────────
+const ratingsScroll = ref<HTMLElement | null>(null);
+const wishlistScroll = ref<HTMLElement | null>(null);
+
+function scrollSection(el: HTMLElement | null, dir: 'left' | 'right'): void {
+  el?.scrollBy({ left: dir === 'left' ? -240 : 240, behavior: 'smooth' });
 }
 
 // ── Загальне завантаження ────────────────────────────────────
@@ -197,11 +209,9 @@ onMounted(() => {
 
 <template>
   <div v-if="userStore.isAuthenticated" class="profile">
-    <header class="profile__top">
-      <h1 class="profile__title">{{ t.title }}</h1>
-    </header>
+    <h1 class="profile__title">{{ t.title }}</h1>
 
-    <!-- ═════════════ Шапка профілю ═════════════ -->
+    <!-- ═══════════════ Шапка профілю ═══════════════ -->
     <section class="profile-header">
       <!-- Аватар -->
       <div class="profile-header__avatar-col">
@@ -215,19 +225,12 @@ onMounted(() => {
         <input ref="avatarInput" type="file" accept="image/*" style="display: none" @change="onAvatarChange" />
       </div>
 
-      <!-- Інформація про користувача -->
+      <!-- Інфо -->
       <div class="profile-card">
-        <header class="profile-card__head">
-          <span class="profile-card__icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 21C4 16.5817 7.58172 13 12 13C16.4183 13 20 16.5817 20 21V22H4V21Z" />
-            </svg>
-          </span>
-          <h2 class="profile-card__title">{{ t.usernameTitle }}</h2>
-        </header>
-
         <div v-if="!editing" class="profile-card__body">
+          <p class="profile-card__row">
+            <span class="profile-card__label">{{ t.usernameTitle }}:</span>
+          </p>
           <p class="profile-card__row">
             <span class="profile-card__label">{{ t.username }}</span>
             <span class="profile-card__value">{{ userStore.username || userStore.nickname || '—' }}</span>
@@ -240,7 +243,7 @@ onMounted(() => {
             <span class="profile-card__label">{{ t.email }}</span>
             <span class="profile-card__value">{{ userStore.email }}</span>
           </p>
-          <button type="button" class="profile-card__edit" @click="startEditing">{{ STR.common.edit }}</button>
+          <button type="button" class="profile-card__btn" @click="startEditing">{{ STR.common.edit }}</button>
         </div>
 
         <form v-else class="profile-card__body" @submit.prevent="saveProfile">
@@ -249,90 +252,105 @@ onMounted(() => {
             <input v-model="editForm.username" type="text" class="profile-card__input" />
           </label>
           <div class="profile-card__edit-actions">
-            <button type="submit" class="profile-card__edit">{{ STR.common.save }}</button>
-            <button type="button" class="profile-card__cancel" @click="cancelEditing">{{ STR.common.cancel }}</button>
+            <button type="submit" class="profile-card__btn">{{ STR.common.save }}</button>
+            <button type="button" class="profile-card__btn profile-card__btn--cancel" @click="cancelEditing">
+              {{ STR.common.cancel }}
+            </button>
           </div>
         </form>
       </div>
 
       <!-- Статистика -->
       <div class="profile-card profile-card--stats">
-        <header class="profile-card__head">
-          <span class="profile-card__icon" aria-hidden="true">📊</span>
-          <h2 class="profile-card__title">{{ t.statsTitle }}</h2>
-        </header>
-        <div class="profile-card__body">
-          <p class="profile-card__row">
-            <span class="profile-card__label">{{ t.statsReviews }}</span>
-            <span class="profile-card__value">{{ stats.reviewsCount }}</span>
-          </p>
-          <p class="profile-card__row">
-            <span class="profile-card__label">{{ t.statsRatings }}</span>
-            <span class="profile-card__value">{{ stats.ratingsCount }}</span>
-          </p>
-          <p class="profile-card__row">
-            <span class="profile-card__label">{{ t.statsWatched }}</span>
-            <span class="profile-card__value">{{ stats.watchedCount }}</span>
-          </p>
+        <p class="profile-card__stats-title">📊 {{ t.statsTitle }}</p>
+        <p class="profile-card__row">
+          <span class="profile-card__label">{{ t.statsReviews }}:</span>
+          <span class="profile-card__value">{{ stats.reviewsCount }}</span>
+        </p>
+        <p class="profile-card__row">
+          <span class="profile-card__label">{{ t.statsRatings }}:</span>
+          <span class="profile-card__value">{{ stats.ratingsCount }}</span>
+        </p>
+        <p class="profile-card__row">
+          <span class="profile-card__label">{{ t.statsWatched }}:</span>
+          <span class="profile-card__value">{{ stats.watchedCount }}</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- ═══════════════ Мої оцінки ═══════════════ -->
+    <section class="profile-section">
+      <h2 class="profile-section__title">⭐ {{ t.myRatingsTitle }}</h2>
+      <p v-if="ratedWorks.length === 0" class="profile-section__empty">{{ t.noRatings }}</p>
+      <div v-else class="profile-section__carousel">
+        <button class="profile-section__arrow" aria-label="Ліворуч" @click="scrollSection(ratingsScroll, 'left')">
+          ←
+        </button>
+        <div ref="ratingsScroll" class="profile-section__scroll">
+          <article v-for="r in ratedWorks" :key="r.work.id" class="rating-card">
+            <div class="rating-card__poster">
+              <img :src="r.work.poster" :alt="r.work.title" @error="onImgError" />
+            </div>
+            <div class="rating-card__info">
+              <h3 class="rating-card__title">{{ r.work.title }}</h3>
+              <dl class="rating-card__meta">
+                <div>
+                  <dt>{{ STR.detail.bookYear }}:</dt>
+                  <dd>{{ r.work.year }}</dd>
+                </div>
+                <div>
+                  <dt>{{ STR.detail.bookGenre }}:</dt>
+                  <dd>{{ r.work.genre }}</dd>
+                </div>
+                <div>
+                  <dt>{{ STR.detail.bookCountry }}:</dt>
+                  <dd>{{ r.work.country }}</dd>
+                </div>
+              </dl>
+            </div>
+            <button
+              type="button"
+              class="rating-card__btn"
+              @click="router.push({ name: 'detail', params: { id: r.work.id } })"
+            >
+              {{ t.view }}
+            </button>
+            <div class="rating-card__user-rating">
+              <span class="rating-card__user-label">{{ t.yourRating }}</span>
+              <StarRating :model-value="Math.max(r.bookRating, r.filmRating)" readonly :size="20" />
+            </div>
+          </article>
         </div>
+        <button class="profile-section__arrow" aria-label="Праворуч" @click="scrollSection(ratingsScroll, 'right')">
+          →
+        </button>
       </div>
     </section>
 
-    <!-- ═════════════ Мої оцінки ═════════════ -->
+    <!-- ═══════════════ Мої відгуки ═══════════════ -->
     <section class="profile-section">
-      <h2 class="profile-section__title">{{ t.myRatingsTitle }}</h2>
-      <p v-if="ratedWorks.length === 0" class="profile-section__empty">
-        {{ t.noRatings }}
-      </p>
-      <div v-else class="profile-section__scroll">
-        <article v-for="r in ratedWorks" :key="r.work.id" class="rating-card">
-          <div class="rating-card__poster">
-            <img :src="r.work.poster" :alt="r.work.title" />
-          </div>
-          <h3 class="rating-card__title">{{ r.work.title }}</h3>
-          <dl class="rating-card__meta">
-            <div>
-              <dt>{{ STR.detail.bookYear }}</dt>
-              <dd>{{ r.work.year }}</dd>
-            </div>
-            <div>
-              <dt>{{ STR.detail.bookGenre }}</dt>
-              <dd>{{ r.work.genre }}</dd>
-            </div>
-            <div>
-              <dt>{{ STR.detail.bookCountry }}</dt>
-              <dd>{{ r.work.country }}</dd>
-            </div>
-          </dl>
-          <button
-            type="button"
-            class="rating-card__btn"
-            @click="router.push({ name: 'detail', params: { id: r.work.id } })"
-          >
-            {{ t.view }}
-          </button>
-          <div class="rating-card__user-rating">
-            <span class="rating-card__user-label">{{ t.yourRating }}</span>
-            <StarRating :model-value="Math.max(r.bookRating, r.filmRating)" readonly :size="20" />
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <!-- ═════════════ Мої відгуки ═════════════ -->
-    <section class="profile-section">
-      <h2 class="profile-section__title">{{ t.myReviewsTitle }}</h2>
+      <h2 class="profile-section__title">💬 {{ t.myReviewsTitle }}</h2>
       <p v-if="myReviews.length === 0" class="profile-section__empty">{{ t.noReviews }}</p>
       <ul v-else class="profile-reviews">
         <li v-for="r in visibleReviews" :key="r.reviewId" class="profile-review">
-          <div class="profile-review__poster">
-            <img v-if="findWork(r.workId)" :src="findWork(r.workId)!.poster" :alt="findWork(r.workId)!.title" />
+          <!-- Постер + назва під ним -->
+          <div class="profile-review__poster-col">
+            <div class="profile-review__poster">
+              <img
+                v-if="findWork(r.workId)"
+                :src="findWork(r.workId)!.poster"
+                :alt="findWork(r.workId)!.title"
+                @error="onImgError"
+              />
+            </div>
+            <p class="profile-review__work-title">{{ findWork(r.workId)?.title || 'Твір' }}</p>
           </div>
+          <!-- Текст відгуку -->
           <div class="profile-review__body">
-            <p class="profile-review__work">{{ findWork(r.workId)?.title || 'Твір' }}</p>
-            <p class="profile-review__label">{{ t.reviewText }}</p>
+            <p class="profile-review__label">{{ t.reviewText }}:</p>
             <p class="profile-review__text">{{ r.text }}</p>
           </div>
+          <!-- Кнопки -->
           <div class="profile-review__actions">
             <button
               type="button"
@@ -356,64 +374,63 @@ onMounted(() => {
       </button>
     </section>
 
-    <!-- ═════════════ Список "Хочу переглянути/прочитати" ═════════════ -->
+    <!-- ═══════════════ Список "Хочу переглянути/прочитати" ═══════════════ -->
     <section class="profile-section">
-      <h2 class="profile-section__title">{{ t.wishlistTitle }}</h2>
-      <p v-if="wishWorks.length === 0" class="profile-section__empty">
-        {{ t.noWishlist }}
-      </p>
-      <div v-else class="profile-section__scroll">
-        <WorkCard v-for="w in wishWorks" :key="w.id" :item="w" />
+      <h2 class="profile-section__title">🔖 {{ t.wishlistTitle }}</h2>
+      <p v-if="wishWorks.length === 0" class="profile-section__empty">{{ t.noWishlist }}</p>
+      <div v-else class="profile-section__carousel">
+        <button class="profile-section__arrow" aria-label="Ліворуч" @click="scrollSection(wishlistScroll, 'left')">
+          ←
+        </button>
+        <div ref="wishlistScroll" class="profile-section__scroll">
+          <WorkCard v-for="w in wishWorks" :key="w.id" :item="w" />
+        </div>
+        <button class="profile-section__arrow" aria-label="Праворуч" @click="scrollSection(wishlistScroll, 'right')">
+          →
+        </button>
       </div>
     </section>
   </div>
 </template>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&display=swap');
+
+/* ── Сторінка ───────────────────────────────────────────── */
 .profile {
   display: flex;
   flex-direction: column;
-  gap: 32px;
-  padding: 24px 16px 48px;
-  font-family: var(--font-body);
-}
-
-.profile__top {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
+  gap: 24px;
+  padding: 24px 20px 48px;
+  font-family: 'Comfortaa', var(--font-body), sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .profile__title {
   margin: 0;
   text-align: center;
-  font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 400;
+  font-family: 'Comfortaa', var(--font-display), sans-serif;
+  font-size: 26px;
+  font-weight: 600;
   color: var(--text-on-light);
-}
-
-@media (max-width: 600px) {
-  .profile__top {
-    flex-direction: column;
-    gap: 8px;
-  }
 }
 
 /* ── Шапка профілю ─────────────────────────────────────── */
 .profile-header {
-  background: var(--color-panel-box);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: 24px;
+  background: var(--color-panel);
+  border-radius: 14px;
+  padding: 28px 24px;
   display: grid;
-  grid-template-columns: auto 1fr 1fr;
-  gap: 24px;
+  grid-template-columns: 140px 1fr 220px;
+  gap: 20px;
   align-items: stretch;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  min-height: 180px;
 }
 
+/* Аватар */
 .profile-header__avatar-col {
   display: flex;
   flex-direction: column;
@@ -422,14 +439,15 @@ onMounted(() => {
 }
 
 .profile-header__avatar {
-  width: 110px;
-  height: 110px;
-  border-radius: var(--radius-pill);
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
   overflow: hidden;
   background: var(--color-card);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .profile-header__avatar img {
@@ -439,8 +457,7 @@ onMounted(() => {
 }
 
 .profile-header__avatar-fallback {
-  font-family: var(--font-display);
-  font-size: 48px;
+  font-size: 40px;
   color: var(--text-on-dark);
 }
 
@@ -448,45 +465,25 @@ onMounted(() => {
   background: none;
   border: none;
   color: var(--color-primary);
-  font-family: var(--font-display);
-  font-size: 13px;
+  font-family: 'Comfortaa', sans-serif;
+  font-size: 12px;
   text-decoration: underline;
   cursor: pointer;
   padding: 0;
 }
 
-.profile-header__change-photo:hover {
-  color: var(--color-primary-hover);
-}
-
-/* ── Картки info / stats ───────────────────────────────── */
+/* Картка інфо */
 .profile-card {
-  background: var(--color-card);
-  color: var(--text-on-dark);
-  border-radius: var(--radius-md);
-  padding: 16px;
+  background: #95696b;
+  color: #fff;
+  border-radius: 10px;
+  padding: 18px 22px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  box-shadow: var(--shadow-sm);
-}
-
-.profile-card__head {
-  display: flex;
-  align-items: center;
   gap: 8px;
-}
-
-.profile-card__icon {
-  display: inline-flex;
-  color: var(--text-on-dark);
-}
-
-.profile-card__title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .profile-card__body {
@@ -494,61 +491,56 @@ onMounted(() => {
   flex-direction: column;
   gap: 6px;
   font-size: 13px;
+  height: 100%;
 }
 
 .profile-card__row {
   margin: 0;
   display: flex;
   gap: 6px;
+  align-items: baseline;
   flex-wrap: wrap;
 }
 
 .profile-card__label {
-  color: var(--color-panel-box);
-  font-family: var(--font-body);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .profile-card__value {
-  color: var(--text-on-dark);
-  font-weight: 500;
-}
-
-.profile-card__edit {
-  align-self: flex-start;
-  margin-top: 8px;
-  background: var(--color-primary);
-  color: var(--text-on-primary);
-  border: 2px solid var(--color-primary-dark);
-  border-radius: var(--radius-sm);
-  padding: 6px 16px;
-  font-family: var(--font-display);
+  color: #fff;
+  font-weight: 600;
   font-size: 13px;
-  cursor: pointer;
 }
 
-.profile-card__edit:hover {
+.profile-card__btn {
+  align-self: flex-start;
+  margin-top: auto;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 20px;
+  font-family: 'Comfortaa', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: background 0.15s;
+}
+
+.profile-card__btn:hover {
   background: var(--color-primary-hover);
 }
 
-.profile-card__cancel {
-  align-self: flex-start;
+.profile-card__btn--cancel {
   background: transparent;
-  color: var(--text-on-dark);
-  /* 2px border щоб збігатись з .profile-card__edit (Зберегти). */
-  border: 2px solid var(--text-on-dark);
-  border-radius: var(--radius-sm);
-  padding: 6px 16px;
-  font-family: var(--font-display);
-  font-size: 13px;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
+  border: 2px solid rgba(255, 255, 255, 0.5);
 }
 
-.profile-card__cancel:hover {
-  background: var(--text-on-dark);
-  color: var(--color-card);
+.profile-card__btn--cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .profile-card__edit-row {
@@ -558,99 +550,141 @@ onMounted(() => {
 }
 
 .profile-card__input {
-  padding: 6px 8px;
-  border: 1px solid var(--border-input);
-  border-radius: var(--radius-xs);
-  background: var(--color-input-bg);
-  color: var(--text-on-light);
-  font-family: var(--font-body);
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-family: 'Comfortaa', sans-serif;
   font-size: 13px;
   outline: none;
 }
 
 .profile-card__edit-actions {
   display: flex;
-  align-items: stretch;
   gap: 8px;
   margin-top: 8px;
 }
 
-/* Усередині actions — прибираємо margin-top у кнопок (це робить контейнер). */
-.profile-card__edit-actions .profile-card__edit,
-.profile-card__edit-actions .profile-card__cancel {
-  align-self: auto;
-  margin-top: 0;
+/* Картка статистики */
+.profile-card--stats {
+  align-items: flex-start;
+}
+
+.profile-card__stats-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
 }
 
 /* ── Секції ────────────────────────────────────────────── */
 .profile-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  background: var(--color-panel-box);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  border: 1px solid var(--border-default);
-  box-shadow: var(--shadow-sm);
+  gap: 14px;
+  background: var(--color-panel);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 
 .profile-section__title {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: 18px;
+  font-family: 'Comfortaa', var(--font-display), sans-serif;
+  font-size: 17px;
+  font-weight: 700;
   color: var(--text-on-light);
-  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .profile-section__empty {
   margin: 0;
   text-align: center;
-  font-family: var(--font-body);
   font-size: 14px;
   color: var(--text-muted);
   padding: 16px;
 }
 
-.profile-section__scroll {
+/* Карусель зі стрілками */
+.profile-section__carousel {
   display: flex;
-  gap: 16px;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-section__arrow {
+  flex-shrink: 0;
+  background: #f5c5ca;
+  color: #1a0a0a;
+  border: none;
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+
+.profile-section__arrow:hover {
+  background: #f0aab2;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.profile-section__scroll {
+  flex: 1;
+  display: flex;
+  gap: 14px;
   overflow-x: auto;
-  padding-bottom: 8px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-primary) transparent;
+  padding-bottom: 6px;
+  scrollbar-width: none;
 }
 
 .profile-section__scroll::-webkit-scrollbar {
-  height: 6px;
+  display: none;
 }
 
-.profile-section__scroll::-webkit-scrollbar-thumb {
-  background: var(--color-primary);
-  border-radius: 3px;
-}
-
-/* ── Картка з оцінкою (компактна) ──────────────────────── */
+/* ── Картка з оцінкою ──────────────────────────────────── */
 .rating-card {
   flex-shrink: 0;
-  width: 200px;
+  width: 220px;
+  height: 420px;
   background: var(--color-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   padding: 12px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   color: var(--text-on-dark);
+  box-sizing: border-box;
+}
+
+.rating-card__info {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .rating-card__poster {
   width: 100%;
-  height: 200px;
+  height: 190px;
   overflow: hidden;
-  border-radius: var(--radius-xs);
+  border-radius: 8px;
   background: var(--color-header);
+  flex-shrink: 0;
 }
 
 .rating-card__poster img {
@@ -661,19 +695,25 @@ onMounted(() => {
 
 .rating-card__title {
   margin: 0;
-  font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 12px;
   text-align: center;
-  font-weight: 500;
+  font-weight: 600;
+  line-height: 1.3;
+  height: 32px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rating-card__meta {
   margin: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   font-size: 11px;
-  align-self: flex-start;
 }
 
 .rating-card__meta div {
@@ -681,16 +721,36 @@ onMounted(() => {
   gap: 4px;
 }
 
+.rating-card__meta dt {
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+}
+
+.rating-card__meta dd {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
 .rating-card__btn {
   width: 100%;
+  height: 32px;
   background: var(--color-primary);
-  color: var(--text-on-primary);
-  border: 2px solid var(--color-primary-dark);
-  border-radius: var(--radius-sm);
-  padding: 6px;
-  font-family: var(--font-display);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 0;
+  font-family: 'Comfortaa', sans-serif;
   font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .rating-card__btn:hover {
@@ -701,12 +761,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  flex-shrink: 0;
+  height: 36px;
 }
 
 .rating-card__user-label {
-  font-family: var(--font-display);
   font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* ── Мої відгуки ───────────────────────────────────────── */
@@ -716,26 +778,36 @@ onMounted(() => {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .profile-review {
   display: grid;
-  grid-template-columns: 80px 1fr auto;
-  gap: 12px;
-  align-items: stretch;
+  grid-template-columns: 110px 1fr auto;
+  gap: 16px;
+  align-items: center;
   background: var(--color-card);
-  color: var(--text-on-dark);
-  border-radius: var(--radius-sm);
-  padding: 12px;
+  color: #fff;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+/* Ліва колонка: постер + назва під ним */
+.profile-review__poster-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
 .profile-review__poster {
-  width: 80px;
-  height: 110px;
+  width: 90px;
+  height: 120px;
   overflow: hidden;
-  border-radius: var(--radius-xs);
+  border-radius: 6px;
   background: var(--color-header);
+  flex-shrink: 0;
 }
 
 .profile-review__poster img {
@@ -744,54 +816,58 @@ onMounted(() => {
   object-fit: cover;
 }
 
+.profile-review__work-title {
+  margin: 0;
+  font-size: 11px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.3;
+}
+
+/* Центр: текст */
 .profile-review__body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
-}
-
-.profile-review__work {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 13px;
-  color: var(--color-panel-box);
 }
 
 .profile-review__label {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: 12px;
-  color: var(--color-panel-box);
+  font-size: 14px;
+  color: #fff;
+  font-weight: 600;
 }
 
 .profile-review__text {
   margin: 0;
-  font-family: var(--font-body);
   font-size: 13px;
   word-break: break-word;
+  color: rgba(255, 255, 255, 0.75);
 }
 
+/* Праворуч: кнопки */
 .profile-review__actions {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  align-self: center;
+  gap: 8px;
 }
 
 .profile-review__btn {
   border: none;
-  border-radius: var(--radius-sm);
-  padding: 6px 14px;
-  font-family: var(--font-display);
+  border-radius: 7px;
+  padding: 8px 18px;
+  font-family: 'Comfortaa', sans-serif;
   font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.15s;
 }
 
 .profile-review__btn--edit {
   background: var(--color-primary);
-  color: var(--text-on-primary);
+  color: #fff;
 }
 
 .profile-review__btn--edit:hover {
@@ -800,54 +876,59 @@ onMounted(() => {
 
 .profile-review__btn--delete {
   background: var(--color-header);
-  color: var(--text-on-dark);
+  color: #fff;
 }
 
 .profile-review__btn--delete:hover {
   background: var(--color-primary);
 }
 
+/* Кнопка "Показати більше" */
 .profile-show-more {
   align-self: center;
-  background: transparent;
-  color: var(--text-on-light);
-  border: 1px solid var(--color-card);
-  border-radius: var(--radius-md);
-  padding: 6px 32px;
-  font-family: var(--font-display);
-  font-size: 13px;
+  background: var(--color-card);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 40px;
+  font-family: 'Comfortaa', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: background 0.15s;
 }
 
 .profile-show-more:hover {
-  background: var(--color-card);
-  color: var(--text-on-dark);
+  background: var(--color-primary);
 }
 
 /* ── Адаптив ───────────────────────────────────────────── */
-@media (max-width: 900px) {
+@media (max-width: 700px) {
   .profile-header {
     grid-template-columns: 1fr;
-    gap: 16px;
     text-align: center;
   }
   .profile-header__avatar-col {
     align-items: center;
   }
+  .profile-card__btn {
+    align-self: center;
+  }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 500px) {
   .profile-review {
-    grid-template-columns: 60px 1fr;
+    grid-template-columns: 80px 1fr;
   }
   .profile-review__actions {
     grid-column: 1 / -1;
     flex-direction: row;
     justify-content: flex-end;
   }
-  .profile-review__poster {
-    width: 60px;
-    height: 80px;
+  .profile-review__poster-col {
+    flex-direction: row;
+    align-items: flex-start;
   }
 }
 </style>

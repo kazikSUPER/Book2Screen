@@ -148,7 +148,6 @@ watch(
           :placeholder="t.commentPlaceholder"
           :maxlength="2200"
           :disabled="isSubmitting"
-          @keyup.enter="onSubmit"
         />
         <button type="submit" class="reviews__submit" :disabled="isSubmitting || !text.trim() || isTooLong">
           {{ isSubmitting ? '…' : STR.common.submit }}

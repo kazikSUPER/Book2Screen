@@ -18,6 +18,8 @@ interface UserRating {
   value: number; // 1..5
 }
 
+import { submitRating } from '../services/ratings';
+
 export const useUserRatingsStore = defineStore('user-ratings', () => {
   const ratings = usePersistedRef<UserRating[]>('b2s_user_ratings', []);
 
@@ -30,15 +32,19 @@ export const useUserRatingsStore = defineStore('user-ratings', () => {
     const idx = ratings.value.findIndex((r) => r.workId === workId && r.target === target);
     const safe = Math.max(0, Math.min(5, Math.round(value)));
     if (safe === 0) {
-      // 0 = зняти оцінку
       if (idx >= 0) ratings.value.splice(idx, 1);
-      return;
-    }
-    if (idx >= 0) {
-      ratings.value[idx].value = safe;
     } else {
-      ratings.value.push({ workId, target, value: safe });
+      if (idx >= 0) {
+        ratings.value[idx].value = safe;
+      } else {
+        ratings.value.push({ workId, target, value: safe });
+      }
     }
+
+    // Fire-and-forget sync to the backend
+    submitRating({ workId, target, value: safe }).catch((err) => {
+      console.error('[ratings] Failed to sync rating to backend:', err);
+    });
   }
 
   // Для ProfileView (SCRUM-64) — секція "Мої оцінки".

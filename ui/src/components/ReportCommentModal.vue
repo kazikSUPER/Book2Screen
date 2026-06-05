@@ -67,24 +67,24 @@ function onOverlayClick(e: MouseEvent) {
   <div class="modal-backdrop" @mousedown="onOverlayMouseDown" @click="onOverlayClick">
     <div class="modal-frame" @click.stop @mousedown.stop>
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="report-title">
-      <button class="modal__close" type="button" :aria-label="STR.common.close" @click="$emit('close')">✕</button>
+        <button class="modal__close" type="button" :aria-label="STR.common.close" @click="$emit('close')">✕</button>
 
-      <h2 id="report-title" class="modal__title">{{ t.title }}</h2>
+        <h2 id="report-title" class="modal__title">{{ t.title }}</h2>
 
-      <label class="modal__field">
-        <span class="modal__label">{{ t.reasonLabel }}</span>
-        <select v-model="selectedReason" class="modal__select" :disabled="isSubmitting">
-          <option value="">{{ t.chooseReason }}</option>
-          <option v-for="r in reasons" :key="r" :value="r">{{ r }}</option>
-        </select>
-      </label>
+        <label class="modal__field">
+          <span class="modal__label">{{ t.reasonLabel }}</span>
+          <select v-model="selectedReason" class="modal__select" :disabled="isSubmitting">
+            <option value="">{{ t.chooseReason }}</option>
+            <option v-for="r in reasons" :key="r" :value="r">{{ r }}</option>
+          </select>
+        </label>
 
-      <p v-if="errorMessage" class="modal__error">{{ errorMessage }}</p>
+        <p v-if="errorMessage" class="modal__error">{{ errorMessage }}</p>
 
-      <button type="button" class="modal__submit" :disabled="isSubmitting || !selectedReason" @click="submit">
-        {{ isSubmitting ? t.sending : STR.common.submit }}
-      </button>
-    </div>
+        <button type="button" class="modal__submit" :disabled="isSubmitting || !selectedReason" @click="submit">
+          {{ isSubmitting ? t.sending : STR.common.submit }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -101,7 +101,6 @@ function onOverlayClick(e: MouseEvent) {
   z-index: 1000;
 }
 
-
 .modal-frame {
   background: #3d0f1a;
   padding: 30px;
@@ -112,7 +111,8 @@ function onOverlayClick(e: MouseEvent) {
 }
 
 .modal {
-  position: relative;background: var(--color-modal-bg);
+  position: relative;
+  background: var(--color-modal-bg);
   border: 2px solid var(--color-card);
   border-radius: var(--radius-md);
   padding: 24px 20px 20px;

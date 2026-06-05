@@ -56,9 +56,7 @@ function setActive(i: number): void {
     <h2 class="diff-map__title">{{ t.differencesTitle }}</h2>
 
     <!-- Плейсхолдер коли точок ще немає (адмін їх ще не додав). -->
-    <p v-if="points.length === 0" class="diff-map__empty">
-      Карта відмінностей для цього твору ще не створена
-    </p>
+    <p v-if="points.length === 0" class="diff-map__empty">Карта відмінностей для цього твору ще не створена</p>
 
     <!-- ── Горизонтальна вісь точок ─────────────────────── -->
     <div v-else class="diff-map__axis" role="tablist">
@@ -117,7 +115,7 @@ function setActive(i: number): void {
   font-size: 24px;
   font-family: var(--font-display);
   font-weight: 500;
-  color: #23080A;
+  color: #23080a;
   text-align: center;
 }
 
@@ -183,7 +181,7 @@ function setActive(i: number): void {
   height: 32px;
   border-radius: 50%;
   border: none;
-  background: #23080A; /* Темні кружечки */
+  background: #23080a; /* Темні кружечки */
   color: #fff;
   font-family: var(--font-display);
   font-size: 14px;
@@ -193,7 +191,7 @@ function setActive(i: number): void {
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .diff-map__point::after {
@@ -219,7 +217,7 @@ function setActive(i: number): void {
 /* ── Картка деталі ──────────────────────────────────────── */
 .diff-map__detail {
   position: relative;
-  background-color: #B18A88; /* Світло-коричневий фон картки (як на скріні) */
+  background-color: #b18a88; /* Світло-коричневий фон картки (як на скріні) */
   border-radius: var(--radius-md);
   padding: 24px;
   max-width: 800px;
@@ -234,7 +232,7 @@ function setActive(i: number): void {
 .diff-map__detail-title {
   font-size: 20px;
   font-family: var(--font-display);
-  color: #23080A;
+  color: #23080a;
   text-align: center;
   margin: 0;
   font-weight: 500;
@@ -260,7 +258,7 @@ function setActive(i: number): void {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
 .diff-map__col-label {
