@@ -12,7 +12,6 @@ using Xunit;
 public class WorkServiceTests : IDisposable
 {
     private readonly ApplicationDbContext _context;
-    private readonly VoteService _voteService;
     private readonly WorkService _service;
 
     public WorkServiceTests()

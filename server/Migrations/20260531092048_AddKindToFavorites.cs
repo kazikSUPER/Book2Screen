@@ -1,9 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
-
-#nullable disable
+﻿// <copyright file="20260531092048_AddKindToFavorites.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
 
 namespace Book2Screen.Migrations
 {
+    using Microsoft.EntityFrameworkCore.Migrations;
+
     /// <inheritdoc />
     public partial class AddKindToFavorites : Migration
     {
@@ -16,7 +18,7 @@ namespace Book2Screen.Migrations
                 type: "character varying(20)",
                 maxLength: 20,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: string.Empty);
         }
 
         /// <inheritdoc />

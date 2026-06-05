@@ -20,9 +20,8 @@ public class ReviewRequest
     /// <summary>
     /// Gets or sets текст відгуку.
     /// </summary>
-    [Required]
-    [StringLength(2000, MinimumLength = 10)]
-    public string Text { get; set; } = null!;
+    [StringLength(2000)]
+    public string? Text { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether чи містить відгук спойлери.

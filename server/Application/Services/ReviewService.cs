@@ -46,17 +46,32 @@ public class ReviewService : IReviewService
         using var transaction = await this.context.Database.BeginTransactionAsync();
         try
         {
-            var review = new Review
-            {
-                UserId = userId,
-                WorkId = request.WorkId,
-                Text = request.Text,
-                IsSpoiler = request.IsSpoiler,
-                Rating = request.Rating,
-                TargetType = request.TargetType.ToLower(),
-            };
+            var targetTypeLower = request.TargetType.ToLower();
+            var existingReview = await this.context.Reviews
+                .FirstOrDefaultAsync(r => r.UserId == userId && r.WorkId == request.WorkId && r.TargetType == targetTypeLower);
 
-            await this.context.Reviews.AddAsync(review);
+            Review review;
+            if (existingReview != null)
+            {
+                review = existingReview;
+                review.Text = request.Text ?? review.Text; // Keep old text if new is null
+                review.IsSpoiler = request.IsSpoiler;
+                review.Rating = request.Rating;
+            }
+            else
+            {
+                review = new Review
+                {
+                    UserId = userId,
+                    WorkId = request.WorkId,
+                    Text = request.Text,
+                    IsSpoiler = request.IsSpoiler,
+                    Rating = request.Rating,
+                    TargetType = targetTypeLower,
+                };
+                await this.context.Reviews.AddAsync(review);
+            }
+
             await this.context.SaveChangesAsync();
             await transaction.CommitAsync();
 
@@ -93,8 +108,8 @@ public class ReviewService : IReviewService
                 ReviewId = r.Id,
                 WorkId = r.WorkId,
                 UserId = r.UserId ?? Guid.Empty,
-                UserNickname = r.User != null ? r.User.Username : "Deleted User",
-                UserAvatar = r.User != null ? r.User.AvatarUrl : null,
+                UserNickname = r.User!.Username,
+                UserAvatar = r.User!.AvatarUrl,
                 Text = r.Text,
                 IsSpoiler = r.IsSpoiler,
                 Rating = r.Rating,
@@ -158,8 +173,8 @@ public class ReviewService : IReviewService
                 ReviewId = r.Id,
                 WorkId = r.WorkId,
                 UserId = r.UserId ?? Guid.Empty,
-                UserNickname = r.User != null ? r.User.Username : "Deleted User",
-                UserAvatar = r.User != null ? r.User.AvatarUrl : null,
+                UserNickname = r.User!.Username,
+                UserAvatar = r.User!.AvatarUrl,
                 Text = r.Text,
                 IsSpoiler = r.IsSpoiler,
                 Rating = r.Rating,
@@ -200,19 +215,19 @@ public class ReviewService : IReviewService
                 Status = r.Status,
                 CreatedAt = r.CreatedAt,
                 ReviewText = r.Review != null ? r.Review.Text : "Review deleted",
-                Review = r.Review != null ? new ReviewResponse
+                Review = r.Review == null ? null : new ReviewResponse
                 {
                     ReviewId = r.Review.Id,
                     WorkId = r.Review.WorkId,
                     UserId = r.Review.UserId ?? Guid.Empty,
-                    UserNickname = r.Review.User != null ? r.Review.User.Username : "Deleted User",
-                    UserAvatar = r.Review.User != null ? r.Review.User.AvatarUrl : null,
+                    UserNickname = r.Review.User!.Username ?? "Deleted User",
+                    UserAvatar = r.Review.User!.AvatarUrl,
                     Text = r.Review.Text,
                     IsSpoiler = r.Review.IsSpoiler,
                     Rating = r.Review.Rating,
                     TargetType = r.Review.TargetType,
                     CreatedAt = r.Review.CreatedAt,
-                } : null,
+                },
             })
             .ToListAsync();
     }
