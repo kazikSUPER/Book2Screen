@@ -2,7 +2,7 @@
 
 > **Система відгуків і рейтингів книг та їх екранізацій** — порівняння книги та фільму/серіалу на основі відгуків і рейтингів користувачів.
 
-Клієнтська частина (Frontend) проєкту Book2Screen.
+Повнофункціональний веб-застосунок (Fullstack), що включає клієнтську частину на Vue.js та серверну частину на ASP.NET Core.
 
 ---
 
@@ -44,8 +44,17 @@ Book2Screen — це платформа, де користувачі можут�
 | Axios | 1.15.0 | HTTP-клієнт з JWT |
 | ESLint + Prettier | 10.1 / 3.8 | Лінтинг і форматування |
 
-### Backend (окремий репозиторій)
-C# / ASP.NET Core + PostgreSQL + Entity Framework Core
+### Backend
+| Технологія | Версія | Призначення |
+|------------|--------|-------------|
+| .NET 10 | 10.0 | Runtime |
+| ASP.NET Core | 10.0 | Web Framework |
+| Entity Framework Core | 10.0 | ORM |
+| PostgreSQL | 15 | Database |
+| Npgsql | 10.0 | Data Provider |
+| AutoMapper | 16.1 | DTO Mapping |
+| FluentValidation | 11.9 | Validation |
+| StyleCop | 1.2 | Code Style |
 
 ---
 
@@ -54,10 +63,13 @@ C# / ASP.NET Core + PostgreSQL + Entity Framework Core
 ### Prerequisites
 
 - **Node.js** ≥ 20.x ([завантажити](https://nodejs.org/))
-- **npm** ≥ 10.x (встановлюється разом із Node.js)
-- Запущений backend-сервер (див. репозиторій backend-команди)
+- **npm** ≥ 10.x
+- **.NET SDK 10.0** ([завантажити](https://dotnet.microsoft.com/download))
+- **Docker & Docker Compose** (рекомендовано)
 
-### Installation
+### Installation & Running (Docker - Quick Start)
+
+Найпростіший спосіб запустити весь проєкт (Frontend + Backend + Database):
 
 1. Клонувати репозиторій:
    ```bash
@@ -65,35 +77,34 @@ C# / ASP.NET Core + PostgreSQL + Entity Framework Core
    cd Book2Screen
    ```
 
-2. Встановити залежності:
-   ```bash
-   npm install
-   ```
-
-3. Створити файл `.env` на основі шаблону:
+2. Створити файл `.env` на основі шаблону:
    ```bash
    cp .env.example .env
    ```
 
-4. У `.env` вказати URL backend-сервера:
+3. Запустити через Docker Compose:
+   ```bash
+   docker-compose up --build
    ```
-   VITE_API_URL=http://localhost:5000
-   ```
 
-### Running
+Після цього:
+- **Frontend:** `http://localhost:3000`
+- **Backend API:** `http://localhost:5000`
+- **Swagger UI:** `http://localhost:5000/swagger`
+- **pgAdmin:** `http://localhost:5050`
 
-```bash
-# Dev-сервер (з hot reload)
-npm run dev
+### Manual Setup
 
-# Production build
-npm run build
+#### Backend
+1. Перейти до папки сервера: `cd server`
+2. Відновити пакети: `dotnet restore`
+3. Застосувати міграції: `dotnet ef database update`
+4. Запустити: `dotnet run`
 
-# Preview production build
-npm run preview
-```
-
-Після запуску `npm run dev` застосунок буде доступний на `http://localhost:5173`.
+#### Frontend
+1. Перейти до папки UI: `cd ui`
+2. Встановити залежності: `npm install`
+3. Запустити: `npm run dev`
 
 ---
 
@@ -115,40 +126,22 @@ npm run preview
 
 ```
 Book2Screen/
-├── docs/                      # Внутрішня документація
-│   ├── naming-conventions.md  # Правила іменування
-│   └── tech-stack.md          # Обґрунтування стеку
-├── public/                    # Статичні ресурси (favicon тощо)
-├── src/
-│   ├── assets/                # Зображення, SVG
-│   ├── components/            # UI-компоненти (модальні вікна тощо)
-│   │   ├── LoginModal.vue
-│   │   ├── RegisterModal.vue
-│   │   └── ResetPasswordModal.vue
-│   ├── views/                 # Сторінки (маршрути)
-│   │   ├── HomeView.vue
-│   │   ├── DetailView.vue     # Сторінка порівняння книги/фільму
-│   │   ├── SearchView.vue
-│   │   └── LoginView.vue
-│   ├── services/              # API-інтеграція
-│   │   ├── api.ts             # Axios клієнт + JWT interceptor
-│   │   └── items.ts           # Запити ресурсів
-│   ├── state/                 # Pinia stores
-│   │   └── user.ts            # Auth state (JWT, email, isAuthenticated)
-│   ├── hooks/                 # Composables (use-функції)
-│   │   └── useFilter.ts       # Логіка фільтрації
-│   ├── router/                # Конфігурація Vue Router
-│   │   └── index.ts
-│   ├── App.vue                # Root-компонент (layout)
-│   ├── main.ts                # Entry point
-│   └── style.css              # Глобальні стилі
-├── .editorconfig              # Універсальні правила форматування
-├── .env.example               # Шаблон змінних середовища
-├── eslint.config.js           # ESLint Flat Config
-├── .prettierrc                # Налаштування Prettier
-├── .github/
-│   └── pull_request_template.md  # PR-шаблон
-└── vite.config.ts
+├── server/                    # Backend (ASP.NET Core)
+│   ├── API (Web)/             # Controllers, Middleware, Configs
+│   ├── Application/           # Services, DTOs, Validators, Interfaces
+│   ├── Domain/                # Entities, Custom Exceptions
+│   └── Infrastructure/        # DB Context, Migrations, External Services
+├── ui/                        # Frontend (Vue 3 + Vite)
+│   ├── src/
+│   │   ├── components/        # UI-компоненти
+│   │   ├── views/             # Сторінки (маршрути)
+│   │   ├── services/          # API-інтеграція
+│   │   └── state/             # Pinia stores
+│   └── ...
+├── Book2Screen.Test/          # Unit & Integration Tests (xUnit)
+├── docs/                      # Документація проєкту
+├── compose.yaml               # Docker Compose конфігурація
+└── README.md
 ```
 
 Детальний опис архітектури — у документі *4.2.3 SAD: Internal View* у [Project Hub](https://www.notion.so/Project-Hub-Book2Screen-322bbedd49dc80b48c0ad04db0152497).
@@ -157,16 +150,23 @@ Book2Screen/
 
 ## Архітектура
 
-Фронтенд побудований за принципами **компонентної архітектури з чітким поділом відповідальності**, що повторює Clean Architecture-підхід backend-частини:
+Проєкт побудований на принципах **Clean Architecture** (Backend) та **Component-Based Architecture** (Frontend):
 
-| Шар | Папка | Відповідальність |
-|-----|-------|------------------|
-| **Pages** | `views/` | Сторінки, прив'язані до маршрутів |
-| **Presentation** | `components/` | Перевикористовувані UI-компоненти |
-| **Services** | `services/` | Інтеграція з Backend API |
-| **State** | `state/` | Глобальний стан (Pinia) |
-| **Hooks** | `hooks/` | Перевикористовувана логіка |
-| **Routing** | `router/` | Маршрутизація SPA |
+### Backend (Clean Architecture)
+| Шар | Відповідальність |
+|-----|------------------|
+| **Domain** | Корневі сутності та бізнес-виключення |
+| **Application** | Бізнес-логіка, DTO, валідатори, інтерфейси |
+| **Infrastructure** | Робота з БД (EF Core), зовнішні сервіси (Email, Tokens) |
+| **API (Web)** | Контролери, Middleware, конфігурація DI |
+
+### Frontend
+| Шар | Відповідальність |
+|-----|------------------|
+| **Pages (Views)** | Сторінки, прив'язані до маршрутів |
+| **Presentation** | Перевикористовувані UI-компоненти |
+| **Services** | Інтеграція з Backend API (Axios) |
+| **State** | Глобальний стан (Pinia) |
 
 **Авторизація:** Stateless JWT. Токен зберігається в Pinia store і автоматично додається до кожного HTTP-запиту через axios interceptor.
 
@@ -195,7 +195,7 @@ Book2Screen/
 
 ---
 
-##Процес розробки
+## Процес розробки
 
 - **Code Style:** ESLint + Prettier з автоматичним форматуванням при збереженні (Format on Save).
 - **Naming Conventions:** див. [`docs/naming-conventions.md`](./docs/naming-conventions.md).
