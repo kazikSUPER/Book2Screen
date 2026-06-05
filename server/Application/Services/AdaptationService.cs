@@ -80,7 +80,29 @@ public class AdaptationService : IAdaptationService
         var adaptation = this.mapper.Map<Domain.Entities.Adaptation>(adaptationDto);
         adaptation.Id = Guid.NewGuid();
 
+        // BUG-FIX: Every adaptation MUST be linked to a Work to be visible in the main list.
+        // If we are creating a standalone adaptation from admin, we create a Work and a Book record too.
+        var book = new Domain.Entities.Book
+        {
+            Id = Guid.NewGuid(),
+            Title = adaptation.Title,
+            Description = adaptation.Description,
+            Genre = "Драма", // Default genre
+        };
+
+        var work = new Domain.Entities.Work
+        {
+            Id = Guid.NewGuid(),
+            Title = adaptation.Title,
+            BookId = book.Id,
+            AdaptationId = adaptation.Id,
+            Summary = adaptation.Description,
+        };
+
+        await this.context.Books.AddAsync(book);
         await this.context.Adaptations.AddAsync(adaptation);
+        await this.context.Works.AddAsync(work);
+        
         await this.context.SaveChangesAsync();
 
         return this.mapper.Map<AdaptationDto>(adaptation);
