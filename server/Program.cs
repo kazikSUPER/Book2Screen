@@ -275,16 +275,20 @@ using (var scope = app.Services.CreateScope())
         {
             logger.LogInformation("Applying migrations and seeding (Attempts left: {Count})", retryCount);
 
+            // 1. Перевірка з'єднання
+            if (!await db.Database.CanConnectAsync())
+            {
+                logger.LogWarning("Database is not ready yet. Retrying...");
+                throw new InvalidOperationException("Cannot connect to DB");
+            }
+
             // ---------------------------------------------------------------
             // SCHEMA FREEZING — RC integrity check
-            // Перевіряємо, що в білді немає незапланованих pending міграцій.
-            // Якщо знайдено міграції яких немає в БД — старт блокується.
-            // Це захищає Release Candidate від випадкових змін схеми.
             // ---------------------------------------------------------------
             var environment = app.Environment.EnvironmentName;
             var isProductionLike = environment is "Production" or "Staging" or "ReleaseCandidate";
 
-            if (isProductionLike)
+            if (isProductionLike && db.Database.IsRelational())
             {
                 var pendingMigrations = (await db.Database.GetPendingMigrationsAsync()).ToList();
 
@@ -308,45 +312,33 @@ using (var scope = app.Services.CreateScope())
                     "Schema freeze check passed: database is up to date with {Count} applied migration(s).",
                     (await db.Database.GetAppliedMigrationsAsync()).Count());
             }
+            else if (db.Database.IsRelational())
+            {
+                // Development / Test — застосовуємо міграції автоматично
+                await db.Database.MigrateAsync();
+                logger.LogInformation("Database migrations applied successfully.");
+            }
             else
             {
-                // Development / Test — застосовуємо міграції автоматично як раніше
-                try
-                {
-                    await db.Database.MigrateAsync();
-                    logger.LogInformation("Database migrations applied successfully.");
-                }
-                catch (Exception migrateEx)
-                {
-                    logger.LogWarning(migrateEx, "Migration skipped - database may already be up to date. Message: {Message}", migrateEx.Message);
-                }
+                logger.LogInformation("Skipping migrations for non-relational database.");
             }
 
             // ---------------------------------------------------------------
             // Seed
             // ---------------------------------------------------------------
-            try
-            {
-                await DbSeeder.SeedAsync(db);
-                logger.LogInformation("Database seeding completed.");
-            }
-            catch (Exception seedEx)
-            {
-                logger.LogWarning(seedEx, "Database seeding skipped - data may already exist. Message: {Message}", seedEx.Message);
-            }
+            await DbSeeder.SeedAsync(db);
+            logger.LogInformation("Database seeding completed.");
 
             logger.LogInformation("Database is ready.");
 
-            // Warmup EF Core and JIT (BUG-001)
+            // Warmup EF Core and JIT
             logger.LogInformation("Warming up application...");
             _ = await db.Works.AsNoTracking().FirstOrDefaultAsync();
-            _ = await db.Votes.AsNoTracking().FirstOrDefaultAsync();
             logger.LogInformation("Warmup completed.");
             break;
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Schema freeze"))
         {
-            // Schema freeze violation — пробрасуємо без retry, одразу зупиняємо
             throw;
         }
         catch (Exception ex)

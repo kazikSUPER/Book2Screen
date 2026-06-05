@@ -181,6 +181,7 @@ export interface UserProfileDto {
 /** Swagger: FavoriteRequest */
 export interface FavoriteRequest {
   workId: string;
+  kind?: string;
 }
 
 // ===== Admin: Adaptation DTO =====

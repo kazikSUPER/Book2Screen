@@ -106,6 +106,8 @@ const emptyForm = (): BookForm => ({
   extraAdaptations: [],
 });
 
+import { usePersistedRef } from '../composables/usePersistedRef';
+
 // Додає блок ще однієї екранізації під формою.
 function addAdaptation(): void {
   form.value.extraAdaptations.push({
@@ -122,7 +124,8 @@ function removeAdaptation(index: number): void {
   form.value.extraAdaptations.splice(index, 1);
 }
 
-const form = ref<BookForm>(emptyForm());
+// BUG-048: зберігаємо стан форми у sessionStorage, щоб дані не зникали при випадковому перемиканні вкладок.
+const form = usePersistedRef<BookForm>('admin_book_draft', emptyForm(), sessionStorage);
 const isSubmitting = ref(false);
 
 const genreOptions = GENRES;

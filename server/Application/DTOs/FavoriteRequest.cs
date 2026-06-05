@@ -20,5 +20,6 @@ public class FavoriteRequest
     /// <summary>
     /// Gets or sets тип (read/watch).
     /// </summary>
-    public string Kind { get; set; } = "favorite";
+    [Required]
+    public string Kind { get; set; } = "read";
 }

@@ -65,8 +65,12 @@ services:
         image: dpage/pgadmin4
         container_name: project_pgadmin
         environment:
-            - PGADMIN_DEFAULT_EMAIL=admin@admin.com
-            - PGADMIN_DEFAULT_PASSWORD=admin
+            - PGADMIN_DEFAULT_EMAIL=admin@book2screen.com
+            - PGADMIN_DEFAULT_PASSWORD=Admin123!
+            - PGADMIN_SETUP_EMAIL=admin@book2screen.com
+            - PGADMIN_SETUP_PASSWORD=Admin123!
+        stdin_open: true
+        tty: true
         depends_on:
             db:
                 condition: service_healthy
@@ -74,8 +78,13 @@ services:
             - "5050:80"
         networks:
             - project_network
+        volumes:
+            - pgadmin_data:/var/lib/pgadmin
 
 networks:
     project_network:
         driver: bridge
+
+volumes:
+    pgadmin_data:
   

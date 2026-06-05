@@ -15,9 +15,10 @@ import { USE_MOCK_FALLBACK } from './env';
  */
 
 // GET /api/v1/Favorites
-export async function fetchFavorites(): Promise<BookScreenItem[]> {
+export async function fetchFavorites(kind?: string): Promise<BookScreenItem[]> {
   try {
-    const response = await apiClient.get<BookScreenItem[]>('/api/v1/Favorites');
+    const url = kind ? `/api/v1/Favorites?kind=${kind}` : '/api/v1/Favorites';
+    const response = await apiClient.get<BookScreenItem[]>(url);
     return response.data;
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
@@ -29,13 +30,13 @@ export async function fetchFavorites(): Promise<BookScreenItem[]> {
 }
 
 // POST /api/v1/Favorites
-export async function addFavorite(workId: string): Promise<void> {
-  const body: FavoriteRequest = { workId };
+export async function addFavorite(workId: string, kind?: string): Promise<void> {
+  const body: FavoriteRequest = { workId, kind: kind || 'read' };
   try {
     await apiClient.post('/api/v1/Favorites', body);
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
-      console.warn('[favorites] Mock add:', workId);
+      console.warn('[favorites] Mock add:', workId, kind);
       return;
     }
     throw err;
@@ -43,12 +44,13 @@ export async function addFavorite(workId: string): Promise<void> {
 }
 
 // DELETE /api/v1/Favorites/{workId}
-export async function removeFavorite(workId: string): Promise<void> {
+export async function removeFavorite(workId: string, kind?: string): Promise<void> {
   try {
-    await apiClient.delete(`/api/v1/Favorites/${workId}`);
+    const url = kind ? `/api/v1/Favorites/${workId}?kind=${kind}` : `/api/v1/Favorites/${workId}`;
+    await apiClient.delete(url);
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
-      console.warn('[favorites] Mock remove:', workId);
+      console.warn('[favorites] Mock remove:', workId, kind);
       return;
     }
     throw err;

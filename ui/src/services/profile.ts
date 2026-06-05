@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import type { ReviewResponse, UserProfileDto } from './types';
+import type { ReviewRequest, ReviewResponse, UserProfileDto } from './types';
 import { USE_MOCK_FALLBACK } from './env';
 
 /**
@@ -83,6 +83,19 @@ export async function fetchMyReviews(): Promise<ReviewResponse[]> {
           createdAt: now,
         },
       ];
+    }
+    throw err;
+  }
+}
+
+// PUT /api/v1/Reviews/{id} — оновити свій відгук
+export async function updateMyReview(reviewId: string, req: ReviewRequest): Promise<void> {
+  try {
+    await apiClient.put(`/api/v1/Reviews/${reviewId}`, req);
+  } catch (err) {
+    if (USE_MOCK_FALLBACK) {
+      console.warn('[profile] Mock update review:', reviewId);
+      return;
     }
     throw err;
   }

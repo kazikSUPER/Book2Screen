@@ -158,6 +158,44 @@ function onAvatarChange(e: Event): void {
 }
 
 // ── Reviews actions ──────────────────────────────────────────
+const editingReview = ref<ReviewResponse | null>(null);
+
+function startEditReview(r: ReviewResponse): void {
+  // Клонуємо об'єкт, щоб не змінювати оригінал до збереження
+  editingReview.value = { ...r };
+}
+
+function cancelEditReview(): void {
+  editingReview.value = null;
+}
+
+import { updateMyReview } from '../services/profile';
+
+async function saveEditReview(): Promise<void> {
+  if (!editingReview.value) return;
+  try {
+    const updated = editingReview.value;
+    await updateMyReview(updated.reviewId, {
+      workId: updated.workId,
+      text: updated.text,
+      isSpoiler: updated.isSpoiler,
+      rating: updated.rating,
+      targetType: updated.targetType || 'comparison'
+    });
+    
+    // Оновлюємо локальний стейт
+    const idx = myReviews.value.findIndex(r => r.reviewId === updated.reviewId);
+    if (idx !== -1) {
+      myReviews.value[idx] = updated;
+    }
+    
+    editingReview.value = null;
+    notifications.pushSuccess('Відгук успішно оновлено');
+  } catch (err) {
+    notifications.pushError(extractErrorMessage(err));
+  }
+}
+
 async function deleteReview(reviewId: string): Promise<void> {
   try {
     await deleteMyReview(reviewId);
@@ -337,7 +375,7 @@ onMounted(() => {
             <button
               type="button"
               class="profile-review__btn profile-review__btn--edit"
-              @click="router.push({ name: 'detail', params: { id: r.workId } })"
+              @click="startEditReview(r)"
             >
               {{ STR.common.edit }}
             </button>
@@ -366,10 +404,79 @@ onMounted(() => {
         <WorkCard v-for="w in wishWorks" :key="w.id" :item="w" />
       </div>
     </section>
+
+    <!-- ── Модалка редагування відгуку ──────────────────────────────── -->
+    <div v-if="editingReview" class="modal-overlay" @click.self="cancelEditReview">
+      <div class="modal-content">
+        <h3>Редагувати відгук</h3>
+        <textarea v-model="editingReview.text" class="modal-textarea" :maxlength="2000"></textarea>
+        <div class="modal-actions">
+          <button @click="cancelEditReview" class="btn-cancel">Скасувати</button>
+          <button @click="saveEditReview" class="btn-save">Зберегти</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&display=swap');
+
+/* ── Модалка редагування ───────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-content {
+  background: var(--color-page);
+  padding: 24px;
+  border-radius: var(--radius-md);
+  width: 90%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.modal-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-md);
+  background: var(--color-input-bg);
+  color: var(--text-on-light);
+  font-family: var(--font-body);
+  resize: vertical;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.btn-cancel {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-input);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.btn-save {
+  background: var(--color-primary);
+  color: var(--text-on-primary);
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+
+/* ── Сторінка ───────────────────────────────────────────── */
 .profile {
   display: flex;
   flex-direction: column;

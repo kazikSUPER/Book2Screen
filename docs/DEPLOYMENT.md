@@ -1,46 +1,77 @@
-# Інструкція з розгортання Book2Screen
+# Інструкція з розгортання проекту Book2Screen
 
-Цей документ містить інструкції щодо розгортання бекенду та фронтенду проекту Book2Screen за допомогою Docker та GitHub Actions.
+Цей документ описує процес розгортання системи в різних середовищах: локальному (Docker Desktop) та хмарному (Production).
 
-## 📋 Системні вимоги
-- Docker та Docker Compose.
-- Акаунт на Docker Hub.
-- База даних PostgreSQL (рекомендовано Supabase).
-- GitHub репозиторій для налаштування CI/CD.
+---
 
-## 🛠 Налаштування GitHub Secrets
-Для роботи автоматичного розгортання (CD) необхідно додати наступні секрети у вашому репозиторії (`Settings > Secrets and variables > Actions`):
+## 1. Системні вимоги
+- **Docker Desktop** (з підтримкою Compose)
+- **.NET 10 SDK** (для локальної розробки без Docker)
+- **Node.js 20+** (для локальної розробки UI)
 
-| Секрет | Опис | Приклад |
-| :--- | :--- | :--- |
-| `DOCKERHUB_USERNAME` | Ваше ім'я користувача на Docker Hub | `myuser` |
-| `DOCKERHUB_TOKEN` | Access Token для Docker Hub | `dckr_pat_...` |
-| `DB_CONNECTION_STRING` | Рядок підключення до PostgreSQL | `Host=...;Database=...;Username=...;Password=...` |
-| `JWT_SECRET` | Секретний ключ для JWT токенів | `SuperSecretKey123!` |
-| `JWT_ISSUER` | Видавець токена | `Book2ScreenAPI` |
-| `JWT_AUDIENCE` | Аудиторія токена | `Book2ScreenClient` |
-| `JWT_EXPIRY_MINUTES` | Час життя токена у хвилинах | `60` |
-| `ALLOWED_ORIGINS` | Дозволені домени для CORS (через кому) | `https://my-app.vercel.app` |
+---
 
-## 🚀 Розгортання через CI/CD (Автоматично)
-1. **CI Pipeline**: Кожен Pull Request до гілок `main` або `develop` запускає автоматичне збирання та тестування.
-2. **CD Pipeline**: Кожен Push у гілку `main` автоматично збирає Docker-образи та завантажує їх на Docker Hub.
+## 2. Локальне розгортання (через Docker Compose)
 
-## 🐳 Локальне розгортання через Docker
-Якщо ви хочете запустити проект локально у Docker-контейнерах:
+Це найшвидший спосіб підняти повний стек проекту.
 
-1. Створіть файл `.env` у корені проекту на основі `.env.example`.
-2. Виконайте команду:
-   ```bash
-   docker-compose up --build
-   ```
+### Крок 1: Підготовка .env
+Створіть файл `.env` у корені проекту на основі `.env.example`:
+```bash
+cp .env.example .env
+```
 
-## 🔍 Перевірка стану (Health Checks)
-Після розгортання ви можете перевірити стан системи за адресою:
-`https://<your-api-domain>/health`
+### Крок 2: Запуск контейнерів
+```bash
+docker compose up -d
+```
 
-Він покаже статус підключення до бази даних та готовність API.
+### Крок 3: Доступ до сервісів
+- **Frontend (UI)**: [http://localhost:3000](http://localhost:3000)
+- **Backend (API)**: [http://localhost:5000](http://localhost:5000)
+- **Swagger**: [http://localhost:5000/swagger](http://localhost:5000/swagger)
+- **pgAdmin**: [http://localhost:5050](http://localhost:5050)
+  - Login: `admin@book2screen.com`
+  - Pass: `Admin123!` (або те, що ви вказали в compose.yaml)
 
-## 🛡 Безпека та Обмеження
-- **Rate Limiting**: Впроваджено обмеження: 100 запитів/хв глобально та 10 запитів/хв для авторизації.
-- **CORS**: Обмежено доменами, вказаними у `ALLOWED_ORIGINS`.
+---
+
+## 3. Конфігурація бази даних (Cloud DB)
+
+Для продуктивного використання рекомендується використовувати **Supabase** або будь-який інший керований PostgreSQL.
+
+1. Отримайте рядок підключення (Connection String).
+2. Оновіть змінну `DB_CONNECTION_STRING` у вашому `.env` файлі.
+3. Система автоматично виконає міграції при першому запуску (якщо встановлено `ASPNETCORE_ENVIRONMENT=Development`).
+
+---
+
+## 4. Механізм Schema Freezing (Stage 6)
+
+У проекті впроваджено захист від випадкових змін схеми БД на етапі Release Candidate.
+
+Якщо ви встановите:
+```yaml
+environment:
+  - ASPNETCORE_ENVIRONMENT=ReleaseCandidate
+```
+Бекенд-контейнер перевірить наявність pending міграцій. Якщо вони є — сервер **не запуститься**, щоб запобігти неузгодженості даних. Усі зміни схеми мають бути перевірені та зафіксовані перед деплоєм у RC/Prod.
+
+---
+
+## 5. Безпека Docker
+
+- Бекенд працює під **non-root користувачем** (`app`).
+- Використовується внутрішній порт **8080** (мапиться на **5000** зовні).
+- Впроваджено **Rate Limiting** (100 зап/хв глобально, 10 зап/хв для Auth).
+
+---
+
+## 6. CI/CD Пайплайни
+
+Процес автоматизовано через GitHub Actions:
+- **CI (ci.yml)**: Запускається при кожному Push/PR. Виконує білд бекенду, фронтенду та запуск 110+ тестів.
+- **CD (cd.yml)**: Запускається при злитті в `main`/`develop`. Автоматично збирає Docker-образи та пушить їх на Docker Hub.
+
+---
+*Документ актуалізовано для Етапу 6 (Фінальна здача).*

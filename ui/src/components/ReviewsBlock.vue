@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import type { ReviewResponse } from '../services/types';
+import type { ReviewResponse, ReviewTargetType } from '../services/types';
 import { fetchReviews, submitReview } from '../services/reviews';
 import { useUserStore } from '../state/user';
 import { useUserRatingsStore } from '../state/userRatings';
@@ -36,6 +36,7 @@ const errorMessage = ref('');
 // ── Форма коментаря ────────────────────────────────────────
 const text = ref('');
 const isSpoiler = ref(false);
+const targetType = ref<ReviewTargetType>('comparison');
 const isSubmitting = ref(false);
 
 // Скільки коментарів показуємо зараз (інші — за "Показати більше").
@@ -71,15 +72,12 @@ async function onSubmit(): Promise<void> {
     return;
   }
   const trimmed = text.value.trim();
-  // BUG-037 / BUG-030: бек чекає 10..2000 символів. Валідуємо клієнтсько.
-  if (trimmed.length < 10) {
-    notifications.pushWarning(t.commentTooShort);
-    return;
-  }
+  // BUG-051: Видалили валідацію trimmed.length < 10, щоб бекенд міг прийняти просто рейтинг (BUG-035) або повернути 400.
   if (trimmed.length > 2000) {
     notifications.pushWarning(t.commentTooLong);
     return;
   }
+
   isSubmitting.value = true;
   try {
     // Прив'язуємо рейтинг із userRatings (середнє між book/film, якщо обидва є).
@@ -94,7 +92,7 @@ async function onSubmit(): Promise<void> {
       text: trimmed,
       isSpoiler: isSpoiler.value,
       rating,
-      targetType: 'comparison',
+      targetType: targetType.value,
     });
     // Додаємо у початок (найновіший зверху).
     reviews.value.unshift(created);
@@ -159,6 +157,13 @@ watch(
           <input v-model="isSpoiler" type="checkbox" :disabled="isSubmitting" />
           <span>{{ t.markSpoiler }}</span>
         </label>
+        
+        <select v-model="targetType" class="reviews__target-select" :disabled="isSubmitting">
+          <option value="comparison">Загальний відгук (порівняння)</option>
+          <option value="book">Відгук про книгу</option>
+          <option value="adaptation">Відгук про фільм</option>
+        </select>
+
         <!-- BUG-037: лічильник символів. Червоніє при перевищенні. -->
         <span class="reviews__counter" :class="{ 'reviews__counter--error': isTooLong }">
           {{ text.length }} / 2000
