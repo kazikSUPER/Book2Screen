@@ -18,9 +18,9 @@ public class VoteRequest
     public required Guid WorkId { get; set; }
 
     /// <summary>
-    /// Gets or sets тип голосу: "book" (книга краща) або "movie" (адаптація краща).
+    /// Gets or sets тип голосу: "book", "movie" або "adaptation".
     /// </summary>
     [Required]
-    [RegularExpression("^(book|movie|BOOK|MOVIE)$", ErrorMessage = "VoteType must be 'book' or 'movie'")]
+    [RegularExpression("^(book|movie|adaptation|BOOK|MOVIE|ADAPTATION)$", ErrorMessage = "VoteType must be 'book', 'movie' or 'adaptation'")]
     public string VoteType { get; set; } = null!;
 }

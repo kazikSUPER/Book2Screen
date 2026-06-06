@@ -104,8 +104,8 @@ export type PasswordResetConfirmResponse = AuthResponse;
 
 // ===== Vote DTO =====
 
-/** ВАЖЛИВО: бек чекає lowercase 'book' | 'movie' (не 'BOOK'/'MOVIE'). */
-export type VoteType = 'book' | 'movie';
+/** ВАЖЛИВО: бек чекає lowercase 'book' | 'movie' | 'adaptation'. */
+export type VoteType = 'book' | 'movie' | 'adaptation';
 
 /** Swagger: VoteRequest */
 export interface VoteRequest {
