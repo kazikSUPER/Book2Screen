@@ -17,10 +17,9 @@ public class DifferenceValidator : AbstractValidator<Difference>
     /// </summary>
     public DifferenceValidator()
     {
-        this.RuleFor(x => x.Description).NotEmpty();
-
-        this.RuleFor(x => x.DifferenceType)
-            .Must(t => new[] { "changed", "added", "removed" }.Contains(t.ToLower()));
+        this.RuleFor(x => x.Title).NotEmpty();
+        this.RuleFor(x => x.BookText).NotEmpty();
+        this.RuleFor(x => x.FilmText).NotEmpty();
 
         this.RuleFor(x => x.ImportanceLevel)
             .Must(l => new[] { "low", "medium", "high" }.Contains(l.ToLower()));

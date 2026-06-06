@@ -112,8 +112,10 @@ public class AdaptationService : IAdaptationService
                 Differences = adaptationDto.Differences.Select(d => new Domain.Entities.Difference
                 {
                     Id = Guid.NewGuid(),
-                    DifferenceType = d.Title,
-                    Description = d.BookText, // Використовуємо BookText як основний опис
+                    Title = d.Title,
+                    BookText = d.BookText,
+                    FilmText = d.FilmText,
+                    IsSpoiler = d.IsSpoiler,
                     ImportanceLevel = d.IsSpoiler ? "high" : "medium",
                 }).ToList(),
             };

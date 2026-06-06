@@ -27,5 +27,5 @@ public class UserProfileDto
     /// <summary>
     /// Gets or sets дату приєднання.
     /// </summary>
-    public required DateTime JoinedAt { get; set; }
+    public DateTime? JoinedAt { get; set; }
 }

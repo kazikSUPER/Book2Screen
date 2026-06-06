@@ -90,10 +90,10 @@ public class WorkService : IWorkService
             dto.Differences = work.DifferenceMap.Differences.Select(d => new DifferenceDto
             {
                 Id = d.Id,
-                Title = d.DifferenceType,
-                BookText = d.Description,
-                FilmText = d.Description,
-                IsSpoiler = d.ImportanceLevel == "high",
+                Title = d.Title,
+                BookText = d.BookText,
+                FilmText = d.FilmText,
+                IsSpoiler = d.IsSpoiler,
             }).ToList();
         }
 

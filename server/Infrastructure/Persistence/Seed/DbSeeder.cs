@@ -142,8 +142,8 @@ public static class DbSeeder
                 Title = "Мапа розбіжностей Дюни",
                 Differences = new List<Difference>
                 {
-                    new Difference { Id = Guid.NewGuid(), DifferenceType = "Зміна сюжету", Description = "У фільмі відсутня сцена вечері з банкірами.", ImportanceLevel = "medium" },
-                    new Difference { Id = Guid.NewGuid(), DifferenceType = "Персонаж", Description = "Доктор Лайт-Кіндс у фільмі — жінка, у книзі — чоловік.", ImportanceLevel = "high" },
+                    new Difference { Id = Guid.NewGuid(), Title = "Зміна сюжету", BookText = "У книзі сцена вечері з банкірами детально описана.", FilmText = "У фільмі відсутня сцена вечері з банкірами.", ImportanceLevel = "medium" },
+                    new Difference { Id = Guid.NewGuid(), Title = "Персонаж", BookText = "Доктор Лайт-Кіндс у книзі — чоловік.", FilmText = "Доктор Лайт-Кіндс у фільмі — жінка.", ImportanceLevel = "high", IsSpoiler = true },
                 },
             };
 

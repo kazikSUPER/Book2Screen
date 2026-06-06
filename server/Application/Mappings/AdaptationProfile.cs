@@ -29,6 +29,9 @@ public class AdaptationProfile : Profile
             .ForMember(dest => dest.BookRating, opt => opt.MapFrom(src => src.Rating != null ? src.Rating.BookRating : 0))
             .ForMember(dest => dest.FilmRating, opt => opt.MapFrom(src => src.Rating != null ? src.Rating.AdaptationRating : 0))
             .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Summary ?? string.Empty))
-            .ForMember(dest => dest.Genre, opt => opt.MapFrom(src => src.Book.Genre ?? "Drama"));
+            .ForMember(dest => dest.Genre, opt => opt.MapFrom(src => src.Book.Genre ?? "Драма"))
+            .ForMember(dest => dest.Differences, opt => opt.MapFrom(src => src.DifferenceMap != null ? src.DifferenceMap.Differences : new List<Difference>()));
+        
+        this.CreateMap<Difference, DifferenceDto>();
     }
 }

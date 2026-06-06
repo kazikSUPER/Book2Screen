@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import type { AdaptationDto, BookScreenItem, ReportResponse, DifferencePoint } from './types';
+import type { AdaptationDto, BookScreenItem, ReportResponse, DifferencePoint, ReviewResponse } from './types';
 import { fetchWorks, fetchWorkById } from './works';
 import { ALL_ITEMS } from './items';
 import { USE_MOCK_FALLBACK } from './env';

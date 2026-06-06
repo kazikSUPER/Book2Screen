@@ -268,7 +268,7 @@ onMounted(() => {
         <div v-if="!editing" class="profile-card__body">
           <p class="profile-card__row">
             <span class="profile-card__label">{{ t.username }}</span>
-            <span class="profile-card__value">{{ userStore.username || userStore.nickname || '—' }}</span>
+            <span class="profile-card__value">{{ userStore.username || '—' }}</span>
           </p>
           <p class="profile-card__row">
             <span class="profile-card__label">{{ t.joinedAt }}</span>

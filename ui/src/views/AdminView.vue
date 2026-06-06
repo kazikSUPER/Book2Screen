@@ -433,14 +433,14 @@ onMounted(() => {
                 <button
                   class="admin__btn admin__btn--ghost"
                   :disabled="r.status !== 'pending'"
-                  @click="moderate(r.reportId, 'reject')"
+                  @click="moderate(r.reportId, 'dismiss')"
                 >
                   {{ t.approve }}
                 </button>
                 <button
                   class="admin__btn admin__btn--primary"
                   :disabled="r.status !== 'pending'"
-                  @click="moderate(r.reportId, 'approve')"
+                  @click="moderate(r.reportId, 'delete')"
                 >
                   {{ STR.common.delete }}
                 </button>

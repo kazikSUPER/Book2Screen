@@ -165,6 +165,8 @@ export interface ReportResponse {
   createdAt: string;
   /** Текст відгуку, на який скаржаться (для зручності модерації). */
   reviewText?: string;
+  /** Об'єкт відгуку (для детальної модерації). */
+  review?: ReviewResponse;
 }
 
 // ===== User Profile DTO =====
