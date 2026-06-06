@@ -88,7 +88,7 @@ public class AdaptationService : IAdaptationService
             Description = adaptationDto.Description,
             Genre = adaptationDto.Genre ?? "Драма",
             Authors = !string.IsNullOrEmpty(adaptationDto.Author) 
-                ? new List<Domain.Entities.Author> { new Domain.Entities.Author { Name = adaptationDto.Author } } 
+                ? new List<Domain.Entities.Author> { new Domain.Entities.Author { FullName = adaptationDto.Author } } 
                 : new List<Domain.Entities.Author>()
         };
 
