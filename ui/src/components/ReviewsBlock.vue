@@ -136,7 +136,7 @@ watch(
     <form class="reviews__form" @submit.prevent="onSubmit">
       <div class="reviews__form-row">
         <div class="reviews__avatar" aria-hidden="true">
-          {{ userStore.isAuthenticated ? (userStore.nickname || userStore.email || '?').charAt(0).toUpperCase() : '?' }}
+          {{ userStore.isAuthenticated ? (userStore.username || userStore.email || '?').charAt(0).toUpperCase() : '?' }}
         </div>
         <input
           v-model="text"
