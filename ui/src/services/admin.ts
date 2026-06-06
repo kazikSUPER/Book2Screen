@@ -156,7 +156,7 @@ export async function fetchReports(): Promise<ReportedComment[]> {
 
 export async function moderateReport(
   reportId: string,
-  action: 'approve' | 'reject' | 'spoiler'
+  action: 'delete' | 'dismiss' | 'spoiler'
 ): Promise<void> {
   try {
     await apiClient.post(`/api/v1/admin/reports/${reportId}/${action}`);

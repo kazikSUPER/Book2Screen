@@ -281,15 +281,15 @@ function removePoint(index: number): void {
 }
 
 // ── Comment moderation actions (BUG-041) ─────────────────
-async function moderate(reportId: string, action: 'approve' | 'reject' | 'spoiler'): Promise<void> {
+async function moderate(reportId: string, action: 'delete' | 'dismiss' | 'spoiler'): Promise<void> {
   try {
     await moderateReport(reportId, action);
     // BUG-041: одразу прибираємо запис зі списку, щоб UI оновився
     // (раніше тільки міняли status, а кнопка лишалась видимою з disabled).
     reports.value = reports.value.filter((x) => x.reportId !== reportId);
     const labels = {
-      approve: t.commentDeleted,
-      reject: t.reportRejected,
+      delete: t.commentDeleted,
+      dismiss: t.reportRejected,
       spoiler: t.markedSpoiler,
     };
     notifications.pushSuccess(labels[action]);

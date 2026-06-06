@@ -249,7 +249,7 @@ public class ReviewService : IReviewService
         {
             switch (action.ToLower())
             {
-                case "approve":
+                case "delete":
                     if (report.Review != null)
                     {
                         this.context.Reviews.Remove(report.Review);
@@ -257,7 +257,7 @@ public class ReviewService : IReviewService
 
                     report.Status = "Resolved";
                     break;
-                case "reject":
+                case "dismiss":
                     report.Status = "Dismissed";
                     break;
                 case "spoiler":
@@ -269,7 +269,7 @@ public class ReviewService : IReviewService
                     report.Status = "Resolved";
                     break;
                 default:
-                    throw new ArgumentException("Invalid action. Use approve, reject, or spoiler.");
+                    throw new ArgumentException("Invalid action. Use delete, dismiss, or spoiler.");
             }
 
             await this.context.SaveChangesAsync();
