@@ -91,7 +91,7 @@ const stats = computed(() => ({
 
 // ── Helpers для відображення ─────────────────────────────────
 const initial = computed(() =>
-  (userStore.username || userStore.nickname || userStore.email || '?').charAt(0).toUpperCase()
+  (userStore.username || userStore.email || '?').charAt(0).toUpperCase()
 );
 
 const joinedDateLabel = computed(() => {
@@ -109,7 +109,7 @@ function findWork(id: string): BookScreenItem | undefined {
 function startEditing(): void {
   editForm.value = {
     username: userStore.username,
-    nickname: userStore.nickname,
+    nickname: userStore.username,
   };
   editing.value = true;
 }
