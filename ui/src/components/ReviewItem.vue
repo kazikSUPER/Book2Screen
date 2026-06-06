@@ -39,9 +39,10 @@ const formattedDate = computed(() => {
 
 <template>
   <article class="review">
-    <!-- Аватар (поки що ініціал у кружечку) -->
-    <div class="review__avatar" aria-hidden="true">
-      {{ (review.userNickname || '?').charAt(0).toUpperCase() }}
+    <!-- Аватар (реальне фото або ініціал) -->
+    <div class="review__avatar">
+      <img v-if="review.userAvatar" :src="review.userAvatar" :alt="review.userNickname" />
+      <span v-else aria-hidden="true">{{ (review.userNickname || '?').charAt(0).toUpperCase() }}</span>
     </div>
 
     <div class="review__body">

@@ -98,46 +98,43 @@ export async function deleteBook(id: string): Promise<void> {
   }
 }
 
-export type ReportStatus = 'pending' | 'approved' | 'rejected' | 'marked-spoiler';
+export type ReportStatus = 'pending' | 'resolved' | 'dismissed' | 'marked-spoiler';
 
 export interface ReportedComment {
   reportId: string;
   reason: string;
   status: ReportStatus;
   createdAt: string;
-  review: {
-    reviewId: string;
-    workId: string;
-    userId: string;
-    text: string;
-    isSpoiler: boolean;
-    rating: number;
-    createdAt: string;
-  };
+  review: ReviewResponse;
 }
 
 function normalizeStatus(raw: string | undefined): ReportStatus {
   const s = (raw ?? '').toLowerCase().trim();
-  if (s === 'approved' || s === 'rejected' || s === 'marked-spoiler') return s;
+  if (s === 'resolved' || s === 'dismissed' || s === 'marked-spoiler') return s;
   if (s === 'spoiler' || s === 'marked_spoiler' || s === 'markedspoiler') return 'marked-spoiler';
   return 'pending';
 }
 
 function mapReport(r: ReportResponse): ReportedComment {
+  // Використовуємо реальний об'єкт Review з сервера, або створюємо fallback.
+  const review: ReviewResponse = r.review ?? {
+    reviewId: r.reviewId,
+    workId: '',
+    userId: r.userId,
+    userNickname: 'Користувач',
+    text: r.reviewText ?? '',
+    isSpoiler: false,
+    rating: 0,
+    targetType: 'comparison',
+    createdAt: r.createdAt,
+  };
+
   return {
     reportId: r.reportId,
     reason: r.reason ?? '',
     status: normalizeStatus(r.status),
     createdAt: r.createdAt,
-    review: {
-      reviewId: r.reviewId,
-      workId: '',
-      userId: r.userId,
-      text: r.reviewText ?? '',
-      isSpoiler: false,
-      rating: 0,
-      createdAt: r.createdAt,
-    },
+    review,
   };
 }
 

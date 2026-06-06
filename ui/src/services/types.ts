@@ -142,8 +142,10 @@ export interface ReviewResponse {
   reviewId: string;
   workId: string;
   userId: string;
-  /** historical поле — бек не завжди повертає, лишаємо для UI. */
-  userNickname?: string;
+  /** Username з бекенду. */
+  userNickname: string;
+  /** URL аватара користувача. */
+  userAvatar?: string;
   text: string;
   isSpoiler: boolean;
   rating: number;
