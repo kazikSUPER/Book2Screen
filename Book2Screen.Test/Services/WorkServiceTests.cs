@@ -108,8 +108,8 @@ public class WorkServiceTests : IDisposable
             Title = "Карта",
             Differences = new List<Difference>
             {
-                new Difference { Id = Guid.NewGuid(), MapId = mapId, DifferenceType = "Вирізана сцена", Description = "Сцена, яку вирізали з фільму", ImportanceLevel = "low" },
-                new Difference { Id = Guid.NewGuid(), MapId = mapId, DifferenceType = "Зміна сюжету", Description = "Змінений фінал", ImportanceLevel = "high" }
+                new Difference { Id = Guid.NewGuid(), MapId = mapId, Title = "Сцена 1", BookText = "...", FilmText = "Сцена, яку вирізали з фільму", ImportanceLevel = "low" },
+                new Difference { Id = Guid.NewGuid(), MapId = mapId, Title = "Сцена 2", BookText = "...", FilmText = "Змінений фінал", ImportanceLevel = "high" }
             }
         };
         work.DifferenceMap = map;
@@ -124,8 +124,8 @@ public class WorkServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.True(result.HasMap);
         Assert.Equal(2, result.Differences.Count);
-        Assert.Contains(result.Differences, d => d.Title == "Зміна сюжету" && d.IsSpoiler);
-        Assert.Contains(result.Differences, d => d.Title == "Вирізана сцена" && !d.IsSpoiler);
+        Assert.Contains(result.Differences, d => d.Title == "Сцена 2" && d.FilmText == "Змінений фінал");
+        Assert.Contains(result.Differences, d => d.Title == "Сцена 1" && d.FilmText == "Сцена, яку вирізали з фільму");
     }
 
     [Fact]

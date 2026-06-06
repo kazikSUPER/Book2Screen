@@ -174,9 +174,11 @@ function seedReports(): ReportedComment[] {
       reviewId: `rev-${i + 1}`,
       workId: hpId,
       userId: `u-${i + 100}`,
+      userNickname: 'Користувач',
       text: 'В кінці книги головні герої…',
       isSpoiler: false,
       rating: 4,
+      targetType: 'comparison',
       createdAt: new Date(Date.now() - i * 3600_000).toISOString(),
     },
   }));
