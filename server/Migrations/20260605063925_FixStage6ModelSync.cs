@@ -1,9 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
-
-#nullable disable
+// <copyright file="20260605063925_FixStage6ModelSync.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
 
 namespace Book2Screen.Migrations
 {
+    using Microsoft.EntityFrameworkCore.Migrations;
+
     /// <inheritdoc />
     public partial class FixStage6ModelSync : Migration
     {
@@ -27,7 +29,7 @@ namespace Book2Screen.Migrations
                 table: "Reviews",
                 type: "text",
                 nullable: false,
-                defaultValue: "",
+                defaultValue: string.Empty,
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);

@@ -72,7 +72,7 @@ public class AuthServiceTests
         result.Should().NotBeNull();
         result!.Token.Should().Be("test-token");
         result.Email.Should().Be("john@example.com");
-        result.Nickname.Should().Be("john_doe");
+        result.Username.Should().Be("john_doe");
         result.Role.Should().Be("user");
     }
 
@@ -131,7 +131,7 @@ public class AuthServiceTests
 
         var request = new RegisterRequest
         {
-            Nickname = "new_user",
+            Username = "new_user",
             Email = "new@example.com",
             Password = "NewPass123!",
         };
@@ -142,7 +142,7 @@ public class AuthServiceTests
         // Assert
         result.Should().NotBeNull();
         result!.Email.Should().Be("new@example.com");
-        result.Nickname.Should().Be("new_user");
+        result.Username.Should().Be("new_user");
         result.Role.Should().Be("user");
 
         var savedUser = await context.Users.FirstOrDefaultAsync(u => u.Email == "new@example.com");
@@ -172,7 +172,7 @@ public class AuthServiceTests
         // Act & Assert
         await service.Invoking(s => s.RegisterAsync(new RegisterRequest
         {
-            Nickname = "new_nick",
+            Username = "new_nick",
             Email = "existing@example.com",
             Password = "NewPass123!",
         }))
@@ -201,7 +201,7 @@ public class AuthServiceTests
 
         await service.Invoking(s => s.RegisterAsync(new RegisterRequest
         {
-            Nickname = "existing_nick",
+            Username = "existing_nick",
             Email = "new@example.com",
             Password = "NewPass123!",
         }))

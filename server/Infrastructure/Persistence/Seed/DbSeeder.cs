@@ -208,13 +208,13 @@ public static class DbSeeder
                 Summary = "Культова трилогія Пітера Джексона.",
             };
 
-            var adaptationActor = new AdaptationActor { Adaptation = adaptation, Actor = actor, RoleName = "Фродо Беггінс" };
+            var adaptationActor = new AdaptationActor { Adaptation = adaptation, Actor = actor, RoleName = "Фродо Беггінс", };
 
             await context.Works.AddAsync(work);
             await context.Set<AdaptationActor>().AddAsync(adaptationActor);
-            
+
             // Додаємо в обране для користувача
-            await context.Favorites.AddAsync(new Favorite { UserId = user.Id, WorkId = work.Id, Kind = "read" });
+            await context.Favorites.AddAsync(new Favorite { UserId = user.Id, WorkId = work.Id, Kind = "read", });
         }
 
         await context.SaveChangesAsync();

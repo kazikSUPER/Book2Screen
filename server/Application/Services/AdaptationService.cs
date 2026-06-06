@@ -87,9 +87,9 @@ public class AdaptationService : IAdaptationService
             Title = adaptationDto.Title,
             Description = adaptationDto.Description,
             Genre = adaptationDto.Genre ?? "Драма",
-            Authors = !string.IsNullOrEmpty(adaptationDto.Author) 
-                ? new List<Domain.Entities.Author> { new Domain.Entities.Author { FullName = adaptationDto.Author } } 
-                : new List<Domain.Entities.Author>()
+            Authors = !string.IsNullOrEmpty(adaptationDto.Author)
+                ? new List<Domain.Entities.Author> { new Domain.Entities.Author { FullName = adaptationDto.Author }, }
+                : new List<Domain.Entities.Author>(),
         };
 
         // 2. Створюємо Твір (Work) та пов'язуємо з Книгою та Адаптацією
@@ -114,8 +114,8 @@ public class AdaptationService : IAdaptationService
                     Id = Guid.NewGuid(),
                     DifferenceType = d.Title,
                     Description = d.BookText, // Використовуємо BookText як основний опис
-                    ImportanceLevel = d.IsSpoiler ? "high" : "medium"
-                }).ToList()
+                    ImportanceLevel = d.IsSpoiler ? "high" : "medium",
+                }).ToList(),
             };
             work.DifferenceMap = diffMap;
             await this.context.DifferenceMaps.AddAsync(diffMap);
@@ -124,7 +124,7 @@ public class AdaptationService : IAdaptationService
         await this.context.Books.AddAsync(book);
         await this.context.Adaptations.AddAsync(adaptation);
         await this.context.Works.AddAsync(work);
-        
+
         await this.context.SaveChangesAsync();
 
         return this.mapper.Map<AdaptationDto>(adaptation);

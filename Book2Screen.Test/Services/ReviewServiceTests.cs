@@ -212,7 +212,7 @@ public class ReviewServiceTests
         var reports = await service.GetAllReportsAsync();
         var reportId = reports.First().ReportId;
 
-        await service.ModerateReviewAsync(reportId, "approve");
+        await service.ModerateReviewAsync(reportId, "delete");
 
         var deletedReview = await context.Reviews.FindAsync(reviewResponse.ReviewId);
         deletedReview.Should().BeNull();
@@ -234,7 +234,7 @@ public class ReviewServiceTests
         var reports = await service.GetAllReportsAsync();
         var reportId = reports.First().ReportId;
 
-        await service.ModerateReviewAsync(reportId, "reject");
+        await service.ModerateReviewAsync(reportId, "dismiss");
 
         var review = await context.Reviews.FindAsync(reviewResponse.ReviewId);
         review.Should().NotBeNull();
