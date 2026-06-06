@@ -201,6 +201,11 @@ export interface AdaptationDto {
   posterUrl?: string;
   studio?: string;
   country?: string;
+  author?: string;
+  genre?: string;
+  bookRating?: number;
+  filmRating?: number;
+  differences?: DifferencePoint[];
 }
 
 // ===== ProblemDetails =====

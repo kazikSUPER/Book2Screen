@@ -60,4 +60,29 @@ public class AdaptationDto
     /// Gets or sets країну виробництва.
     /// </summary>
     public string? Country { get; set; }
+
+    /// <summary>
+    /// Gets or sets ім'я автора книги.
+    /// </summary>
+    public string? Author { get; set; }
+
+    /// <summary>
+    /// Gets or sets жанр.
+    /// </summary>
+    public string? Genre { get; set; }
+
+    /// <summary>
+    /// Gets or sets початковий рейтинг книги.
+    /// </summary>
+    public double? BookRating { get; set; }
+
+    /// <summary>
+    /// Gets or sets початковий рейтинг фільму.
+    /// </summary>
+    public double? FilmRating { get; set; }
+
+    /// <summary>
+    /// Gets or sets список розбіжностей для створення карти.
+    /// </summary>
+    public List<DifferenceDto>? Differences { get; set; }
 }

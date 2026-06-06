@@ -14,6 +14,11 @@ function toAdaptationDto(item: Partial<BookScreenItem> & { id?: string; type?: s
     posterUrl: item.filmPoster ?? item.poster,
     country: item.filmCountry ?? item.country,
     studio: item.director,
+    author: item.author,
+    genre: item.genre,
+    bookRating: item.bookRating,
+    filmRating: item.filmRating,
+    differences: item.differences,
   };
 }
 
@@ -22,16 +27,19 @@ function fromAdaptationDto(a: AdaptationDto): BookScreenItem {
     id: a.id ?? '',
     title: a.title,
     year: a.releaseYear ?? 0,
-    genre: '',
+    genre: a.genre ?? '',
     country: a.country ?? '',
     poster: a.posterUrl ?? '',
-    bookRating: 0,
-    filmRating: 0,
+    bookRating: a.bookRating ?? 0,
+    filmRating: a.filmRating ?? 0,
     description: a.description ?? '',
     director: a.studio,
     filmYear: a.releaseYear,
     filmPoster: a.posterUrl,
     filmCountry: a.country,
+    author: a.author,
+    differences: a.differences,
+    hasMap: Boolean(a.differences && a.differences.length > 0),
   };
 }
 

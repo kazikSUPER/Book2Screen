@@ -80,24 +80,46 @@ public class AdaptationService : IAdaptationService
         var adaptation = this.mapper.Map<Domain.Entities.Adaptation>(adaptationDto);
         adaptation.Id = Guid.NewGuid();
 
-        // BUG-FIX: Every adaptation MUST be linked to a Work to be visible in the main list.
-        // If we are creating a standalone adaptation from admin, we create a Work and a Book record too.
+        // 1. Створюємо Книгу
         var book = new Domain.Entities.Book
         {
             Id = Guid.NewGuid(),
-            Title = adaptation.Title,
-            Description = adaptation.Description,
-            Genre = "Драма", // Default genre
+            Title = adaptationDto.Title,
+            Description = adaptationDto.Description,
+            Genre = adaptationDto.Genre ?? "Драма",
+            Authors = !string.IsNullOrEmpty(adaptationDto.Author) 
+                ? new List<Domain.Entities.Author> { new Domain.Entities.Author { Name = adaptationDto.Author } } 
+                : new List<Domain.Entities.Author>()
         };
 
+        // 2. Створюємо Твір (Work) та пов'язуємо з Книгою та Адаптацією
         var work = new Domain.Entities.Work
         {
             Id = Guid.NewGuid(),
-            Title = adaptation.Title,
+            Title = adaptationDto.Title,
             BookId = book.Id,
             AdaptationId = adaptation.Id,
-            Summary = adaptation.Description,
+            Summary = adaptationDto.Description,
         };
+
+        // 3. Якщо передано розбіжності — створюємо карту
+        if (adaptationDto.Differences != null && adaptationDto.Differences.Any())
+        {
+            var diffMap = new Domain.Entities.DifferenceMap
+            {
+                Id = Guid.NewGuid(),
+                WorkId = work.Id,
+                Differences = adaptationDto.Differences.Select(d => new Domain.Entities.Difference
+                {
+                    Id = Guid.NewGuid(),
+                    DifferenceType = d.Title,
+                    Description = d.BookText, // Використовуємо BookText як основний опис
+                    ImportanceLevel = d.IsSpoiler ? "high" : "medium"
+                }).ToList()
+            };
+            work.DifferenceMap = diffMap;
+            await this.context.DifferenceMaps.AddAsync(diffMap);
+        }
 
         await this.context.Books.AddAsync(book);
         await this.context.Adaptations.AddAsync(adaptation);
