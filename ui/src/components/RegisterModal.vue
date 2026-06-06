@@ -59,12 +59,11 @@ const handleRegister = async () => {
   apiError.value = '';
   isSubmitting.value = true;
   try {
-    // nickname формуємо з email-prefix (до @), бо у формі його немає.
-    // Якщо бекенд вимагатиме унікальний nickname — згенеруй форму сам або хай бекенд бере з email.
-    const nickname = email.value.split('@')[0];
+    // username формуємо з email-prefix (до @), бо у формі його немає.
+    const username = email.value.split('@')[0];
     await userStore.register({
       email: email.value,
-      nickname,
+      username,
       password: password.value,
     });
     emit('success');

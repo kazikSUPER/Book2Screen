@@ -60,7 +60,7 @@ export interface LoginRequest {
  */
 export interface RegisterRequest {
   email: string;
-  nickname: string;
+  username: string;
   password: string;
 }
 
@@ -69,7 +69,7 @@ export interface AuthResponse {
   token: string;
   userId: string;
   email: string;
-  nickname: string;
+  username: string;
   /** 'user' | 'admin' | 'moderator' — використовуємо для route-guard на /admin. */
   role?: string;
 }

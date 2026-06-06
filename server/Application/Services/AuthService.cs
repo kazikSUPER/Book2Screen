@@ -49,7 +49,7 @@ public class AuthService : IAuthService
             Token = this.tokenService.CreateToken(user),
             UserId = user.Id.ToString(),
             Email = user.Email,
-            Nickname = user.Username,
+            Username = user.Username,
             Role = user.Role,
         };
     }
@@ -58,7 +58,7 @@ public class AuthService : IAuthService
     public async Task<AuthResponse?> RegisterAsync(RegisterRequest registerRequest)
     {
         var userExists = await this.context.Users.AnyAsync(u =>
-            u.Username == registerRequest.Nickname || u.Email == registerRequest.Email);
+            u.Username == registerRequest.Username || u.Email == registerRequest.Email);
 
         if (userExists)
         {
@@ -70,7 +70,7 @@ public class AuthService : IAuthService
         {
             var user = new User
             {
-                Username = registerRequest.Nickname,
+                Username = registerRequest.Username,
                 Email = registerRequest.Email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password),
                 Role = "user",
@@ -86,7 +86,7 @@ public class AuthService : IAuthService
                 Token = this.tokenService.CreateToken(user),
                 UserId = user.Id.ToString(),
                 Email = user.Email,
-                Nickname = user.Username,
+                Username = user.Username,
                 Role = user.Role,
             };
         }
@@ -178,7 +178,7 @@ public class AuthService : IAuthService
                 Token = this.tokenService.CreateToken(user),
                 UserId = user.Id.ToString(),
                 Email = user.Email,
-                Nickname = user.Username,
+                Username = user.Username,
                 Role = user.Role,
             };
         }
