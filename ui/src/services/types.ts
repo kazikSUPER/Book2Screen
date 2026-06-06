@@ -147,7 +147,7 @@ export interface ReviewResponse {
   text: string;
   isSpoiler: boolean;
   rating: number;
-  targetType?: ReviewTargetType;
+  targetType: ReviewTargetType;
   createdAt: string;
 }
 
