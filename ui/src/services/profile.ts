@@ -46,12 +46,10 @@ export async function updateMyProfile(patch: UserProfileDto): Promise<void> {
   }
 }
 
-// POST /api/v1/users/me/avatar — body: рядок з URL
+// POST /api/v1/users/me/avatar — body: { avatarUrl: "..." }
 export async function updateMyAvatar(avatarUrl: string): Promise<void> {
   try {
-    await apiClient.post('/api/v1/users/me/avatar', avatarUrl, {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    await apiClient.post('/api/v1/users/me/avatar', { avatarUrl });
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
       console.warn('[profile] Mock avatar update:', avatarUrl.slice(0, 60));

@@ -72,7 +72,11 @@ async function onSubmit(): Promise<void> {
     return;
   }
   const trimmed = text.value.trim();
-  // BUG-051: Видалили валідацію trimmed.length < 10, щоб бекенд міг прийняти просто рейтинг (BUG-035) або повернути 400.
+  // BUG-051: Додано перевірку на мінімальну довжину 10 символів (вимога бекенду).
+  if (trimmed.length > 0 && trimmed.length < 10) {
+    notifications.pushWarning("Текст відгуку повинен містити мінімум 10 символів.");
+    return;
+  }
   if (trimmed.length > 2000) {
     notifications.pushWarning(t.commentTooLong);
     return;
