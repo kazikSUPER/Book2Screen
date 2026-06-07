@@ -1088,6 +1088,50 @@
               ]
             }
           }
+        },
+        {
+          "name": "TC-SM-29 · PUT /admin/adaptations/{id} — оновлення автора (fix validation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-29 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-SM-29 · Author updated', () => { pm.expect(pm.response.json().author).to.equal('Updated Author Name'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Title\": \"Updated Title via Smoke Test\",\n  \"Type\": \"movie\",\n  \"Author\": \"Updated Author Name\",\n  \"Genre\": \"Sci-Fi\",\n  \"Description\": \"Updated description\",\n  \"ReleaseYear\": 2025\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{itemId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "adaptations",
+                "{{itemId}}"
+              ]
+            }
+          }
         }
       ]
     }
