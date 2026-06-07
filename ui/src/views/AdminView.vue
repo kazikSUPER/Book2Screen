@@ -268,7 +268,7 @@ function cancelForm(): void {
 // ── Differences map editor ──────────────────────────────────
 function addPoint(): void {
   form.value.differences.push({
-    id: `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    id: crypto.randomUUID(),
     title: '',
     bookText: '',
     filmText: '',
@@ -498,7 +498,6 @@ onMounted(() => {
               <select v-model="form.type" class="admin-form__input" required>
                 <option value="movie">{{ t.typeMovie }}</option>
                 <option value="series">{{ t.typeSeries }}</option>
-                <option value="anime">{{ t.typeAnime }}</option>
               </select>
             </label>
 
