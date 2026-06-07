@@ -71,7 +71,8 @@ interface ExtraAdaptation {
 }
 
 interface BookForm {
-  id: string | null; // null = create
+  id: string | null; // null = create (WorkId)
+  adaptationId: string | null; // ID адаптації для PUT запитів
   title: string;
   author: string;
   year: number | null;
@@ -91,6 +92,7 @@ interface BookForm {
 
 const emptyForm = (): BookForm => ({
   id: null,
+  adaptationId: null,
   title: '',
   author: '',
   year: null,
@@ -175,6 +177,7 @@ function startCreate(): void {
 function startEdit(book: BookScreenItem): void {
   form.value = {
     id: book.id,
+    adaptationId: book.adaptationId ?? null,
     title: book.title,
     author: book.author ?? '',
     year: book.year,
@@ -196,7 +199,7 @@ function startEdit(book: BookScreenItem): void {
 async function onDelete(book: BookScreenItem): Promise<void> {
   if (!confirm(t.confirmDelete(book.title))) return;
   try {
-    await deleteBook(book.id);
+    await deleteBook(book.id, book.adaptationId);
     books.value = books.value.filter((b) => b.id !== book.id);
     if (selectedBook.value?.id === book.id) selectedBook.value = books.value[0] ?? null;
     notifications.pushSuccess(t.bookDeleted);
@@ -227,17 +230,24 @@ async function submitForm(): Promise<void> {
       hasMap: form.value.differences.length > 0,
       differences: form.value.differences.length > 0 ? form.value.differences : undefined,
       type: form.value.type,
+      adaptationId: form.value.adaptationId || undefined,
     };
     if (form.value.id) {
-      const updated = await updateBook(form.value.id, payload);
-      const idx = books.value.findIndex((b) => b.id === updated.id);
-      if (idx >= 0) books.value[idx] = updated;
+      await updateBook(form.value.id, payload);
       notifications.pushSuccess(t.bookUpdated);
     } else {
-      const created = await createBook(payload);
-      books.value.push(created);
+      await createBook(payload);
       notifications.pushSuccess(t.bookAdded);
     }
+    // BUG-052: Повний релоад списку для гарантованого оновлення UI (рейтинги, автори тощо)
+    const oldSelectedId = selectedBook.value?.id;
+    await loadBooks();
+    
+    // Оновлюємо selectedBook зі свіжого масиву
+    if (oldSelectedId) {
+      selectedBook.value = books.value.find(b => b.id === oldSelectedId) || books.value[0] || null;
+    }
+    
     mode.value = 'books';
   } catch (err) {
     notifications.pushError(extractErrorMessage(err));
