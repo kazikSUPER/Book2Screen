@@ -13,7 +13,7 @@ public class DifferenceDto
     /// <summary>
     /// Gets or sets унікальний ідентифікатор.
     /// </summary>
-    public Guid Id { get; set; }
+    public Guid? Id { get; set; }
 
     /// <summary>
     /// Gets or sets заголовок сцени.
