@@ -19,16 +19,11 @@ public class AdaptationProfile : Profile
     public AdaptationProfile()
     {
         this.CreateMap<Adaptation, AdaptationDto>()
-            .ForMember(dest => dest.Genre, opt => opt.MapFrom(src => src.Work != null && src.Work.Book != null ? src.Work.Book.Genre : null))
-            .ForMember(dest => dest.Author, opt => opt.MapFrom(src => src.Work != null && src.Work.Book != null ? string.Join(", ", src.Work.Book.Authors.Select(a => a.FullName)) : null))
-            .ForMember(dest => dest.BookRating, opt => opt.MapFrom(src => src.Work != null && src.Work.Rating != null ? (double?)src.Work.Rating.BookRating : 0))
-            .ForMember(dest => dest.FilmRating, opt => opt.MapFrom(src => src.Work != null && src.Work.Rating != null ? (double?)src.Work.Rating.AdaptationRating : 0))
-            .ForMember(dest => dest.Differences, opt => opt.MapFrom(src => src.Work != null && src.Work.DifferenceMap != null ? src.Work.DifferenceMap.Differences : new List<Difference>()))
-            .ReverseMap()
-            .ForPath(dest => dest.Work!.DifferenceMap, opt => opt.Ignore());
+            .ReverseMap();
 
         this.CreateMap<Work, BookScreenItemDto>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.AdaptationId, opt => opt.MapFrom(src => src.AdaptationId))
             .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
             .ForMember(dest => dest.Year, opt => opt.MapFrom(src => src.Adaptation.ReleaseYear ?? 0))
             .ForMember(dest => dest.Country, opt => opt.MapFrom(src => src.Adaptation.Country ?? "Unknown"))

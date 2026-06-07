@@ -52,13 +52,41 @@ public class AdaptationService : IAdaptationService
     /// <returns>DTO-об'єкт адаптації.</returns>
     public async Task<AdaptationDto?> GetAdaptationByIdAsync(Guid id)
     {
-        var adaptation = await this.context.Adaptations.FindAsync(id);
+        var adaptation = await this.context.Adaptations
+            .Include(a => a.Work)
+                .ThenInclude(w => w!.Book)
+                    .ThenInclude(b => b.Authors)
+            .Include(a => a.Work)
+                .ThenInclude(w => w!.DifferenceMap)
+                    .ThenInclude(dm => dm!.Differences)
+            .FirstOrDefaultAsync(a => a.Id == id);
+
         if (adaptation == null)
         {
             throw new KeyNotFoundException($"Adaptation with ID {id} not found.");
         }
 
-        return this.mapper.Map<AdaptationDto>(adaptation);
+        var dto = this.mapper.Map<AdaptationDto>(adaptation);
+
+        // Ручне мапування полів, які не можна транслювати в SQL через ProjectTo, але можна через звичайний Map
+        if (adaptation.Work != null && adaptation.Work.Book != null)
+        {
+            dto.Genre = adaptation.Work.Book.Genre;
+            dto.Author = string.Join(", ", adaptation.Work.Book.Authors.Select(a => a.FullName));
+            if (adaptation.Work.DifferenceMap != null)
+            {
+                dto.Differences = adaptation.Work.DifferenceMap.Differences.Select(d => new DifferenceDto
+                {
+                    Id = d.Id,
+                    Title = d.Title,
+                    BookText = d.BookText,
+                    FilmText = d.FilmText,
+                    IsSpoiler = d.IsSpoiler,
+                }).ToList();
+            }
+        }
+
+        return dto;
     }
 
     /// <summary>
@@ -68,10 +96,24 @@ public class AdaptationService : IAdaptationService
     /// <returns>Відфільтрована колекція DTO-об'єктів адаптацій.</returns>
     public async Task<IEnumerable<AdaptationDto>> GetFilteredAdaptationsAsync(AdaptationFilter filter)
     {
-        return await this.context.Adaptations
+        var adaptations = await this.context.Adaptations
             .ApplyFilter(filter)
-            .ProjectTo<AdaptationDto>(this.mapper.ConfigurationProvider)
+            .Include(a => a.Work)
+                .ThenInclude(w => w!.Book)
+                    .ThenInclude(b => b.Authors)
             .ToListAsync();
+
+        return adaptations.Select(a =>
+        {
+            var dto = this.mapper.Map<AdaptationDto>(a);
+            if (a.Work != null && a.Work.Book != null)
+            {
+                dto.Genre = a.Work.Book.Genre;
+                dto.Author = string.Join(", ", a.Work.Book.Authors.Select(a => a.FullName));
+            }
+
+            return dto;
+        });
     }
 
     /// <inheritdoc/>
@@ -143,6 +185,8 @@ public class AdaptationService : IAdaptationService
             .Include(a => a.Work)
                 .ThenInclude(w => w!.Book)
                     .ThenInclude(b => b.Authors)
+            .Include(a => a.Work)
+                .ThenInclude(w => w!.Rating)
             .FirstOrDefaultAsync(a => a.Id == id);
 
         if (adaptation == null)
@@ -150,32 +194,52 @@ public class AdaptationService : IAdaptationService
             throw new KeyNotFoundException($"Adaptation with ID {id} not found.");
         }
 
-        this.mapper.Map(adaptationDto, adaptation);
-        adaptation.Id = id; // Ensure ID is not changed
+        // Manual mapping to ensure IDs and relations are preserved
+        adaptation.Title = adaptationDto.Title;
+        adaptation.Type = adaptationDto.Type;
+        adaptation.Description = adaptationDto.Description;
+        adaptation.ReleaseYear = adaptationDto.ReleaseYear;
+        adaptation.PosterUrl = adaptationDto.PosterUrl;
+        adaptation.Country = adaptationDto.Country;
+        adaptation.Studio = adaptationDto.Studio;
 
         // Оновлюємо пов'язану книгу та автора
-        if (adaptation.Work != null && adaptation.Work.Book != null)
+        if (adaptation.Work != null)
         {
-            adaptation.Work.Book.Genre = adaptationDto.Genre ?? adaptation.Work.Book.Genre;
             adaptation.Work.Title = adaptationDto.Title;
-            adaptation.Work.Book.Title = adaptationDto.Title;
+            adaptation.Work.Summary = adaptationDto.Description;
 
-            if (!string.IsNullOrEmpty(adaptationDto.Author))
+            if (adaptation.Work.Book != null)
             {
-                // Для MVP — просто замінюємо першого автора або додаємо нового
-                var existingAuthor = adaptation.Work.Book.Authors.FirstOrDefault();
-                if (existingAuthor != null)
+                adaptation.Work.Book.Title = adaptationDto.Title;
+                adaptation.Work.Book.Description = adaptationDto.Description;
+                adaptation.Work.Book.Genre = adaptationDto.Genre ?? adaptation.Work.Book.Genre;
+
+                if (!string.IsNullOrEmpty(adaptationDto.Author))
                 {
-                    existingAuthor.FullName = adaptationDto.Author;
-                }
-                else
-                {
-                    adaptation.Work.Book.Authors.Add(new Domain.Entities.Author { FullName = adaptationDto.Author });
+                    var existingAuthor = adaptation.Work.Book.Authors.FirstOrDefault();
+                    if (existingAuthor != null)
+                    {
+                        existingAuthor.FullName = adaptationDto.Author;
+                    }
+                    else
+                    {
+                        adaptation.Work.Book.Authors.Add(new Domain.Entities.Author { FullName = adaptationDto.Author });
+                    }
                 }
             }
+
+            // Оновлюємо рейтинги
+            if (adaptation.Work.Rating == null)
+            {
+                adaptation.Work.Rating = new Domain.Entities.Rating { Id = Guid.NewGuid(), WorkId = adaptation.Work.Id };
+                await this.context.Ratings.AddAsync(adaptation.Work.Rating);
+            }
+
+            adaptation.Work.Rating.BookRating = (decimal?)adaptationDto.BookRating;
+            adaptation.Work.Rating.AdaptationRating = (decimal?)adaptationDto.FilmRating;
         }
 
-        this.context.Adaptations.Update(adaptation);
         await this.context.SaveChangesAsync();
 
         var result = this.mapper.Map<AdaptationDto>(adaptation);
