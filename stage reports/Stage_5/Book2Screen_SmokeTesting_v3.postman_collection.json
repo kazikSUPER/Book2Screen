@@ -1097,7 +1097,9 @@
               "script": {
                 "exec": [
                   "pm.test('TC-SM-29 · Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('TC-SM-29 · Author updated', () => { pm.expect(pm.response.json().author).to.equal('Updated Author Name'); });"
+                  "pm.test('TC-SM-29 · Author updated', () => { pm.expect(pm.response.json().author).to.equal('Updated Author Name'); });",
+                  "pm.test('TC-SM-29 · BookRating updated', () => { pm.expect(pm.response.json().bookRating).to.equal(6); });",
+                  "pm.test('TC-SM-29 · FilmRating updated', () => { pm.expect(pm.response.json().filmRating).to.equal(5); });"
                 ]
               }
             }
@@ -1116,7 +1118,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"Title\": \"Updated Title via Smoke Test\",\n  \"Type\": \"movie\",\n  \"Author\": \"Updated Author Name\",\n  \"Genre\": \"Sci-Fi\",\n  \"Description\": \"Updated description\",\n  \"ReleaseYear\": 2025\n}"
+              "raw": "{\n  \"Title\": \"Updated Title via Smoke Test\",\n  \"Type\": \"movie\",\n  \"Author\": \"Updated Author Name\",\n  \"Genre\": \"Sci-Fi\",\n  \"Description\": \"Updated description\",\n  \"ReleaseYear\": 2025,\n  \"BookRating\": 6.0,\n  \"FilmRating\": 5.0\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{itemId}}",

@@ -43,9 +43,9 @@ public interface IAdaptationService
     /// Оновлює існуючу адаптацію.
     /// </summary>
     /// <param name="id">ID адаптації.</param>
-    /// <param name="adaptationDto">Нові дані.</param>
-    /// <returns>Оновлена адаптація або null.</returns>
-    Task<AdaptationDto?> UpdateAdaptationAsync(Guid id, AdaptationDto adaptationDto);
+    /// <param name="adaptationDto">Нові дані адаптації.</param>
+    /// <returns>Оновлений твір у форматі BookScreenItemDto.</returns>
+    Task<BookScreenItemDto?> UpdateAdaptationAsync(Guid id, AdaptationDto adaptationDto);
 
     /// <summary>
     /// Видаляє адаптацію.

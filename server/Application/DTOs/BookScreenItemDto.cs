@@ -15,6 +15,11 @@ public class BookScreenItemDto
     public Guid Id { get; set; }
 
     /// <summary>
+    /// Gets or sets унікальний ідентифікатор адаптації.
+    /// </summary>
+    public Guid AdaptationId { get; set; }
+
+    /// <summary>
     /// Gets or sets назву твору (книги/адаптації).
     /// </summary>
     public string Title { get; set; } = null!;

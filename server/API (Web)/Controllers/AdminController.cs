@@ -65,7 +65,7 @@ public class AdminController : ControllerBase
     /// <param name="adaptationDto">Нові дані.</param>
     /// <returns>Оновлена адаптація.</returns>
     [HttpPut("{id:guid}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AdaptationDto))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BookScreenItemDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateAdaptation(Guid id, [FromBody] AdaptationDto adaptationDto)
     {

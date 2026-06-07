@@ -210,7 +210,7 @@ public class AdaptationService : IAdaptationService
     }
 
     /// <inheritdoc/>
-    public async Task<AdaptationDto?> UpdateAdaptationAsync(Guid id, AdaptationDto adaptationDto)
+    public async Task<BookScreenItemDto?> UpdateAdaptationAsync(Guid id, AdaptationDto adaptationDto)
     {
         var adaptation = await this.context.Adaptations
             .Include(a => a.Work)
@@ -218,6 +218,9 @@ public class AdaptationService : IAdaptationService
                     .ThenInclude(b => b.Authors)
             .Include(a => a.Work)
                 .ThenInclude(w => w!.Rating)
+            .Include(a => a.Work)
+                .ThenInclude(w => w!.DifferenceMap)
+                    .ThenInclude(dm => dm!.Differences)
             .FirstOrDefaultAsync(a => a.Id == id);
 
         if (adaptation == null)
@@ -297,10 +300,8 @@ public class AdaptationService : IAdaptationService
 
         await this.context.SaveChangesAsync();
 
-        var result = this.mapper.Map<AdaptationDto>(adaptation);
-        result.Author = adaptationDto.Author;
-        result.Genre = adaptationDto.Genre;
-        return result;
+        // Повертаємо BookScreenItemDto для синхронізації фронтенду
+        return this.mapper.Map<BookScreenItemDto>(adaptation.Work);
     }
 
     /// <inheritdoc/>

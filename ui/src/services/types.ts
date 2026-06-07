@@ -24,6 +24,7 @@ export interface DifferencePoint {
 /** Swagger: BookScreenItemDto */
 export interface BookScreenItem {
   id: string;
+  adaptationId?: string;
   title: string;
   year: number;
   genre: string;
