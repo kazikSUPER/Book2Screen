@@ -59,10 +59,9 @@ public class WorkServiceTests : IDisposable
 
         await _context.Works.AddRangeAsync(work1, work2);
 
-        var review1 = new Review { WorkId = work1.Id, Rating = 9.0, TargetType = "adaptation", Text = "Чудово" };
-        var review2 = new Review { WorkId = work2.Id, Rating = 7.0, TargetType = "adaptation", Text = "Нормально" };
+        work1.Rating = new Rating { WorkId = work1.Id, AdaptationRating = 9.0m, BookRating = 8.0m };
+        work2.Rating = new Rating { WorkId = work2.Id, AdaptationRating = 7.0m, BookRating = 6.0m };
 
-        await _context.Reviews.AddRangeAsync(review1, review2);
         await _context.SaveChangesAsync();
 
         // Act
@@ -83,11 +82,10 @@ public class WorkServiceTests : IDisposable
         var book = new Book { Id = Guid.NewGuid(), Title = "Книга" };
         var adaptation = new Adaptation { Id = Guid.NewGuid(), Title = "Фільм", Type = "movie" };
         var work = new Work { Id = Guid.NewGuid(), Title = "Твір", Book = book, Adaptation = adaptation };
+        
+        work.Rating = new Rating { WorkId = work.Id, AdaptationRating = 9.0m, BookRating = 9.0m };
+        
         await _context.Works.AddAsync(work);
-
-        var review1 = new Review { WorkId = work.Id, Rating = 10.0, TargetType = "adaptation", Text = "Супер" };
-        var review2 = new Review { WorkId = work.Id, Rating = 8.0, TargetType = "adaptation", Text = "Добре" };
-        await _context.Reviews.AddRangeAsync(review1, review2);
         await _context.SaveChangesAsync();
 
         // Act

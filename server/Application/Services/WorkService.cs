@@ -41,6 +41,7 @@ public class WorkService : IWorkService
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
             .Include(w => w.Votes)
+            .Include(w => w.Rating)
             .Include(w => w.DifferenceMap)
             .AsQueryable();
 
@@ -80,6 +81,7 @@ public class WorkService : IWorkService
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
             .Include(w => w.Votes)
+            .Include(w => w.Rating)
             .Include(w => w.DifferenceMap)
                 .ThenInclude(dm => dm!.Differences)
             .FirstOrDefaultAsync(w => w.Id == id);
@@ -101,6 +103,7 @@ public class WorkService : IWorkService
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
             .Include(w => w.Votes)
+            .Include(w => w.Rating)
             .Include(w => w.DifferenceMap)
             .ToListAsync();
 

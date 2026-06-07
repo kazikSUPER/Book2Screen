@@ -75,6 +75,9 @@ public class ReviewService : IReviewService
             await this.context.SaveChangesAsync();
             await transaction.CommitAsync();
 
+            // Перераховуємо рейтинг після коміту основної транзакції
+            await this.SyncWorkRatingAsync(review.WorkId);
+
             return new ReviewResponse
             {
                 ReviewId = review.Id,
@@ -140,6 +143,9 @@ public class ReviewService : IReviewService
         review.TargetType = request.TargetType.ToLower();
 
         await this.context.SaveChangesAsync();
+
+        await this.SyncWorkRatingAsync(review.WorkId);
+
         return true;
     }
 
@@ -157,8 +163,12 @@ public class ReviewService : IReviewService
             throw new ForbiddenException("You can only delete your own reviews.");
         }
 
+        var workId = review.WorkId;
         this.context.Reviews.Remove(review);
         await this.context.SaveChangesAsync();
+
+        await this.SyncWorkRatingAsync(workId);
+
         return true;
     }
 
@@ -276,11 +286,43 @@ public class ReviewService : IReviewService
 
             await this.context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            if (report.Review != null)
+            {
+                await this.SyncWorkRatingAsync(report.Review.WorkId);
+            }
         }
         catch
         {
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    /// <summary>
+    /// Перераховує та синхронізує рейтинг твору на основі всіх відгуків.
+    /// </summary>
+    private async Task SyncWorkRatingAsync(Guid workId)
+    {
+        var reviews = await this.context.Reviews
+            .Where(r => r.WorkId == workId)
+            .ToListAsync();
+
+        var rating = await this.context.Ratings.FirstOrDefaultAsync(r => r.WorkId == workId);
+
+        if (rating == null)
+        {
+            rating = new Rating { Id = Guid.NewGuid(), WorkId = workId };
+            await this.context.Ratings.AddAsync(rating);
+        }
+
+        var bookReviews = reviews.Where(r => r.TargetType == "book" || r.TargetType == "comparison").ToList();
+        var adaptationReviews = reviews.Where(r => r.TargetType == "adaptation" || r.TargetType == "comparison").ToList();
+
+        rating.BookRating = bookReviews.Any() ? (decimal?)Math.Round(bookReviews.Average(r => r.Rating), 1) : 0;
+        rating.AdaptationRating = adaptationReviews.Any() ? (decimal?)Math.Round(adaptationReviews.Average(r => r.Rating), 1) : 0;
+        rating.VotesCount = reviews.Count;
+
+        await this.context.SaveChangesAsync();
     }
 }

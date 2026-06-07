@@ -160,6 +160,7 @@ public static class DbSeeder
                 TargetType = "comparison",
                 Text = "Фільм візуально приголомшливий, але книга пропонує набагато глибшу проробку світу. Спойлер: Пол виживає!",
                 IsSpoiler = false,
+                Rating = 9.0,
                 LikesCount = 10,
             };
             await context.Reviews.AddAsync(review);
