@@ -4,6 +4,7 @@
 
 namespace Book2Screen.Application.Services;
 
+using AutoMapper;
 using Book2Screen.Application.DTOs;
 using Book2Screen.Application.Filters;
 using Book2Screen.Application.Interfaces;
@@ -12,19 +13,23 @@ using Book2Screen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 /// <summary>
-/// Реалізація сервісу для роботи з творами.
+/// Сервіс для роботи з творами (Work).
+/// Об'єднує книги та їх адаптації.
 /// </summary>
 public class WorkService : IWorkService
 {
     private readonly ApplicationDbContext context;
+    private readonly IMapper mapper;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkService"/> class.
     /// </summary>
     /// <param name="context">Контекст бази даних.</param>
-    public WorkService(ApplicationDbContext context)
+    /// <param name="mapper">Мапер об'єктів.</param>
+    public WorkService(ApplicationDbContext context, IMapper mapper)
     {
         this.context = context;
+        this.mapper = mapper;
     }
 
     /// <inheritdoc/>
@@ -63,7 +68,7 @@ public class WorkService : IWorkService
         }
 
         var works = await query.ToListAsync();
-        return works.Select(this.MapToDto).ToList();
+        return works.Select(w => this.mapper.Map<BookScreenItemDto>(w)).ToList();
     }
 
     /// <inheritdoc/>
@@ -84,23 +89,7 @@ public class WorkService : IWorkService
             throw new KeyNotFoundException($"Work with ID {id} not found.");
         }
 
-        var dto = this.MapToDto(work);
-
-        if (work.DifferenceMap != null)
-        {
-            dto.HasMap = true;
-            dto.Differences = work.DifferenceMap.Differences.Select(d => new DifferenceDto
-            {
-                Id = d.Id,
-                Title = d.Title,
-                BookText = d.BookText,
-                FilmText = d.FilmText,
-                ImportanceLevel = d.ImportanceLevel,
-                IsSpoiler = d.IsSpoiler,
-            }).ToList();
-        }
-
-        return dto;
+        return this.mapper.Map<BookScreenItemDto>(work);
     }
 
     /// <inheritdoc/>
@@ -116,50 +105,9 @@ public class WorkService : IWorkService
             .ToListAsync();
 
         return works
-            .Select(this.MapToDto)
+            .Select(w => this.mapper.Map<BookScreenItemDto>(w))
             .OrderByDescending(d => d.FilmRating)
             .Take(count)
             .ToList();
-    }
-
-    private BookScreenItemDto MapToDto(Work w)
-    {
-        var total = w.Votes.Count;
-        var bookVotes = w.Votes.Count(v => v.SelectedOption == "book");
-        var movieVotes = w.Votes.Count(v => v.SelectedOption == "movie" || v.SelectedOption == "adaptation");
-
-        return new BookScreenItemDto
-        {
-            Id = w.Id,
-            Title = w.Title,
-            Year = w.Adaptation.ReleaseYear ?? 0,
-            Genre = w.Book.Genre ?? "Драма",
-            Author = string.Join(", ", w.Book.Authors.Select(a => a.FullName)),
-            Country = w.Adaptation.Country ?? "Unknown",
-            Poster = w.Adaptation.PosterUrl ?? "https://via.placeholder.com/300x450",
-            BookRating = w.Reviews.Any(r => r.TargetType == "book")
-                ? Math.Round(w.Reviews.Where(r => r.TargetType == "book").Average(r => r.Rating), 1)
-                : 0,
-            FilmRating = w.Reviews.Any(r => r.TargetType == "adaptation")
-                ? Math.Round(w.Reviews.Where(r => r.TargetType == "adaptation").Average(r => r.Rating), 1)
-                : 0,
-            Description = w.Summary ?? w.Book.Description ?? string.Empty,
-            FilmYear = w.Adaptation.ReleaseYear,
-            FilmCountry = w.Adaptation.Country,
-            FilmPoster = w.Adaptation.PosterUrl,
-            Director = w.Adaptation.Studio, // Use Studio as director placeholder if specific field is missing in entity
-            BookSummary = w.Book.Description,
-            FilmSummary = w.Adaptation.Description,
-            HasMap = w.DifferenceMap != null,
-            VoteStats = new VoteResponse
-            {
-                WorkId = w.Id,
-                TotalVotes = total,
-                BookVotes = bookVotes,
-                MovieVotes = movieVotes,
-                BookPercentage = total > 0 ? (double)bookVotes / total * 100 : 0,
-                MoviePercentage = total > 0 ? (double)movieVotes / total * 100 : 0,
-            },
-        };
     }
 }

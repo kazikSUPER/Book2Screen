@@ -1,7 +1,9 @@
 namespace Book2Screen.Tests.Services;
 
+using AutoMapper;
 using Book2Screen.Application.DTOs;
 using Book2Screen.Application.Filters;
+using Book2Screen.Application.Mappings;
 using Book2Screen.Application.Services;
 using Book2Screen.Domain.Entities;
 using Book2Screen.Infrastructure.Persistence;
@@ -13,6 +15,7 @@ public class WorkServiceTests : IDisposable
 {
     private readonly ApplicationDbContext _context;
     private readonly WorkService _service;
+    private readonly IMapper _mapper;
 
     public WorkServiceTests()
     {
@@ -21,7 +24,11 @@ public class WorkServiceTests : IDisposable
             .ConfigureWarnings(x => x.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         _context = new ApplicationDbContext(options);
-        _service = new WorkService(_context);
+
+        var config = new MapperConfiguration(cfg => cfg.AddProfile<AdaptationProfile>(), new Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory());
+        _mapper = config.CreateMapper();
+
+        _service = new WorkService(_context, _mapper);
     }
 
 
@@ -89,6 +96,32 @@ public class WorkServiceTests : IDisposable
         // Assert
         Assert.Single(result);
         Assert.Equal(9.0, result[0].FilmRating);
+    }
+
+    [Fact]
+    public async Task GetWorkByIdAsync_ReturnsWorkWithAllMappedFields()
+    {
+        // Arrange
+        var author1 = new Author { Id = Guid.NewGuid(), FullName = "Автор 1" };
+        var author2 = new Author { Id = Guid.NewGuid(), FullName = "Автор 2" };
+        var book = new Book { Id = Guid.NewGuid(), Title = "Книга", Description = "Опис книги", Authors = new List<Author> { author1, author2 } };
+        var adaptation = new Adaptation { Id = Guid.NewGuid(), Title = "Фільм", Type = "movie", Studio = "Legendary", Description = "Опис фільму", ReleaseYear = 2024 };
+        var workId = Guid.NewGuid();
+        var work = new Work { Id = workId, Title = "Твір", Book = book, Adaptation = adaptation, Summary = "Загальний опис" };
+        
+        await _context.Works.AddAsync(work);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetWorkByIdAsync(workId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Автор 1, Автор 2", result.Author);
+        Assert.Equal("Legendary", result.Director);
+        Assert.Equal("Опис книги", result.BookSummary);
+        Assert.Equal("Опис фільму", result.FilmSummary);
+        Assert.Equal("Загальний опис", result.Description);
     }
 
     [Fact]

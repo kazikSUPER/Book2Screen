@@ -108,17 +108,19 @@ public class ReviewServiceTests
         using var context = TestDbHelper.CreateContext(nameof(this.GetReviewsByWorkIdAsync_MultipleUsers_ReturnsAllReviews));
         var (userId1, workId) = await TestDbHelper.SeedUserAndWork(context);
         var userId2 = await TestDbHelper.SeedUser(context, "user2@test.com", "user2");
+        
+        var review1 = new Review { WorkId = workId, UserId = userId1, Rating = 8, Text = "Текст 11111111", TargetType = "comparison", LikesCount = 5 };
+        var review2 = new Review { WorkId = workId, UserId = userId2, Rating = 7, Text = "Текст 22222222", TargetType = "comparison", LikesCount = 10 };
+        await context.Reviews.AddRangeAsync(review1, review2);
+        await context.SaveChangesAsync();
+
         var service = new ReviewService(context);
-
-        await service.AddReviewAsync(userId1, this.DefaultRequest(workId, "Відгук першого юзера про твір тут"));
-        await service.AddReviewAsync(userId2, this.DefaultRequest(workId, "Відгук другого юзера про твір тут"));
-
         var reviews = await service.GetReviewsByWorkIdAsync(workId);
 
         var reviewList = reviews.ToList();
         reviewList.Should().HaveCount(2);
-        reviewList.Should().Contain(r => r.UserId == userId1);
-        reviewList.Should().Contain(r => r.UserId == userId2);
+        reviewList.Should().Contain(r => r.UserId == userId1 && r.LikesCount == 5);
+        reviewList.Should().Contain(r => r.UserId == userId2 && r.LikesCount == 10);
     }
 
     // ── UpdateReviewAsync ─────────────────────────────────────────────────────
