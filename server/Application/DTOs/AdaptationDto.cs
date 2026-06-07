@@ -85,4 +85,9 @@ public class AdaptationDto
     /// Gets or sets список розбіжностей для створення карти.
     /// </summary>
     public List<DifferenceDto>? Differences { get; set; }
+
+    /// <summary>
+    /// Gets or sets список акторів.
+    /// </summary>
+    public List<string>? Actors { get; set; }
 }

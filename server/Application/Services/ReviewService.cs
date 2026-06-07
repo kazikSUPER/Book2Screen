@@ -114,6 +114,7 @@ public class ReviewService : IReviewService
                 IsSpoiler = r.IsSpoiler,
                 Rating = r.Rating,
                 TargetType = r.TargetType,
+                LikesCount = r.LikesCount,
                 CreatedAt = r.CreatedAt,
             })
             .ToListAsync();
@@ -179,6 +180,7 @@ public class ReviewService : IReviewService
                 IsSpoiler = r.IsSpoiler,
                 Rating = r.Rating,
                 TargetType = r.TargetType,
+                LikesCount = r.LikesCount,
                 CreatedAt = r.CreatedAt,
             })
             .ToListAsync();

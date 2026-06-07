@@ -124,6 +124,8 @@ public class WorkServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.True(result.HasMap);
         Assert.Equal(2, result.Differences.Count);
+        Assert.Equal("high", result.Differences.First(d => d.Title == "Сцена 2").ImportanceLevel);
+        Assert.Equal("low", result.Differences.First(d => d.Title == "Сцена 1").ImportanceLevel);
         Assert.Contains(result.Differences, d => d.Title == "Сцена 2" && d.FilmText == "Змінений фінал");
         Assert.Contains(result.Differences, d => d.Title == "Сцена 1" && d.FilmText == "Сцена, яку вирізали з фільму");
     }

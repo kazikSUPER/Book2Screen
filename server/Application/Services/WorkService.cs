@@ -95,6 +95,7 @@ public class WorkService : IWorkService
                 Title = d.Title,
                 BookText = d.BookText,
                 FilmText = d.FilmText,
+                ImportanceLevel = d.ImportanceLevel,
                 IsSpoiler = d.IsSpoiler,
             }).ToList();
         }
@@ -133,7 +134,7 @@ public class WorkService : IWorkService
             Title = w.Title,
             Year = w.Adaptation.ReleaseYear ?? 0,
             Genre = w.Book.Genre ?? "Драма",
-            Author = w.Book.Authors.FirstOrDefault()?.FullName ?? "Невідомий автор",
+            Author = string.Join(", ", w.Book.Authors.Select(a => a.FullName)),
             Country = w.Adaptation.Country ?? "Unknown",
             Poster = w.Adaptation.PosterUrl ?? "https://via.placeholder.com/300x450",
             BookRating = w.Reviews.Any(r => r.TargetType == "book")
@@ -146,6 +147,9 @@ public class WorkService : IWorkService
             FilmYear = w.Adaptation.ReleaseYear,
             FilmCountry = w.Adaptation.Country,
             FilmPoster = w.Adaptation.PosterUrl,
+            Director = w.Adaptation.Studio, // Use Studio as director placeholder if specific field is missing in entity
+            BookSummary = w.Book.Description,
+            FilmSummary = w.Adaptation.Description,
             HasMap = w.DifferenceMap != null,
             VoteStats = new VoteResponse
             {

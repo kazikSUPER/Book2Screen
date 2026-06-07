@@ -150,6 +150,7 @@ export interface ReviewResponse {
   isSpoiler: boolean;
   rating: number;
   targetType: ReviewTargetType;
+  likesCount?: number;
   createdAt: string;
 }
 

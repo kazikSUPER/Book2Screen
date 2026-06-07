@@ -55,6 +55,11 @@ public class ReviewResponse
     public string TargetType { get; set; } = "comparison";
 
     /// <summary>
+    /// Gets or sets кількість лайків.
+    /// </summary>
+    public int LikesCount { get; set; }
+
+    /// <summary>
     /// Gets or sets дата створення.
     /// </summary>
     public DateTime CreatedAt { get; set; }

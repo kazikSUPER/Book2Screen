@@ -34,6 +34,12 @@ public class AdaptationProfile : Profile
             .ForMember(dest => dest.FilmRating, opt => opt.MapFrom(src => src.Rating != null ? src.Rating.AdaptationRating : 0))
             .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Summary ?? string.Empty))
             .ForMember(dest => dest.Genre, opt => opt.MapFrom(src => src.Book.Genre ?? "Драма"))
+            .ForMember(dest => dest.FilmYear, opt => opt.MapFrom(src => src.Adaptation.ReleaseYear))
+            .ForMember(dest => dest.FilmCountry, opt => opt.MapFrom(src => src.Adaptation.Country))
+            .ForMember(dest => dest.FilmPoster, opt => opt.MapFrom(src => src.Adaptation.PosterUrl))
+            .ForMember(dest => dest.Director, opt => opt.MapFrom(src => src.Adaptation.Studio))
+            .ForMember(dest => dest.BookSummary, opt => opt.MapFrom(src => src.Book.Description))
+            .ForMember(dest => dest.FilmSummary, opt => opt.MapFrom(src => src.Adaptation.Description))
             .ForMember(dest => dest.Differences, opt => opt.MapFrom(src => src.DifferenceMap != null ? src.DifferenceMap.Differences : new List<Difference>()));
 
         this.CreateMap<Difference, DifferenceDto>();

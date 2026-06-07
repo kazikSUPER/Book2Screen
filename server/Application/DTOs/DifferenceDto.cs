@@ -31,6 +31,11 @@ public class DifferenceDto
     public string FilmText { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets рівень важливості (low, medium, high).
+    /// </summary>
+    public string ImportanceLevel { get; set; } = "medium";
+
+    /// <summary>
     /// Gets or sets a value indicating whether чи є точка спойлером.
     /// </summary>
     public bool IsSpoiler { get; set; }
