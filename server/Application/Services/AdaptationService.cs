@@ -136,33 +136,46 @@ public class AdaptationService : IAdaptationService
                 await this.context.Authors.AddAsync(author);
             }
             authors.Add(author);
-        }
+            }
 
-        // 2. Створюємо Книгу
-        var book = new Domain.Entities.Book
-        {
+            // 2. Створюємо Книгу
+            var book = new Domain.Entities.Book
+            {
             Id = Guid.NewGuid(),
             Title = adaptationDto.Title,
             Description = adaptationDto.Description,
             Genre = adaptationDto.Genre ?? "Драма",
             Authors = authors,
-            CreatedAt = DateTime.UtcNow
-        };
+            CreatedAt = DateTime.UtcNow,
+            };
 
-        // 3. Створюємо Твір (Work) та пов'язуємо з Книгою та Адаптацією
-        var work = new Domain.Entities.Work
-        {
-            Id = Guid.NewGuid(),
-            Title = adaptationDto.Title,
-            BookId = book.Id,
-            AdaptationId = adaptation.Id,
-            Summary = adaptationDto.Description,
-            CreatedAt = DateTime.UtcNow
-        };
+            // 3. Створюємо Твір (Work) та пов'язуємо з Книгою та Адаптацією
+            var work = new Domain.Entities.Work
+            {
+                Id = Guid.NewGuid(),
+                Title = adaptationDto.Title,
+                BookId = book.Id,
+                AdaptationId = adaptation.Id,
+                Summary = adaptationDto.Description,
+                CreatedAt = DateTime.UtcNow,
+            };
 
-        // 4. Якщо передано розбіжності — створюємо карту
-        if (adaptationDto.Differences != null && adaptationDto.Differences.Any())
-        {
+            // 3.1. Створюємо сутність Rating
+            var rating = new Domain.Entities.Rating
+            {
+                Id = Guid.NewGuid(),
+                WorkId = work.Id,
+                BookRating = (decimal?)(adaptationDto.BookRating ?? 0),
+                AdaptationRating = (decimal?)(adaptationDto.FilmRating ?? 0),
+                VotesCount = 1, // Початковий голос
+                CreatedAt = DateTime.UtcNow,
+            };
+            work.Rating = rating;
+            await this.context.Ratings.AddAsync(rating);
+
+            // 4. Якщо передано розбіжності — створюємо карту
+            if (adaptationDto.Differences != null && adaptationDto.Differences.Any())
+            {
             var diffMap = new Domain.Entities.DifferenceMap
             {
                 Id = Guid.NewGuid(),
@@ -177,12 +190,12 @@ public class AdaptationService : IAdaptationService
                     FilmText = d.FilmText,
                     IsSpoiler = d.IsSpoiler,
                     ImportanceLevel = d.ImportanceLevel ?? (d.IsSpoiler ? "high" : "medium"),
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
                 }).ToList(),
             };
             work.DifferenceMap = diffMap;
             await this.context.DifferenceMaps.AddAsync(diffMap);
-        }
+            }
 
         await this.context.Books.AddAsync(book);
         await this.context.Adaptations.AddAsync(adaptation);
@@ -251,7 +264,13 @@ public class AdaptationService : IAdaptationService
 
                         if (author == null)
                         {
-                            author = new Domain.Entities.Author { FullName = adaptationDto.Author };
+                            author = new Domain.Entities.Author
+                            {
+                                Id = Guid.NewGuid(),
+                                FullName = adaptationDto.Author,
+                                CreatedAt = DateTime.UtcNow,
+                            };
+                            await this.context.Authors.AddAsync(author);
                         }
 
                         adaptation.Work.Book.Authors.Add(author);

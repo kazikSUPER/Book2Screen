@@ -19,7 +19,11 @@ public class AdaptationProfile : Profile
     public AdaptationProfile()
     {
         this.CreateMap<Adaptation, AdaptationDto>()
-            .ReverseMap();
+            .ForMember(dest => dest.BookRating, opt => opt.MapFrom(src => src.Work != null && src.Work.Rating != null ? (double?)src.Work.Rating.BookRating : null))
+            .ForMember(dest => dest.FilmRating, opt => opt.MapFrom(src => src.Work != null && src.Work.Rating != null ? (double?)src.Work.Rating.AdaptationRating : null))
+            .ReverseMap()
+            .ForPath(dest => dest.Work!.Rating!.BookRating, opt => opt.MapFrom(src => (decimal?)src.BookRating))
+            .ForPath(dest => dest.Work!.Rating!.AdaptationRating, opt => opt.MapFrom(src => (decimal?)src.FilmRating));
 
         this.CreateMap<Work, BookScreenItemDto>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
