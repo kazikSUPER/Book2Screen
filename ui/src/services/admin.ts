@@ -73,15 +73,16 @@ export async function createBook(
 
 export async function updateBook(
   id: string,
-  patch: Partial<Omit<BookScreenItem, 'id'>> & { type?: string }
+  patch: Partial<Omit<BookScreenItem, 'id'>> & { type?: string; adaptationId?: string }
 ): Promise<BookScreenItem> {
-  const dto = toAdaptationDto({ ...patch, id });
+  const targetId = patch.adaptationId ?? id;
+  const dto = toAdaptationDto({ ...patch, id: targetId });
   try {
-    const response = await apiClient.put<AdaptationDto>(`/api/v1/admin/adaptations/${id}`, dto);
-    return fromAdaptationDto(response.data);
+    const response = await apiClient.put<BookScreenItem>(`/api/v1/admin/adaptations/${targetId}`, dto);
+    return response.data;
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
-      console.warn('[admin] Mock update:', id);
+      console.warn('[admin] Mock update:', targetId);
       const local = ALL_ITEMS.find((b) => b.id === id);
       return { ...(local ?? ({} as BookScreenItem)), ...patch, id } as BookScreenItem;
     }
@@ -89,12 +90,13 @@ export async function updateBook(
   }
 }
 
-export async function deleteBook(id: string): Promise<void> {
+export async function deleteBook(id: string, adaptationId?: string): Promise<void> {
+  const targetId = adaptationId ?? id;
   try {
-    await apiClient.delete(`/api/v1/admin/adaptations/${id}`);
+    await apiClient.delete(`/api/v1/admin/adaptations/${targetId}`);
   } catch (err) {
     if (!USE_MOCK_FALLBACK) throw err;
-    console.warn('[admin] Mock delete:', id);
+    console.warn('[admin] Mock delete:', targetId);
   }
 }
 
