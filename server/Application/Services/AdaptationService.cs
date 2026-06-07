@@ -109,6 +109,7 @@ public class AdaptationService : IAdaptationService
             {
                 Id = Guid.NewGuid(),
                 WorkId = work.Id,
+                Title = $"Карта розбіжностей: {work.Title}",
                 Differences = adaptationDto.Differences.Select(d => new Domain.Entities.Difference
                 {
                     Id = Guid.NewGuid(),
@@ -116,7 +117,7 @@ public class AdaptationService : IAdaptationService
                     BookText = d.BookText,
                     FilmText = d.FilmText,
                     IsSpoiler = d.IsSpoiler,
-                    ImportanceLevel = d.IsSpoiler ? "high" : "medium",
+                    ImportanceLevel = d.ImportanceLevel ?? (d.IsSpoiler ? "high" : "medium"),
                 }).ToList(),
             };
             work.DifferenceMap = diffMap;
