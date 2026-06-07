@@ -31,7 +31,7 @@ public class AdaptationProfile : Profile
             .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Summary ?? string.Empty))
             .ForMember(dest => dest.Genre, opt => opt.MapFrom(src => src.Book.Genre ?? "Драма"))
             .ForMember(dest => dest.Differences, opt => opt.MapFrom(src => src.DifferenceMap != null ? src.DifferenceMap.Differences : new List<Difference>()));
-        
+
         this.CreateMap<Difference, DifferenceDto>();
     }
 }

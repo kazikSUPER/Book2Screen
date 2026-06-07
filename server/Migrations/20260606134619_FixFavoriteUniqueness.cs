@@ -1,9 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿// <copyright file="20260606134619_FixFavoriteUniqueness.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
 
 #nullable disable
 
 namespace Book2Screen.Migrations
 {
+    using Microsoft.EntityFrameworkCore.Migrations;
+
     /// <inheritdoc />
     public partial class FixFavoriteUniqueness : Migration
     {

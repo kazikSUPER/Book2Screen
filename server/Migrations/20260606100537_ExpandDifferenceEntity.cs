@@ -1,9 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿// <copyright file="20260606100537_ExpandDifferenceEntity.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
 
 #nullable disable
 
 namespace Book2Screen.Migrations
 {
+    using Microsoft.EntityFrameworkCore.Migrations;
+
     /// <inheritdoc />
     public partial class ExpandDifferenceEntity : Migration
     {
@@ -30,7 +34,7 @@ namespace Book2Screen.Migrations
                 table: "Differences",
                 type: "text",
                 nullable: false,
-                defaultValue: "");
+                defaultValue: string.Empty);
 
             migrationBuilder.AddColumn<bool>(
                 name: "IsSpoiler",
@@ -45,7 +49,7 @@ namespace Book2Screen.Migrations
                 type: "character varying(255)",
                 maxLength: 255,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: string.Empty);
         }
 
         /// <inheritdoc />
@@ -74,7 +78,7 @@ namespace Book2Screen.Migrations
                 type: "character varying(20)",
                 maxLength: 20,
                 nullable: false,
-                defaultValue: "",
+                defaultValue: string.Empty,
                 oldClrType: typeof(string),
                 oldType: "character varying(20)",
                 oldMaxLength: 20,
