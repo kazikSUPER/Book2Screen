@@ -18,7 +18,11 @@ public class AdaptationProfile : Profile
     /// </summary>
     public AdaptationProfile()
     {
-        this.CreateMap<Adaptation, AdaptationDto>().ReverseMap();
+        this.CreateMap<Adaptation, AdaptationDto>()
+            .ForMember(dest => dest.Genre, opt => opt.MapFrom(src => src.Work != null && src.Work.Book != null ? src.Work.Book.Genre : null))
+            .ForMember(dest => dest.Author, opt => opt.MapFrom(src => src.Work != null && src.Work.Book != null ? src.Work.Book.Authors.Select(a => a.FullName).FirstOrDefault() : null))
+            .ForMember(dest => dest.Differences, opt => opt.MapFrom(src => src.Work != null && src.Work.DifferenceMap != null ? src.Work.DifferenceMap.Differences : new List<Difference>()))
+            .ReverseMap();
 
         this.CreateMap<Work, BookScreenItemDto>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))

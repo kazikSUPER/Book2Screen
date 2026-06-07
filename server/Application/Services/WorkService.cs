@@ -32,6 +32,7 @@ public class WorkService : IWorkService
     {
         var query = this.context.Works
             .Include(w => w.Book)
+                .ThenInclude(b => b.Authors)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
             .Include(w => w.Votes)
@@ -70,6 +71,7 @@ public class WorkService : IWorkService
     {
         var work = await this.context.Works
             .Include(w => w.Book)
+                .ThenInclude(b => b.Authors)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
             .Include(w => w.Votes)
@@ -105,6 +107,7 @@ public class WorkService : IWorkService
     {
         var works = await this.context.Works
             .Include(w => w.Book)
+                .ThenInclude(b => b.Authors)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
             .Include(w => w.Votes)
@@ -130,6 +133,7 @@ public class WorkService : IWorkService
             Title = w.Title,
             Year = w.Adaptation.ReleaseYear ?? 0,
             Genre = w.Book.Genre ?? "Драма",
+            Author = w.Book.Authors.FirstOrDefault()?.FullName ?? "Невідомий автор",
             Country = w.Adaptation.Country ?? "Unknown",
             Poster = w.Adaptation.PosterUrl ?? "https://via.placeholder.com/300x450",
             BookRating = w.Reviews.Any(r => r.TargetType == "book")

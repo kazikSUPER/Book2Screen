@@ -129,13 +129,21 @@ public class AdaptationService : IAdaptationService
 
         await this.context.SaveChangesAsync();
 
-        return this.mapper.Map<AdaptationDto>(adaptation);
+        var result = this.mapper.Map<AdaptationDto>(adaptation);
+        result.Author = adaptationDto.Author;
+        result.Genre = adaptationDto.Genre;
+        return result;
     }
 
     /// <inheritdoc/>
     public async Task<AdaptationDto?> UpdateAdaptationAsync(Guid id, AdaptationDto adaptationDto)
     {
-        var adaptation = await this.context.Adaptations.FindAsync(id);
+        var adaptation = await this.context.Adaptations
+            .Include(a => a.Work)
+                .ThenInclude(w => w!.Book)
+                    .ThenInclude(b => b.Authors)
+            .FirstOrDefaultAsync(a => a.Id == id);
+
         if (adaptation == null)
         {
             throw new KeyNotFoundException($"Adaptation with ID {id} not found.");
@@ -144,10 +152,35 @@ public class AdaptationService : IAdaptationService
         this.mapper.Map(adaptationDto, adaptation);
         adaptation.Id = id; // Ensure ID is not changed
 
+        // Оновлюємо пов'язану книгу та автора
+        if (adaptation.Work != null && adaptation.Work.Book != null)
+        {
+            adaptation.Work.Book.Genre = adaptationDto.Genre ?? adaptation.Work.Book.Genre;
+            adaptation.Work.Title = adaptationDto.Title;
+            adaptation.Work.Book.Title = adaptationDto.Title;
+
+            if (!string.IsNullOrEmpty(adaptationDto.Author))
+            {
+                // Для MVP — просто замінюємо першого автора або додаємо нового
+                var existingAuthor = adaptation.Work.Book.Authors.FirstOrDefault();
+                if (existingAuthor != null)
+                {
+                    existingAuthor.FullName = adaptationDto.Author;
+                }
+                else
+                {
+                    adaptation.Work.Book.Authors.Add(new Domain.Entities.Author { FullName = adaptationDto.Author });
+                }
+            }
+        }
+
         this.context.Adaptations.Update(adaptation);
         await this.context.SaveChangesAsync();
 
-        return this.mapper.Map<AdaptationDto>(adaptation);
+        var result = this.mapper.Map<AdaptationDto>(adaptation);
+        result.Author = adaptationDto.Author;
+        result.Genre = adaptationDto.Genre;
+        return result;
     }
 
     /// <inheritdoc/>
