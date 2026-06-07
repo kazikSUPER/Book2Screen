@@ -121,20 +121,35 @@ public class AdaptationService : IAdaptationService
     {
         var adaptation = this.mapper.Map<Domain.Entities.Adaptation>(adaptationDto);
         adaptation.Id = Guid.NewGuid();
+        adaptation.CreatedAt = DateTime.UtcNow;
 
-        // 1. Створюємо Книгу
+        // 1. Підготовка автора
+        var authors = new List<Domain.Entities.Author>();
+        if (!string.IsNullOrEmpty(adaptationDto.Author))
+        {
+            var author = await this.context.Authors
+                .FirstOrDefaultAsync(a => a.FullName == adaptationDto.Author);
+
+            if (author == null)
+            {
+                author = new Domain.Entities.Author { Id = Guid.NewGuid(), FullName = adaptationDto.Author };
+                await this.context.Authors.AddAsync(author);
+            }
+            authors.Add(author);
+        }
+
+        // 2. Створюємо Книгу
         var book = new Domain.Entities.Book
         {
             Id = Guid.NewGuid(),
             Title = adaptationDto.Title,
             Description = adaptationDto.Description,
             Genre = adaptationDto.Genre ?? "Драма",
-            Authors = !string.IsNullOrEmpty(adaptationDto.Author)
-                ? new List<Domain.Entities.Author> { new Domain.Entities.Author { FullName = adaptationDto.Author }, }
-                : new List<Domain.Entities.Author>(),
+            Authors = authors,
+            CreatedAt = DateTime.UtcNow
         };
 
-        // 2. Створюємо Твір (Work) та пов'язуємо з Книгою та Адаптацією
+        // 3. Створюємо Твір (Work) та пов'язуємо з Книгою та Адаптацією
         var work = new Domain.Entities.Work
         {
             Id = Guid.NewGuid(),
@@ -142,9 +157,10 @@ public class AdaptationService : IAdaptationService
             BookId = book.Id,
             AdaptationId = adaptation.Id,
             Summary = adaptationDto.Description,
+            CreatedAt = DateTime.UtcNow
         };
 
-        // 3. Якщо передано розбіжності — створюємо карту
+        // 4. Якщо передано розбіжності — створюємо карту
         if (adaptationDto.Differences != null && adaptationDto.Differences.Any())
         {
             var diffMap = new Domain.Entities.DifferenceMap
@@ -152,6 +168,7 @@ public class AdaptationService : IAdaptationService
                 Id = Guid.NewGuid(),
                 WorkId = work.Id,
                 Title = $"Карта розбіжностей: {work.Title}",
+                CreatedAt = DateTime.UtcNow,
                 Differences = adaptationDto.Differences.Select(d => new Domain.Entities.Difference
                 {
                     Id = Guid.NewGuid(),
@@ -160,6 +177,7 @@ public class AdaptationService : IAdaptationService
                     FilmText = d.FilmText,
                     IsSpoiler = d.IsSpoiler,
                     ImportanceLevel = d.ImportanceLevel ?? (d.IsSpoiler ? "high" : "medium"),
+                    CreatedAt = DateTime.UtcNow
                 }).ToList(),
             };
             work.DifferenceMap = diffMap;
@@ -194,7 +212,7 @@ public class AdaptationService : IAdaptationService
             throw new KeyNotFoundException($"Adaptation with ID {id} not found.");
         }
 
-        // Manual mapping to ensure IDs and relations are preserved
+        // 1. Оновлюємо основні поля адаптації
         adaptation.Title = adaptationDto.Title;
         adaptation.Type = adaptationDto.Type;
         adaptation.Description = adaptationDto.Description;
@@ -202,42 +220,60 @@ public class AdaptationService : IAdaptationService
         adaptation.PosterUrl = adaptationDto.PosterUrl;
         adaptation.Country = adaptationDto.Country;
         adaptation.Studio = adaptationDto.Studio;
+        adaptation.UpdatedAt = DateTime.UtcNow;
 
-        // Оновлюємо пов'язану книгу та автора
+        // 2. Оновлюємо пов'язаний твір та книгу
         if (adaptation.Work != null)
         {
             adaptation.Work.Title = adaptationDto.Title;
             adaptation.Work.Summary = adaptationDto.Description;
+            adaptation.Work.UpdatedAt = DateTime.UtcNow;
 
             if (adaptation.Work.Book != null)
             {
                 adaptation.Work.Book.Title = adaptationDto.Title;
                 adaptation.Work.Book.Description = adaptationDto.Description;
                 adaptation.Work.Book.Genre = adaptationDto.Genre ?? adaptation.Work.Book.Genre;
+                adaptation.Work.Book.UpdatedAt = DateTime.UtcNow;
 
+                // 3. Синхронізація автора (MVP: підтримуємо одного основного автора)
                 if (!string.IsNullOrEmpty(adaptationDto.Author))
                 {
-                    var existingAuthor = adaptation.Work.Book.Authors.FirstOrDefault();
-                    if (existingAuthor != null)
+                    var existingAuthors = adaptation.Work.Book.Authors.ToList();
+                    if (!existingAuthors.Any(a => a.FullName == adaptationDto.Author))
                     {
-                        existingAuthor.FullName = adaptationDto.Author;
-                    }
-                    else
-                    {
-                        adaptation.Work.Book.Authors.Add(new Domain.Entities.Author { FullName = adaptationDto.Author });
+                        // Прибираємо старі зв'язки
+                        adaptation.Work.Book.Authors.Clear();
+
+                        // Шукаємо автора в БД або створюємо нового
+                        var author = await this.context.Authors
+                            .FirstOrDefaultAsync(a => a.FullName == adaptationDto.Author);
+
+                        if (author == null)
+                        {
+                            author = new Domain.Entities.Author { FullName = adaptationDto.Author };
+                        }
+
+                        adaptation.Work.Book.Authors.Add(author);
                     }
                 }
             }
 
-            // Оновлюємо рейтинги
+            // 4. Оновлення рейтингів
             if (adaptation.Work.Rating == null)
             {
-                adaptation.Work.Rating = new Domain.Entities.Rating { Id = Guid.NewGuid(), WorkId = adaptation.Work.Id };
+                adaptation.Work.Rating = new Domain.Entities.Rating
+                {
+                    Id = Guid.NewGuid(),
+                    WorkId = adaptation.Work.Id,
+                    CreatedAt = DateTime.UtcNow,
+                };
                 await this.context.Ratings.AddAsync(adaptation.Work.Rating);
             }
 
-            adaptation.Work.Rating.BookRating = (decimal?)adaptationDto.BookRating;
-            adaptation.Work.Rating.AdaptationRating = (decimal?)adaptationDto.FilmRating;
+            adaptation.Work.Rating.BookRating = (decimal?)(adaptationDto.BookRating ?? 0);
+            adaptation.Work.Rating.AdaptationRating = (decimal?)(adaptationDto.FilmRating ?? 0);
+            adaptation.Work.Rating.UpdatedAt = DateTime.UtcNow;
         }
 
         await this.context.SaveChangesAsync();
