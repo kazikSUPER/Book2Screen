@@ -8,13 +8,15 @@ import * as favoritesApi from '../services/favorites';
  *
  * Архітектура (станом на підключення бекенду):
  *  • БЕК має /Favorites — повна синхронізація творів, які користувач додав.
- *  • Бек розрізняє 'read' / 'watch' через поле kind у FavoriteRequest та запитах.
+ *  • Бек НЕ розрізняє 'read' / 'watch' — у нього просто список workId.
  *
  * Тому ми:
- *  1. Тримаємо локальний список { workId, kind } у localStorage —
- *     для швидкого UI.
- *  2. Синхронізуємо з беком (push/pull через /Favorites).
+ *  1. Тримаємо локальний `kindMap`: { workId → 'read'|'watch'|'both' } у localStorage —
+ *     для UI-розрізнення (на сторінці деталі дві окремі кнопки).
+ *  2. Список workId синхронізуємо з беком (push/pull через /Favorites).
  *  3. При login → sync(), при logout → не чіпаємо локальне (анонімний режим).
+ *
+ * Якщо в майбутньому бек додасть поле `kind` у FavoriteRequest — позбавимось локального map.
  */
 
 export type WishKind = 'read' | 'watch';
@@ -31,10 +33,6 @@ export const useWishlistStore = defineStore('wishlist', () => {
     return items.value.some((e) => e.workId === workId && e.kind === kind);
   }
 
-  /**
-   * Локальний toggle + спроба синхронізації з беком.
-   * Якщо бек неавторизований/недоступний — лишається тільки локально.
-   */
   async function toggle(workId: string, kind: WishKind): Promise<void> {
     const idx = items.value.findIndex((e) => e.workId === workId && e.kind === kind);
     const isRemoving = idx >= 0;
@@ -59,18 +57,18 @@ export const useWishlistStore = defineStore('wishlist', () => {
   /** Початкова синхронізація з бекенду (викликати після login). */
   async function syncFromServer(): Promise<void> {
     try {
-      // Отримуємо окремо прочитані та переглянуті
-      const [readListRemote, watchListRemote] = await Promise.all([
+      const [remoteRead, remoteWatch] = await Promise.all([
         favoritesApi.fetchFavorites('read'),
-        favoritesApi.fetchFavorites('watch')
+        favoritesApi.fetchFavorites('watch'),
       ]);
 
       const newItems: WishlistEntry[] = [];
-
-      readListRemote.forEach(w => newItems.push({ workId: w.id, kind: 'read' }));
-      watchListRemote.forEach(w => newItems.push({ workId: w.id, kind: 'watch' }));
-
-      // Замінюємо локальний список на серверний (оскільки сервер — джерело істини)
+      for (const w of remoteRead) {
+        newItems.push({ workId: w.id, kind: 'read' });
+      }
+      for (const w of remoteWatch) {
+        newItems.push({ workId: w.id, kind: 'watch' });
+      }
       items.value = newItems;
     } catch (err) {
       console.warn('[wishlist] Sync from server failed (ignored):', err);

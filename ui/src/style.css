@@ -131,7 +131,6 @@ a:hover {
 
 /* Reduced motion — поважаємо системне налаштування користувача (Етап 4: Cross-browser). */
 @media (prefers-reduced-motion: reduce) {
-
   *,
   *::before,
   *::after {

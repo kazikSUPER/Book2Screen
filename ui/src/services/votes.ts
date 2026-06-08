@@ -21,7 +21,14 @@ export async function submitVote(workId: string, type: VoteType): Promise<VoteRe
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
       console.warn('[votes] Backend unavailable, returning mock', err);
-      return { workId, totalVotes: 1, bookVotes: type === 'book' ? 1 : 0, movieVotes: type === 'movie' ? 1 : 0, bookPercentage: type === 'book' ? 100 : 0, moviePercentage: type === 'movie' ? 100 : 0 };
+      return {
+        workId,
+        totalVotes: 100,
+        bookVotes: type === 'book' ? 51 : 50,
+        movieVotes: type === 'movie' ? 50 : 50,
+        bookPercentage: type === 'book' ? 51 : 50,
+        moviePercentage: type === 'movie' ? 49 : 50,
+      };
     }
     throw err;
   }
@@ -35,7 +42,14 @@ export async function fetchVoteResults(workId: string): Promise<VoteResponse> {
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
       console.warn('[votes] Backend unavailable, returning mock', err);
-      return { workId, totalVotes: 0, bookVotes: 0, movieVotes: 0, bookPercentage: 0, moviePercentage: 0 };
+      return {
+        workId,
+        totalVotes: 100,
+        bookVotes: 50,
+        movieVotes: 50,
+        bookPercentage: 50,
+        moviePercentage: 50,
+      };
     }
     throw err;
   }

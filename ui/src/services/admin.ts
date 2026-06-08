@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import type { AdaptationDto, BookScreenItem, ReportResponse, DifferencePoint, ReviewResponse } from './types';
+import type { AdaptationDto, BookScreenItem, ReportResponse, DifferencePoint } from './types';
 import { fetchWorks, fetchWorkById } from './works';
 import { ALL_ITEMS } from './items';
 import { USE_MOCK_FALLBACK } from './env';
@@ -14,11 +14,6 @@ function toAdaptationDto(item: Partial<BookScreenItem> & { id?: string; type?: s
     posterUrl: item.filmPoster ?? item.poster,
     country: item.filmCountry ?? item.country,
     studio: item.director,
-    author: item.author,
-    genre: item.genre,
-    bookRating: item.bookRating,
-    filmRating: item.filmRating,
-    differences: item.differences,
   };
 }
 
@@ -27,19 +22,16 @@ function fromAdaptationDto(a: AdaptationDto): BookScreenItem {
     id: a.id ?? '',
     title: a.title,
     year: a.releaseYear ?? 0,
-    genre: a.genre ?? '',
+    genre: '',
     country: a.country ?? '',
     poster: a.posterUrl ?? '',
-    bookRating: a.bookRating ?? 0,
-    filmRating: a.filmRating ?? 0,
+    bookRating: 0,
+    filmRating: 0,
     description: a.description ?? '',
     director: a.studio,
     filmYear: a.releaseYear,
     filmPoster: a.posterUrl,
     filmCountry: a.country,
-    author: a.author,
-    differences: a.differences,
-    hasMap: Boolean(a.differences && a.differences.length > 0),
   };
 }
 
@@ -51,9 +43,7 @@ export async function fetchAdminBook(id: string): Promise<BookScreenItem> {
   return fetchWorkById(id);
 }
 
-export async function createBook(
-  book: Omit<BookScreenItem, 'id'> & { type?: string }
-): Promise<BookScreenItem> {
+export async function createBook(book: Omit<BookScreenItem, 'id'> & { type?: string }): Promise<BookScreenItem> {
   const dto = toAdaptationDto(book);
   try {
     const response = await apiClient.post<AdaptationDto>('/api/v1/admin/adaptations', dto);
@@ -73,16 +63,15 @@ export async function createBook(
 
 export async function updateBook(
   id: string,
-  patch: Partial<Omit<BookScreenItem, 'id'>> & { type?: string; adaptationId?: string }
+  patch: Partial<Omit<BookScreenItem, 'id'>> & { type?: string }
 ): Promise<BookScreenItem> {
-  const targetId = patch.adaptationId ?? id;
-  const dto = toAdaptationDto({ ...patch, id: targetId });
+  const dto = toAdaptationDto({ ...patch, id });
   try {
-    const response = await apiClient.put<BookScreenItem>(`/api/v1/admin/adaptations/${targetId}`, dto);
-    return response.data;
+    const response = await apiClient.put<AdaptationDto>(`/api/v1/admin/adaptations/${id}`, dto);
+    return fromAdaptationDto(response.data);
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
-      console.warn('[admin] Mock update:', targetId);
+      console.warn('[admin] Mock update:', id);
       const local = ALL_ITEMS.find((b) => b.id === id);
       return { ...(local ?? ({} as BookScreenItem)), ...patch, id } as BookScreenItem;
     }
@@ -90,53 +79,55 @@ export async function updateBook(
   }
 }
 
-export async function deleteBook(id: string, adaptationId?: string): Promise<void> {
-  const targetId = adaptationId ?? id;
+export async function deleteBook(id: string): Promise<void> {
   try {
-    await apiClient.delete(`/api/v1/admin/adaptations/${targetId}`);
+    await apiClient.delete(`/api/v1/admin/adaptations/${id}`);
   } catch (err) {
     if (!USE_MOCK_FALLBACK) throw err;
-    console.warn('[admin] Mock delete:', targetId);
+    console.warn('[admin] Mock delete:', id);
   }
 }
 
-export type ReportStatus = 'pending' | 'resolved' | 'dismissed' | 'marked-spoiler';
+export type ReportStatus = 'pending' | 'approved' | 'rejected' | 'marked-spoiler';
 
 export interface ReportedComment {
   reportId: string;
   reason: string;
   status: ReportStatus;
   createdAt: string;
-  review: ReviewResponse;
+  review: {
+    reviewId: string;
+    workId: string;
+    userId: string;
+    text: string;
+    isSpoiler: boolean;
+    rating: number;
+    createdAt: string;
+  };
 }
 
 function normalizeStatus(raw: string | undefined): ReportStatus {
   const s = (raw ?? '').toLowerCase().trim();
-  if (s === 'resolved' || s === 'dismissed' || s === 'marked-spoiler') return s;
+  if (s === 'approved' || s === 'rejected' || s === 'marked-spoiler') return s;
   if (s === 'spoiler' || s === 'marked_spoiler' || s === 'markedspoiler') return 'marked-spoiler';
   return 'pending';
 }
 
 function mapReport(r: ReportResponse): ReportedComment {
-  // Використовуємо реальний об'єкт Review з сервера, або створюємо fallback.
-  const review: ReviewResponse = r.review ?? {
-    reviewId: r.reviewId,
-    workId: '',
-    userId: r.userId,
-    userNickname: 'Користувач',
-    text: r.reviewText ?? '',
-    isSpoiler: false,
-    rating: 0,
-    targetType: 'comparison',
-    createdAt: r.createdAt,
-  };
-
   return {
     reportId: r.reportId,
     reason: r.reason ?? '',
     status: normalizeStatus(r.status),
     createdAt: r.createdAt,
-    review,
+    review: {
+      reviewId: r.reviewId,
+      workId: '',
+      userId: r.userId,
+      text: r.reviewText ?? '',
+      isSpoiler: false,
+      rating: 0,
+      createdAt: r.createdAt,
+    },
   };
 }
 
@@ -153,10 +144,7 @@ export async function fetchReports(): Promise<ReportedComment[]> {
   }
 }
 
-export async function moderateReport(
-  reportId: string,
-  action: 'delete' | 'dismiss' | 'spoiler'
-): Promise<void> {
+export async function moderateReport(reportId: string, action: 'approve' | 'reject' | 'spoiler'): Promise<void> {
   try {
     await apiClient.post(`/api/v1/admin/reports/${reportId}/${action}`);
   } catch (err) {
@@ -176,11 +164,9 @@ function seedReports(): ReportedComment[] {
       reviewId: `rev-${i + 1}`,
       workId: hpId,
       userId: `u-${i + 100}`,
-      userNickname: 'Користувач',
       text: 'В кінці книги головні герої…',
       isSpoiler: false,
       rating: 4,
-      targetType: 'comparison',
       createdAt: new Date(Date.now() - i * 3600_000).toISOString(),
     },
   }));

@@ -24,7 +24,6 @@ export interface DifferencePoint {
 /** Swagger: BookScreenItemDto */
 export interface BookScreenItem {
   id: string;
-  adaptationId?: string;
   title: string;
   year: number;
   genre: string;
@@ -44,6 +43,8 @@ export interface BookScreenItem {
   differences?: DifferencePoint[];
   /** Вбудована статистика голосування (бек може повертати разом з твором). */
   voteStats?: VoteResponse;
+  /** З Favorites endpoint */
+  kind?: 'read' | 'watch';
 }
 
 // ===== Auth DTO =====
@@ -61,7 +62,7 @@ export interface LoginRequest {
  */
 export interface RegisterRequest {
   email: string;
-  username: string;
+  nickname: string;
   password: string;
 }
 
@@ -70,7 +71,7 @@ export interface AuthResponse {
   token: string;
   userId: string;
   email: string;
-  username: string;
+  nickname: string;
   /** 'user' | 'admin' | 'moderator' — використовуємо для route-guard на /admin. */
   role?: string;
 }
@@ -105,8 +106,8 @@ export type PasswordResetConfirmResponse = AuthResponse;
 
 // ===== Vote DTO =====
 
-/** ВАЖЛИВО: бек чекає lowercase 'book' | 'movie' | 'adaptation'. */
-export type VoteType = 'book' | 'movie' | 'adaptation';
+/** ВАЖЛИВО: бек чекає lowercase 'book' | 'movie' (не 'BOOK'/'MOVIE'). */
+export type VoteType = 'book' | 'movie';
 
 /** Swagger: VoteRequest */
 export interface VoteRequest {
@@ -143,15 +144,12 @@ export interface ReviewResponse {
   reviewId: string;
   workId: string;
   userId: string;
-  /** Username з бекенду. */
-  userNickname: string;
-  /** URL аватара користувача. */
-  userAvatar?: string;
+  /** historical поле — бек не завжди повертає, лишаємо для UI. */
+  userNickname?: string;
   text: string;
   isSpoiler: boolean;
   rating: number;
-  targetType: ReviewTargetType;
-  likesCount?: number;
+  targetType?: ReviewTargetType;
   createdAt: string;
 }
 
@@ -167,8 +165,6 @@ export interface ReportResponse {
   createdAt: string;
   /** Текст відгуку, на який скаржаться (для зручності модерації). */
   reviewText?: string;
-  /** Об'єкт відгуку (для детальної модерації). */
-  review?: ReviewResponse;
 }
 
 // ===== User Profile DTO =====
@@ -187,7 +183,7 @@ export interface UserProfileDto {
 /** Swagger: FavoriteRequest */
 export interface FavoriteRequest {
   workId: string;
-  kind?: string;
+  kind: string;
 }
 
 // ===== Admin: Adaptation DTO =====
@@ -207,11 +203,6 @@ export interface AdaptationDto {
   posterUrl?: string;
   studio?: string;
   country?: string;
-  author?: string;
-  genre?: string;
-  bookRating?: number;
-  filmRating?: number;
-  differences?: DifferencePoint[];
 }
 
 // ===== ProblemDetails =====

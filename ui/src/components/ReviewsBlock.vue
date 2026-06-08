@@ -36,10 +36,10 @@ const errorMessage = ref('');
 // ── Форма коментаря ────────────────────────────────────────
 const text = ref('');
 const isSpoiler = ref(false);
-const targetType = ref<ReviewTargetType>('comparison');
 const isSubmitting = ref(false);
 
 // Скільки коментарів показуємо зараз (інші — за "Показати більше").
+const targetType = ref<ReviewTargetType>('comparison');
 const PAGE_SIZE = 5;
 const visibleCount = ref(PAGE_SIZE);
 
@@ -72,16 +72,15 @@ async function onSubmit(): Promise<void> {
     return;
   }
   const trimmed = text.value.trim();
-  // BUG-051: Додано перевірку на мінімальну довжину 10 символів (вимога бекенду).
-  if (trimmed.length > 0 && trimmed.length < 10) {
-    notifications.pushWarning("Текст відгуку повинен містити мінімум 10 символів.");
+  // BUG-037 / BUG-030: бек чекає 10..2000 символів. Валідуємо клієнтсько.
+  if (trimmed.length < 10) {
+    notifications.pushWarning(t.commentTooShort);
     return;
   }
   if (trimmed.length > 2000) {
     notifications.pushWarning(t.commentTooLong);
     return;
   }
-
   isSubmitting.value = true;
   try {
     // Прив'язуємо рейтинг із userRatings (середнє між book/film, якщо обидва є).
@@ -102,6 +101,7 @@ async function onSubmit(): Promise<void> {
     reviews.value.unshift(created);
     text.value = '';
     isSpoiler.value = false;
+    targetType.value = 'comparison';
     notifications.pushSuccess(t.commentPublished);
   } catch (err) {
     notifications.pushError(extractErrorMessage(err));
@@ -140,7 +140,7 @@ watch(
     <form class="reviews__form" @submit.prevent="onSubmit">
       <div class="reviews__form-row">
         <div class="reviews__avatar" aria-hidden="true">
-          {{ userStore.isAuthenticated ? (userStore.username || userStore.email || '?').charAt(0).toUpperCase() : '?' }}
+          {{ userStore.isAuthenticated ? (userStore.nickname || userStore.email || '?').charAt(0).toUpperCase() : '?' }}
         </div>
         <input
           v-model="text"
@@ -150,7 +150,6 @@ watch(
           :placeholder="t.commentPlaceholder"
           :maxlength="2200"
           :disabled="isSubmitting"
-          @keyup.enter="onSubmit"
         />
         <button type="submit" class="reviews__submit" :disabled="isSubmitting || !text.trim() || isTooLong">
           {{ isSubmitting ? '…' : STR.common.submit }}
@@ -161,11 +160,11 @@ watch(
           <input v-model="isSpoiler" type="checkbox" :disabled="isSubmitting" />
           <span>{{ t.markSpoiler }}</span>
         </label>
-        
-        <select v-model="targetType" class="reviews__target-select" :disabled="isSubmitting">
-          <option value="comparison">Загальний відгук (порівняння)</option>
-          <option value="book">Відгук про книгу</option>
-          <option value="adaptation">Відгук про фільм</option>
+
+        <select v-model="targetType" :disabled="isSubmitting" class="reviews__select">
+          <option value="comparison">{{ t.targetComparison }}</option>
+          <option value="book">{{ t.targetBook }}</option>
+          <option value="adaptation">{{ t.targetAdaptation }}</option>
         </select>
 
         <!-- BUG-037: лічильник символів. Червоніє при перевищенні. -->
@@ -376,6 +375,22 @@ watch(
 
 .reviews__more:hover {
   background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.reviews__select {
+  padding: 4px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  background: var(--color-input-bg);
+  color: var(--text-on-light);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.reviews__select:focus {
   border-color: var(--color-primary);
 }
 

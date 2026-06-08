@@ -91,78 +91,78 @@ function onOverlayClick(e: MouseEvent) {
   <div class="modal-overlay" @mousedown="onOverlayMouseDown" @click="onOverlayClick">
     <div class="modal-frame" @click.stop @mousedown.stop>
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reset-title">
-      <button class="modal-close" type="button" :aria-label="STR.common.close" @click="emit('close')">✕</button>
+        <button class="modal-close" type="button" :aria-label="STR.common.close" @click="emit('close')">✕</button>
 
-      <h2 id="reset-title" class="modal-title">{{ t.resetTitle }}</h2>
+        <h2 id="reset-title" class="modal-title">{{ t.resetTitle }}</h2>
 
-      <div class="modal-body">
-        <div class="field">
-          <label class="field-label">{{ t.resetEmailLabel }}</label>
-          <div class="email-row">
-            <input
-              v-model="email"
-              type="email"
-              autocomplete="email"
-              class="field-input"
-              :class="{ error: emailError }"
-              :placeholder="t.emailPlaceholder"
-              :disabled="codeSent || isSendingCode"
-            />
-            <button
-              type="button"
-              class="send-btn"
-              :disabled="!isEmailValid || isSendingCode || codeSent"
-              @click="handleSendCode"
-            >
-              {{ isSendingCode ? t.sending : t.sendCode }}
-            </button>
+        <div class="modal-body">
+          <div class="field">
+            <label class="field-label">{{ t.resetEmailLabel }}</label>
+            <div class="email-row">
+              <input
+                v-model="email"
+                type="email"
+                autocomplete="email"
+                class="field-input"
+                :class="{ error: emailError }"
+                :placeholder="t.emailPlaceholder"
+                :disabled="codeSent || isSendingCode"
+              />
+              <button
+                type="button"
+                class="send-btn"
+                :disabled="!isEmailValid || isSendingCode || codeSent"
+                @click="handleSendCode"
+              >
+                {{ isSendingCode ? t.sending : t.sendCode }}
+              </button>
+            </div>
+            <span v-if="emailError" class="error-text">{{ emailError }}</span>
+            <span v-if="codeSent" class="success-text">{{ t.codeSentTo(email) }}</span>
+            <span v-if="apiError && !codeSent" class="error-text">{{ apiError }}</span>
           </div>
-          <span v-if="emailError" class="error-text">{{ emailError }}</span>
-          <span v-if="codeSent" class="success-text">{{ t.codeSentTo(email) }}</span>
-          <span v-if="apiError && !codeSent" class="error-text">{{ apiError }}</span>
+
+          <div class="field">
+            <label class="field-label">{{ t.codeLabel }}</label>
+            <input
+              v-model="code"
+              type="text"
+              class="field-input"
+              :class="{ error: codeError }"
+              :placeholder="t.codePlaceholder"
+              :disabled="isSubmitting"
+              autocomplete="one-time-code"
+            />
+            <span v-if="codeError" class="error-text">{{ codeError }}</span>
+          </div>
+
+          <!-- Крок 3: новий пароль (з'являється коли код надіслано) -->
+          <div v-if="codeSent" class="field">
+            <label class="field-label">{{ t.newPasswordLabel }}</label>
+            <input
+              v-model="newPassword"
+              type="password"
+              autocomplete="new-password"
+              class="field-input"
+              :class="{ error: passwordError }"
+              :placeholder="t.passwordPlaceholder"
+              :disabled="isSubmitting"
+            />
+            <span v-if="passwordError" class="error-text">{{ passwordError }}</span>
+          </div>
+
+          <p v-if="apiError && codeSent" class="api-error">{{ apiError }}</p>
+
+          <button
+            type="button"
+            class="reset-btn"
+            :disabled="isSubmitting || !codeSent || !isPasswordValid"
+            @click="handleReset"
+          >
+            {{ isSubmitting ? t.submittingReset : t.submitReset }}
+          </button>
         </div>
-
-        <div class="field">
-          <label class="field-label">{{ t.codeLabel }}</label>
-          <input
-            v-model="code"
-            type="text"
-            class="field-input"
-            :class="{ error: codeError }"
-            :placeholder="t.codePlaceholder"
-            :disabled="isSubmitting"
-            autocomplete="one-time-code"
-          />
-          <span v-if="codeError" class="error-text">{{ codeError }}</span>
-        </div>
-
-        <!-- Крок 3: новий пароль (з'являється коли код надіслано) -->
-        <div v-if="codeSent" class="field">
-          <label class="field-label">{{ t.newPasswordLabel }}</label>
-          <input
-            v-model="newPassword"
-            type="password"
-            autocomplete="new-password"
-            class="field-input"
-            :class="{ error: passwordError }"
-            :placeholder="t.passwordPlaceholder"
-            :disabled="isSubmitting"
-          />
-          <span v-if="passwordError" class="error-text">{{ passwordError }}</span>
-        </div>
-
-        <p v-if="apiError && codeSent" class="api-error">{{ apiError }}</p>
-
-        <button
-          type="button"
-          class="reset-btn"
-          :disabled="isSubmitting || !codeSent || !isPasswordValid"
-          @click="handleReset"
-        >
-          {{ isSubmitting ? t.submittingReset : t.submitReset }}
-        </button>
       </div>
-    </div>
     </div>
   </div>
 </template>
@@ -179,7 +179,6 @@ function onOverlayClick(e: MouseEvent) {
   padding: 16px;
 }
 
-
 .modal-frame {
   background: #3d0f1a;
   padding: 30px;
@@ -192,7 +191,8 @@ function onOverlayClick(e: MouseEvent) {
 .modal {
   background-color: var(--color-modal-bg);
   border: 2px solid var(--color-card);
-  /* border-radius: var(--radius-md); */padding: 32px;
+  /* border-radius: var(--radius-md); */
+  padding: 32px;
   position: relative;
   box-shadow: var(--shadow-md);
 }

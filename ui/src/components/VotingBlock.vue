@@ -162,7 +162,7 @@ watch(
   border-radius: var(--radius-md);
   max-width: 500px;
   width: 100%;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
 .voting__title {
@@ -206,7 +206,7 @@ watch(
 
 .voting__btn--active {
   background-color: #5a141c;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .voting__btn--inactive {

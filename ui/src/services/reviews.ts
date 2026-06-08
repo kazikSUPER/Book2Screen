@@ -81,11 +81,13 @@ export async function deleteReview(reviewId: string): Promise<void> {
   }
 }
 
-// POST /api/v1/Reviews/{id}/report — тіло: { reason: string }
+// POST /api/v1/Reviews/{id}/report — тіло: просто рядок з причиною
 export async function reportReview(reviewId: string, reason: string): Promise<void> {
   try {
-    // Бек чекає об'єкт ReportRequest: { reason: "..." }
-    await apiClient.post(`/api/v1/Reviews/${reviewId}/report`, { reason });
+    // Бек чекає просто рядок як JSON body. axios передасть чистий рядок, якщо не зробити JSON.stringify.
+    await apiClient.post(`/api/v1/Reviews/${reviewId}/report`, JSON.stringify(reason), {
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
       console.warn('[reviews] Mock report:', { reviewId, reason });

@@ -26,10 +26,11 @@ export const useUserStore = defineStore('user', () => {
   const token = usePersistedRef<string>('b2s_token', '');
   const userId = usePersistedRef<string>('b2s_userId', '');
   const email = usePersistedRef<string>('b2s_email', '');
-  const username = usePersistedRef<string>('b2s_username', '');
+  const nickname = usePersistedRef<string>('b2s_nickname', '');
   const role = usePersistedRef<string>('b2s_role', '');
 
   // ── Профіль (SCRUM-64) — підвантажується з /users/me ─────
+  const username = usePersistedRef<string>('b2s_profile_username', '');
   const avatarUrl = usePersistedRef<string>('b2s_profile_avatar', '');
   const joinedAt = usePersistedRef<string>('b2s_profile_joined', '');
 
@@ -40,7 +41,7 @@ export const useUserStore = defineStore('user', () => {
     token.value = payload.token;
     userId.value = payload.userId;
     email.value = payload.email;
-    username.value = payload.username;
+    nickname.value = payload.nickname;
     role.value = payload.role ?? 'user';
   }
 
@@ -68,7 +69,7 @@ export const useUserStore = defineStore('user', () => {
     token.value = '';
     userId.value = '';
     email.value = '';
-    username.value = '';
+    nickname.value = '';
     role.value = '';
     // Профільні дані лишаємо в localStorage — після наступного login підвантажимо.
   }
@@ -106,13 +107,14 @@ export const useUserStore = defineStore('user', () => {
     token,
     userId,
     email,
-    username,
+    nickname,
     role,
     login,
     register,
     resetPassword,
     logout,
     // profile
+    username,
     avatarUrl,
     joinedAt,
     refreshProfile,

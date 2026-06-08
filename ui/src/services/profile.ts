@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import type { ReviewRequest, ReviewResponse, UserProfileDto } from './types';
+import type { ReviewResponse, UserProfileDto } from './types';
 import { USE_MOCK_FALLBACK } from './env';
 
 /**
@@ -46,10 +46,12 @@ export async function updateMyProfile(patch: UserProfileDto): Promise<void> {
   }
 }
 
-// POST /api/v1/users/me/avatar — body: { avatarUrl: "..." }
+// POST /api/v1/users/me/avatar — body: рядок з URL
 export async function updateMyAvatar(avatarUrl: string): Promise<void> {
   try {
-    await apiClient.post('/api/v1/users/me/avatar', { avatarUrl });
+    await apiClient.post('/api/v1/users/me/avatar', JSON.stringify(avatarUrl), {
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
       console.warn('[profile] Mock avatar update:', avatarUrl.slice(0, 60));
@@ -81,19 +83,6 @@ export async function fetchMyReviews(): Promise<ReviewResponse[]> {
           createdAt: now,
         },
       ];
-    }
-    throw err;
-  }
-}
-
-// PUT /api/v1/Reviews/{id} — оновити свій відгук
-export async function updateMyReview(reviewId: string, req: ReviewRequest): Promise<void> {
-  try {
-    await apiClient.put(`/api/v1/Reviews/${reviewId}`, req);
-  } catch (err) {
-    if (USE_MOCK_FALLBACK) {
-      console.warn('[profile] Mock update review:', reviewId);
-      return;
     }
     throw err;
   }

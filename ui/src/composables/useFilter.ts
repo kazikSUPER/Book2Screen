@@ -26,8 +26,7 @@ export function useFilter(items: Ref<BookScreenItem[]> | BookScreenItem[]) {
         item.genre.toLowerCase().includes(filters.genre.toLowerCase());
 
       const countryEn = mapCountryToBackend(filters.country);
-      const matchesCountry =
-        !filters.country || item.country === countryEn || item.country === filters.country;
+      const matchesCountry = !filters.country || item.country === countryEn || item.country === filters.country;
 
       const matchesYearMin = filters.yearMin === null || item.year >= filters.yearMin;
       const matchesYearMax = filters.yearMax === null || item.year <= filters.yearMax;
@@ -37,7 +36,15 @@ export function useFilter(items: Ref<BookScreenItem[]> | BookScreenItem[]) {
 
       const matchesMap = !filters.onlyWithMap || item.hasMap === true;
 
-      return matchesSearch && matchesGenre && matchesCountry && matchesYearMin && matchesYearMax && matchesRating && matchesMap;
+      return (
+        matchesSearch &&
+        matchesGenre &&
+        matchesCountry &&
+        matchesYearMin &&
+        matchesYearMax &&
+        matchesRating &&
+        matchesMap
+      );
     });
 
     return sortItems(matched, filters.sortBy);

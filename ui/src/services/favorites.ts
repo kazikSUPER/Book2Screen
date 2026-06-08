@@ -17,8 +17,9 @@ import { USE_MOCK_FALLBACK } from './env';
 // GET /api/v1/Favorites
 export async function fetchFavorites(kind?: string): Promise<BookScreenItem[]> {
   try {
-    const url = kind ? `/api/v1/Favorites?kind=${kind}` : '/api/v1/Favorites';
-    const response = await apiClient.get<BookScreenItem[]>(url);
+    const response = await apiClient.get<BookScreenItem[]>('/api/v1/Favorites', {
+      params: kind ? { kind } : {},
+    });
     return response.data;
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
@@ -30,8 +31,8 @@ export async function fetchFavorites(kind?: string): Promise<BookScreenItem[]> {
 }
 
 // POST /api/v1/Favorites
-export async function addFavorite(workId: string, kind?: string): Promise<void> {
-  const body: FavoriteRequest = { workId, kind: kind || 'read' };
+export async function addFavorite(workId: string, kind: string): Promise<void> {
+  const body: FavoriteRequest = { workId, kind };
   try {
     await apiClient.post('/api/v1/Favorites', body);
   } catch (err) {
@@ -46,8 +47,9 @@ export async function addFavorite(workId: string, kind?: string): Promise<void> 
 // DELETE /api/v1/Favorites/{workId}
 export async function removeFavorite(workId: string, kind?: string): Promise<void> {
   try {
-    const url = kind ? `/api/v1/Favorites/${workId}?kind=${kind}` : `/api/v1/Favorites/${workId}`;
-    await apiClient.delete(url);
+    await apiClient.delete(`/api/v1/Favorites/${workId}`, {
+      params: kind ? { kind } : {},
+    });
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
       console.warn('[favorites] Mock remove:', workId, kind);
@@ -58,9 +60,11 @@ export async function removeFavorite(workId: string, kind?: string): Promise<voi
 }
 
 // GET /api/v1/Favorites/check/{workId} → bool
-export async function checkFavorite(workId: string): Promise<boolean> {
+export async function checkFavorite(workId: string, kind?: string): Promise<boolean> {
   try {
-    const response = await apiClient.get<boolean>(`/api/v1/Favorites/check/${workId}`);
+    const response = await apiClient.get<boolean>(`/api/v1/Favorites/check/${workId}`, {
+      params: kind ? { kind } : {},
+    });
     return response.data === true;
   } catch (err) {
     if (USE_MOCK_FALLBACK) return false;

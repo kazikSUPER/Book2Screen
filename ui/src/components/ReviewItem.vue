@@ -39,16 +39,18 @@ const formattedDate = computed(() => {
 
 <template>
   <article class="review">
-    <!-- Аватар (реальне фото або ініціал) -->
-    <div class="review__avatar">
-      <img v-if="review.userAvatar" :src="review.userAvatar" :alt="review.userNickname" />
-      <span v-else aria-hidden="true">{{ (review.userNickname || '?').charAt(0).toUpperCase() }}</span>
+    <!-- Аватар (поки що ініціал у кружечку) -->
+    <div class="review__avatar" aria-hidden="true">
+      {{ (review.userNickname || '?').charAt(0).toUpperCase() }}
     </div>
 
     <div class="review__body">
       <header class="review__head">
         <span class="review__author">{{ review.userNickname || 'Користувач' }}</span>
         <StarRating v-if="review.rating > 0" :model-value="review.rating" readonly :size="14" />
+        <span v-if="review.targetType" class="review__target-badge" :class="`review__target-badge--${review.targetType}`">
+          {{ review.targetType === 'book' ? t.targetBook : (review.targetType === 'adaptation' ? t.targetAdaptation : t.targetComparison) }}
+        </span>
         <time v-if="formattedDate" class="review__date" :datetime="review.createdAt">{{ formattedDate }}</time>
       </header>
 
@@ -172,5 +174,29 @@ const formattedDate = computed(() => {
 .review__report:hover {
   color: var(--color-primary);
   text-decoration: underline;
+}
+
+.review__target-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.review__target-badge--comparison {
+  background-color: rgba(142, 24, 47, 0.25);
+  color: #ff6b81;
+}
+
+.review__target-badge--book {
+  background-color: rgba(240, 192, 64, 0.25);
+  color: #ffd254;
+}
+
+.review__target-badge--adaptation {
+  background-color: rgba(64, 120, 240, 0.25);
+  color: #70a1ff;
 }
 </style>
