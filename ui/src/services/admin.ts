@@ -9,11 +9,19 @@ function toAdaptationDto(item: Partial<BookScreenItem> & { id?: string; type?: s
     id: item.id,
     title: item.title ?? '',
     type: item.type ?? 'movie',
-    description: item.description,
+    description: item.filmSummary ?? item.description,
     releaseYear: item.filmYear ?? item.year,
     posterUrl: item.filmPoster ?? item.poster,
     country: item.filmCountry ?? item.country,
     studio: item.director,
+
+    // Book fields
+    bookTitle: item.title ?? '',
+    bookDescription: item.bookSummary ?? item.description,
+    author: item.author,
+    genre: item.genre,
+    bookYear: item.year,
+    bookPoster: item.poster,
   };
 }
 
@@ -22,16 +30,21 @@ function fromAdaptationDto(a: AdaptationDto): BookScreenItem {
     id: a.id ?? '',
     title: a.title,
     year: a.releaseYear ?? 0,
-    genre: '',
+    genre: a.genre ?? '',
     country: a.country ?? '',
-    poster: a.posterUrl ?? '',
+    poster: a.bookPoster ?? a.posterUrl ?? '',
     bookRating: 0,
     filmRating: 0,
-    description: a.description ?? '',
+    description: a.bookDescription ?? a.description ?? '',
     director: a.studio,
     filmYear: a.releaseYear,
     filmPoster: a.posterUrl,
     filmCountry: a.country,
+    filmSummary: a.description,
+    bookSummary: a.bookDescription,
+    bookYear: a.bookYear,
+    adaptationId: a.id,
+    author: a.author,
   };
 }
 

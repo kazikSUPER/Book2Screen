@@ -87,6 +87,12 @@ interface BookForm {
   differences: DifferencePoint[];
   // BUG-045: бек вимагає type = 'movie' | 'series' | 'anime'.
   type: string;
+  filmTitle: string;
+  filmYear: number | null;
+  filmCountry: string;
+  filmPoster: string;
+  filmSummary: string;
+  director: string;
   /** Список додаткових адаптацій (опціонально — серіал + фільм). */
   extraAdaptations: ExtraAdaptation[];
 }
@@ -105,6 +111,12 @@ const emptyForm = (): BookForm => ({
   hasMap: false,
   differences: [],
   type: 'movie',
+  filmTitle: '',
+  filmYear: null,
+  filmCountry: '',
+  filmPoster: '',
+  filmSummary: '',
+  director: '',
   extraAdaptations: [],
 });
 
@@ -194,19 +206,25 @@ function startCreate(): void {
 
 function startEdit(book: BookScreenItem): void {
   form.value = {
-    id: book.id,
+    id: book.adaptationId ?? book.id,
     title: book.title,
     author: book.author ?? '',
-    year: book.year,
+    year: book.bookYear ?? book.year,
     genre: book.genre,
     country: book.country,
     poster: book.poster,
     bookRating: book.bookRating,
     filmRating: book.filmRating,
-    description: book.description,
+    description: book.bookSummary ?? book.description,
     hasMap: book.hasMap ?? false,
     differences: book.differences ? JSON.parse(JSON.stringify(book.differences)) : [],
-    type: 'movie', // BUG-045: бек не повертає type у /Works/{id}, тому дефолт.
+    type: book.type ?? 'movie',
+    filmTitle: book.title,
+    filmYear: book.filmYear ?? book.year,
+    filmCountry: book.filmCountry ?? book.country,
+    filmPoster: book.filmPoster ?? book.poster,
+    filmSummary: book.filmSummary ?? book.description,
+    director: book.director ?? '',
     extraAdaptations: [],
   };
   mode.value = 'book-form';
@@ -216,7 +234,7 @@ function startEdit(book: BookScreenItem): void {
 async function onDelete(book: BookScreenItem): Promise<void> {
   if (!confirm(t.confirmDelete(book.title))) return;
   try {
-    await deleteBook(book.id);
+    await deleteBook(book.adaptationId ?? book.id);
     books.value = books.value.filter((b) => b.id !== book.id);
     if (selectedBook.value?.id === book.id) selectedBook.value = books.value[0] ?? null;
     notifications.pushSuccess(t.bookDeleted);
@@ -247,17 +265,22 @@ async function submitForm(): Promise<void> {
       hasMap: form.value.differences.length > 0,
       differences: form.value.differences.length > 0 ? form.value.differences : undefined,
       type: form.value.type,
+
+      // Distinct adaptation fields
+      filmYear: form.value.filmYear ?? undefined,
+      filmCountry: form.value.filmCountry || undefined,
+      filmPoster: form.value.filmPoster || undefined,
+      filmSummary: form.value.filmSummary || undefined,
+      director: form.value.director || undefined,
     };
     if (form.value.id) {
-      const updated = await updateBook(form.value.id, payload);
-      const idx = books.value.findIndex((b) => b.id === updated.id);
-      if (idx >= 0) books.value[idx] = updated;
+      await updateBook(form.value.id, payload);
       notifications.pushSuccess(t.bookUpdated);
     } else {
-      const created = await createBook(payload);
-      books.value.push(created);
+      await createBook(payload);
       notifications.pushSuccess(t.bookAdded);
     }
+    await loadBooks();
     mode.value = 'books';
   } catch (err) {
     notifications.pushError(extractErrorMessage(err));
@@ -482,9 +505,6 @@ onMounted(() => {
           <div class="admin-form__col">
             <h2 class="admin-form__col-title">{{ t.bookFormSectionTitle }}</h2>
 
-            <!-- BUG-045: type обов'язковий для бекенду -->
-            <input v-model="form.type" type="hidden" />
-
             <input v-model="form.title" type="text" class="admin-form__input" :placeholder="t.titleLabel" required />
             <input v-model="form.author" type="text" class="admin-form__input" :placeholder="t.authorLabel" />
             <input
@@ -520,6 +540,50 @@ onMounted(() => {
 
             <textarea
               v-model="form.description"
+              rows="4"
+              class="admin-form__input admin-form__textarea"
+              :placeholder="t.descriptionLabel"
+            ></textarea>
+
+            <!-- ═══ Дані екранізації ═══ -->
+            <h2 class="admin-form__col-title" style="margin-top: 24px;">Заповніть інформацію про екранізацію</h2>
+
+            <input v-model="form.filmTitle" type="text" class="admin-form__input" :placeholder="t.titleLabel" required />
+            <input v-model="form.director" type="text" class="admin-form__input" :placeholder="t.authorLabel" />
+            <input
+              v-model.number="form.filmYear"
+              type="number"
+              class="admin-form__input"
+              :placeholder="t.yearLabel"
+              min="1900"
+              required
+            />
+
+            <select v-model="form.type" class="admin-form__input admin-form__select" required>
+              <option value="movie">Фільм</option>
+              <option value="series">Серіал</option>
+              <option value="anime">Аніме</option>
+            </select>
+
+            <!-- Постер екранізації -->
+            <div class="admin-form__poster-section">
+              <label class="admin-form__poster-link" for="film-poster-url-input">
+                {{ t.posterLabel }}
+              </label>
+              <input
+                id="film-poster-url-input"
+                v-model="form.filmPoster"
+                type="url"
+                class="admin-form__poster-url"
+                placeholder="https://…"
+              />
+              <div class="admin-form__poster-preview">
+                <img v-if="form.filmPoster" :src="form.filmPoster" :alt="t.posterPreviewAlt" @error="onImgError" />
+              </div>
+            </div>
+
+            <textarea
+              v-model="form.filmSummary"
               rows="4"
               class="admin-form__input admin-form__textarea"
               :placeholder="t.descriptionLabel"

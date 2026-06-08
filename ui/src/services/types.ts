@@ -33,12 +33,15 @@ export interface BookScreenItem {
   filmRating: number;
   description: string;
   author?: string;
+  bookYear?: number;
+  bookSummary?: string;
   filmYear?: number;
   filmCountry?: string;
   filmPoster?: string;
-  director?: string;
-  bookSummary?: string;
   filmSummary?: string;
+  director?: string;
+  adaptationId?: string;
+  type?: string;
   hasMap?: boolean;
   differences?: DifferencePoint[];
   /** Вбудована статистика голосування (бек може повертати разом з твором). */
@@ -203,6 +206,14 @@ export interface AdaptationDto {
   posterUrl?: string;
   studio?: string;
   country?: string;
+
+  // Book fields
+  bookTitle?: string;
+  bookDescription?: string;
+  author?: string;
+  genre?: string;
+  bookYear?: number;
+  bookPoster?: string;
 }
 
 // ===== ProblemDetails =====

@@ -166,7 +166,7 @@ const differencesData = computed(() => {
                 <dl class="compare-card__meta">
                   <div class="compare-card__meta-row">
                     <dt>{{ t.bookYear }}</dt>
-                    <dd>{{ item.year }}</dd>
+                    <dd>{{ item.bookYear ?? item.year }}</dd>
                   </div>
                   <div class="compare-card__meta-row">
                     <dt>{{ t.bookGenre }}</dt>
