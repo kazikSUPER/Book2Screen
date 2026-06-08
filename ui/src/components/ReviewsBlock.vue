@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import type { ReviewResponse } from '../services/types';
+import type { ReviewResponse, ReviewTargetType } from '../services/types';
 import { fetchReviews, submitReview } from '../services/reviews';
 import { useUserStore } from '../state/user';
 import { useUserRatingsStore } from '../state/userRatings';
@@ -39,6 +39,7 @@ const isSpoiler = ref(false);
 const isSubmitting = ref(false);
 
 // Скільки коментарів показуємо зараз (інші — за "Показати більше").
+const targetType = ref<ReviewTargetType>('comparison');
 const PAGE_SIZE = 5;
 const visibleCount = ref(PAGE_SIZE);
 
@@ -94,12 +95,13 @@ async function onSubmit(): Promise<void> {
       text: trimmed,
       isSpoiler: isSpoiler.value,
       rating,
-      targetType: 'comparison',
+      targetType: targetType.value,
     });
     // Додаємо у початок (найновіший зверху).
     reviews.value.unshift(created);
     text.value = '';
     isSpoiler.value = false;
+    targetType.value = 'comparison';
     notifications.pushSuccess(t.commentPublished);
   } catch (err) {
     notifications.pushError(extractErrorMessage(err));
@@ -158,6 +160,13 @@ watch(
           <input v-model="isSpoiler" type="checkbox" :disabled="isSubmitting" />
           <span>{{ t.markSpoiler }}</span>
         </label>
+
+        <select v-model="targetType" :disabled="isSubmitting" class="reviews__select">
+          <option value="comparison">{{ t.targetComparison }}</option>
+          <option value="book">{{ t.targetBook }}</option>
+          <option value="adaptation">{{ t.targetAdaptation }}</option>
+        </select>
+
         <!-- BUG-037: лічильник символів. Червоніє при перевищенні. -->
         <span class="reviews__counter" :class="{ 'reviews__counter--error': isTooLong }">
           {{ text.length }} / 2000
@@ -366,6 +375,22 @@ watch(
 
 .reviews__more:hover {
   background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.reviews__select {
+  padding: 4px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  background: var(--color-input-bg);
+  color: var(--text-on-light);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.reviews__select:focus {
   border-color: var(--color-primary);
 }
 

@@ -7,8 +7,9 @@ import { useWishlistStore } from '../state/wishlist';
 import { useNotificationsStore } from '../state/notifications';
 import { fetchWorks } from '../services/works';
 import { fetchMyReviews, deleteMyReview } from '../services/profile';
+import { updateReview } from '../services/reviews';
 import { extractErrorMessage } from '../services/error';
-import type { BookScreenItem, ReviewResponse } from '../services/types';
+import type { BookScreenItem, ReviewResponse, ReviewTargetType } from '../services/types';
 import StarRating from '../components/StarRating.vue';
 import WorkCard from '../components/WorkCard.vue';
 import { STR } from '../constants';
@@ -167,6 +168,60 @@ async function deleteReview(reviewId: string): Promise<void> {
     await deleteMyReview(reviewId);
     myReviews.value = myReviews.value.filter((r) => r.reviewId !== reviewId);
     notifications.pushSuccess(t.reviewDeleted);
+  } catch (err) {
+    notifications.pushError(extractErrorMessage(err));
+  }
+}
+
+// ── Review Editing ───────────────────────────────────────────
+const editingReviewId = ref<string | null>(null);
+const editReviewText = ref('');
+const editReviewIsSpoiler = ref(false);
+const editReviewRating = ref(0);
+const editReviewTargetType = ref<ReviewTargetType>('comparison');
+
+function startEditReview(r: ReviewResponse): void {
+  editingReviewId.value = r.reviewId;
+  editReviewText.value = r.text;
+  editReviewIsSpoiler.value = r.isSpoiler;
+  editReviewRating.value = r.rating;
+  editReviewTargetType.value = r.targetType || 'comparison';
+}
+
+function cancelEditReview(): void {
+  editingReviewId.value = null;
+}
+
+async function saveReview(reviewId: string): Promise<void> {
+  const trimmed = editReviewText.value.trim();
+  if (trimmed.length < 10) {
+    notifications.pushWarning(STR.detail.commentTooShort);
+    return;
+  }
+  if (trimmed.length > 2000) {
+    notifications.pushWarning(STR.detail.commentTooLong);
+    return;
+  }
+  try {
+    const orig = myReviews.value.find((r) => r.reviewId === reviewId);
+    if (!orig) return;
+
+    await updateReview(reviewId, {
+      workId: orig.workId,
+      text: trimmed,
+      isSpoiler: editReviewIsSpoiler.value,
+      rating: editReviewRating.value,
+      targetType: editReviewTargetType.value,
+    });
+
+    // Оновлюємо локальний стан
+    orig.text = trimmed;
+    orig.isSpoiler = editReviewIsSpoiler.value;
+    orig.rating = editReviewRating.value;
+    orig.targetType = editReviewTargetType.value;
+
+    editingReviewId.value = null;
+    notifications.pushSuccess(t.reviewUpdated || 'Відгук оновлено');
   } catch (err) {
     notifications.pushError(extractErrorMessage(err));
   }
@@ -345,17 +400,56 @@ onMounted(() => {
             </div>
             <p class="profile-review__work-title">{{ findWork(r.workId)?.title || 'Твір' }}</p>
           </div>
-          <!-- Текст відгуку -->
-          <div class="profile-review__body">
-            <p class="profile-review__label">{{ t.reviewText }}:</p>
-            <p class="profile-review__text">{{ r.text }}</p>
+          <!-- Текст відгуку (Перегляд) -->
+          <div v-if="editingReviewId !== r.reviewId" class="profile-review__body">
+            <p class="profile-review__label">
+              {{ t.reviewText }}:
+              <span v-if="r.targetType" class="profile-review__target-badge" :class="`profile-review__target-badge--${r.targetType}`">
+                {{ r.targetType === 'book' ? STR.detail.targetBook : (r.targetType === 'adaptation' ? STR.detail.targetAdaptation : STR.detail.targetComparison) }}
+              </span>
+            </p>
+            <p class="profile-review__text">
+              <span v-if="r.isSpoiler" class="profile-review__spoiler-tag">[{{ STR.detail.spoiler }}]</span>
+              {{ r.text }}
+            </p>
+          </div>
+          <!-- Редагування відгуку -->
+          <div v-else class="profile-review__body profile-review__body--edit">
+            <textarea
+              v-model="editReviewText"
+              class="profile-review__textarea"
+              :class="{ 'profile-review__textarea--error': editReviewText.length > 2000 }"
+            ></textarea>
+            <div class="profile-review__edit-row">
+              <label class="profile-review__spoiler-toggle">
+                <input v-model="editReviewIsSpoiler" type="checkbox" />
+                <span>{{ STR.detail.markSpoiler }}</span>
+              </label>
+
+              <select v-model="editReviewTargetType" class="profile-review__select">
+                <option value="comparison">{{ STR.detail.targetComparison }}</option>
+                <option value="book">{{ STR.detail.targetBook }}</option>
+                <option value="adaptation">{{ STR.detail.targetAdaptation }}</option>
+              </select>
+
+              <div class="profile-review__rating-edit">
+                <span class="profile-review__rating-label">{{ STR.detail.bookRatingLabel }}:</span>
+                <select v-model="editReviewRating" class="profile-review__select-rating">
+                  <option v-for="i in 11" :key="i - 1" :value="i - 1">{{ i - 1 }}</option>
+                </select>
+              </div>
+
+              <span class="profile-review__counter" :class="{ 'profile-review__counter--error': editReviewText.length > 2000 }">
+                {{ editReviewText.length }} / 2000
+              </span>
+            </div>
           </div>
           <!-- Кнопки -->
-          <div class="profile-review__actions">
+          <div v-if="editingReviewId !== r.reviewId" class="profile-review__actions">
             <button
               type="button"
               class="profile-review__btn profile-review__btn--edit"
-              @click="router.push({ name: 'detail', params: { id: r.workId } })"
+              @click="startEditReview(r)"
             >
               {{ STR.common.edit }}
             </button>
@@ -365,6 +459,23 @@ onMounted(() => {
               @click="deleteReview(r.reviewId)"
             >
               {{ STR.common.delete }}
+            </button>
+          </div>
+          <div v-else class="profile-review__actions">
+            <button
+              type="button"
+              class="profile-review__btn profile-review__btn--save"
+              :disabled="!editReviewText.trim() || editReviewText.length > 2000"
+              @click="saveReview(r.reviewId)"
+            >
+              {{ STR.common.save }}
+            </button>
+            <button
+              type="button"
+              class="profile-review__btn profile-review__btn--cancel"
+              @click="cancelEditReview"
+            >
+              {{ STR.common.cancel }}
             </button>
           </div>
         </li>
@@ -930,5 +1041,143 @@ onMounted(() => {
     flex-direction: row;
     align-items: flex-start;
   }
+}
+
+/* Inline editor styles */
+.profile-review__body--edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-review__textarea {
+  width: 100%;
+  height: 90px;
+  background: var(--color-header);
+  color: #fff;
+  border: 1px solid var(--border-input);
+  border-radius: 6px;
+  padding: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+}
+
+.profile-review__textarea:focus {
+  border-color: var(--color-primary);
+}
+
+.profile-review__textarea--error {
+  border-color: var(--text-error);
+}
+
+.profile-review__edit-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 12px;
+}
+
+.profile-review__spoiler-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.profile-review__select,
+.profile-review__select-rating {
+  padding: 4px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  background: var(--color-header);
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.profile-review__select:focus,
+.profile-review__select-rating:focus {
+  border-color: var(--color-primary);
+}
+
+.profile-review__rating-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-review__rating-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.profile-review__counter {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.profile-review__counter--error {
+  color: var(--text-error);
+}
+
+.profile-review__btn--save {
+  background: #2e7d32;
+  color: #fff;
+}
+
+.profile-review__btn--save:hover:not(:disabled) {
+  background: #388e3c;
+}
+
+.profile-review__btn--save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.profile-review__btn--cancel {
+  background: var(--color-header);
+  color: #fff;
+}
+
+.profile-review__btn--cancel:hover {
+  background: #616161;
+}
+
+/* Badge/Tag styles */
+.profile-review__target-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-left: 8px;
+  display: inline-block;
+}
+
+.profile-review__target-badge--comparison {
+  background-color: rgba(142, 24, 47, 0.25);
+  color: #ff6b81;
+}
+
+.profile-review__target-badge--book {
+  background-color: rgba(240, 192, 64, 0.25);
+  color: #ffd254;
+}
+
+.profile-review__target-badge--adaptation {
+  background-color: rgba(64, 120, 240, 0.25);
+  color: #70a1ff;
+}
+
+.profile-review__spoiler-tag {
+  color: #ff6b81;
+  font-weight: bold;
+  margin-right: 4px;
 }
 </style>

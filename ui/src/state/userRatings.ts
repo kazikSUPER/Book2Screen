@@ -6,8 +6,8 @@ import { usePersistedRef } from '../composables/usePersistedRef';
  * SCRUM-68 — особиста "зіркова" оцінка користувача (1..5) для кожного твору.
  * Окремо для книги і для екранізації.
  *
- * Persist у localStorage. Коли бекенд буде готовий — sync через
- * POST /api/v1/ratings (TODO).
+ * Persist у localStorage + sync на бекенд через POST /api/v1/ratings
+ * (services/ratings.ts, fire-and-forget — UI не чекає на відповідь).
  */
 
 export type RatingTarget = 'book' | 'film';

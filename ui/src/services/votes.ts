@@ -21,7 +21,14 @@ export async function submitVote(workId: string, type: VoteType): Promise<VoteRe
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
       console.warn('[votes] Backend unavailable, returning mock', err);
-      return mockResult(workId, type);
+      return {
+        workId,
+        totalVotes: 100,
+        bookVotes: type === 'book' ? 51 : 50,
+        movieVotes: type === 'movie' ? 50 : 50,
+        bookPercentage: type === 'book' ? 51 : 50,
+        moviePercentage: type === 'movie' ? 49 : 50,
+      };
     }
     throw err;
   }
@@ -35,31 +42,15 @@ export async function fetchVoteResults(workId: string): Promise<VoteResponse> {
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
       console.warn('[votes] Backend unavailable, returning mock', err);
-      return mockResult(workId, null);
+      return {
+        workId,
+        totalVotes: 100,
+        bookVotes: 50,
+        movieVotes: 50,
+        bookPercentage: 50,
+        moviePercentage: 50,
+      };
     }
     throw err;
   }
-}
-
-function mockResult(workId: string, addType: VoteType | null): VoteResponse {
-  const seed = simpleHash(workId);
-  const baseTotal = 80 + (seed % 200);
-  const bookBias = (seed % 60) - 30;
-  let bookVotes = Math.max(1, Math.floor(baseTotal / 2 + bookBias / 2));
-  let movieVotes = Math.max(1, baseTotal - bookVotes);
-  if (addType === 'book') bookVotes += 1;
-  else if (addType === 'movie') movieVotes += 1;
-  const totalVotes = bookVotes + movieVotes;
-  const bookPercentage = Math.round((bookVotes / totalVotes) * 100);
-  const moviePercentage = 100 - bookPercentage;
-  return { workId, totalVotes, bookVotes, movieVotes, bookPercentage, moviePercentage };
-}
-
-function simpleHash(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (h << 5) - h + s.charCodeAt(i);
-    h |= 0;
-  }
-  return Math.abs(h);
 }

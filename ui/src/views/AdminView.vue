@@ -29,8 +29,8 @@ import { onImgError } from '../composables/useImageFallback';
  *   3. 'book-form' — форма додавання/редагування твору з інтерактивним
  *                    редактором карти відмінностей.
  *
- * Доступ: тільки залогіненим (поки backend не повертає role у JWT).
- * TODO: коли в LoginResponse з'явиться role — додати if (role !== 'admin').
+ * Доступ: лише користувачам з роллю admin/moderator (AuthResponse.Role з бекенду,
+ * userStore.isAdmin). Звичайних залогінених користувачів — на головну.
  */
 
 const router = useRouter();
@@ -310,7 +310,10 @@ async function moderate(reportId: string, action: 'approve' | 'reject' | 'spoile
 
 // ── Mount ───────────────────────────────────────────────────
 onMounted(() => {
-  if (!userStore.isAuthenticated) {
+  if (!userStore.isAuthenticated || !userStore.isAdmin) {
+    if (userStore.isAuthenticated && !userStore.isAdmin) {
+      notifications.pushWarning(STR.common.accessDenied);
+    }
     router.push({ name: 'home' });
     return;
   }
@@ -319,7 +322,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="userStore.isAuthenticated" class="admin">
+  <div v-if="userStore.isAuthenticated && userStore.isAdmin" class="admin">
     <!-- ═════════ Стрічка-заголовок ═════════ -->
     <div class="admin__stripe">
       <span v-if="mode === 'books'">{{ t.panelTitle }}</span>

@@ -33,10 +33,6 @@ export const useWishlistStore = defineStore('wishlist', () => {
     return items.value.some((e) => e.workId === workId && e.kind === kind);
   }
 
-  /**
-   * Локальний toggle + спроба синхронізації з беком.
-   * Якщо бек неавторизований/недоступний — лишається тільки локально.
-   */
   async function toggle(workId: string, kind: WishKind): Promise<void> {
     const idx = items.value.findIndex((e) => e.workId === workId && e.kind === kind);
     const isRemoving = idx >= 0;
@@ -47,14 +43,11 @@ export const useWishlistStore = defineStore('wishlist', () => {
       items.value.push({ workId, kind });
     }
 
-    // Sync з беком. Бек не розрізняє kind — додаємо в /Favorites, якщо це перше
-    // додавання цього workId; видаляємо тільки коли БУДЬ-якого kind не лишилось.
-    const stillHasAnyKind = items.value.some((e) => e.workId === workId);
     try {
-      if (!isRemoving && stillHasAnyKind) {
-        await favoritesApi.addFavorite(workId);
-      } else if (isRemoving && !stillHasAnyKind) {
-        await favoritesApi.removeFavorite(workId);
+      if (!isRemoving) {
+        await favoritesApi.addFavorite(workId, kind);
+      } else {
+        await favoritesApi.removeFavorite(workId, kind);
       }
     } catch (err) {
       console.warn('[wishlist] Backend sync failed (ignored):', err);
@@ -64,14 +57,19 @@ export const useWishlistStore = defineStore('wishlist', () => {
   /** Початкова синхронізація з бекенду (викликати після login). */
   async function syncFromServer(): Promise<void> {
     try {
-      const remote = await favoritesApi.fetchFavorites();
-      const remoteIds = new Set(remote.map((w) => w.id));
-      // Додаємо в локальний список ті, що є на сервері (kind='read' за замовчуванням).
-      for (const id of remoteIds) {
-        if (!items.value.some((e) => e.workId === id)) {
-          items.value.push({ workId: id, kind: 'read' });
-        }
+      const [remoteRead, remoteWatch] = await Promise.all([
+        favoritesApi.fetchFavorites('read'),
+        favoritesApi.fetchFavorites('watch'),
+      ]);
+
+      const newItems: WishlistEntry[] = [];
+      for (const w of remoteRead) {
+        newItems.push({ workId: w.id, kind: 'read' });
       }
+      for (const w of remoteWatch) {
+        newItems.push({ workId: w.id, kind: 'watch' });
+      }
+      items.value = newItems;
     } catch (err) {
       console.warn('[wishlist] Sync from server failed (ignored):', err);
     }

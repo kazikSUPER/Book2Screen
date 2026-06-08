@@ -25,7 +25,8 @@ const t = STR.detail;
  *  - кнопки "+ Хочу прочитати / переглянути" (через wishlist store)
  *  - зіркові оцінки (інтерактивні — userRatings store)
  *  - інтерактивна карта відмінностей (компонент DifferencesMap)
- *  - блоки голосування і коментарів — заглушки під SCRUM-70/71/72
+ *  - блок голосування "Книга vs Фільм" (VotingBlock, SCRUM-70)
+ *  - блок коментарів/відгуків (ReviewsBlock, SCRUM-72)
  */
 
 const route = useRoute();
@@ -506,30 +507,6 @@ const differencesData = computed(() => {
   font-size: 15px;
   color: #333;
   font-weight: 500;
-}
-
-/* ── Заглушки голосування + коментарі ───────────────────── */
-.detail__placeholder {
-  background: var(--color-panel-box);
-  border-radius: var(--radius-md);
-  padding: 24px;
-  margin: 0 16px;
-  text-align: center;
-  border: 1px dashed var(--color-card);
-}
-
-.detail__placeholder-title {
-  margin: 0 0 8px 0;
-  font-family: var(--font-display);
-  font-size: 18px;
-  color: var(--text-on-light);
-}
-
-.detail__placeholder-note {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-muted);
-  font-family: var(--font-body);
 }
 
 /* ── Status ─────────────────────────────────────────────── */

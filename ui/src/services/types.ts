@@ -43,6 +43,8 @@ export interface BookScreenItem {
   differences?: DifferencePoint[];
   /** Вбудована статистика голосування (бек може повертати разом з твором). */
   voteStats?: VoteResponse;
+  /** З Favorites endpoint */
+  kind?: 'read' | 'watch';
 }
 
 // ===== Auth DTO =====
@@ -181,6 +183,7 @@ export interface UserProfileDto {
 /** Swagger: FavoriteRequest */
 export interface FavoriteRequest {
   workId: string;
+  kind: string;
 }
 
 // ===== Admin: Adaptation DTO =====
