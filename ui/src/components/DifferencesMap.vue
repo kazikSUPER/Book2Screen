@@ -36,14 +36,17 @@ const activePoint = computed<DifferencePoint | null>(() => {
 // Скидається при зміні твору (по ключу activePoint.id).
 const revealedSpoilers = ref<Record<string, boolean>>({});
 
+// Стабільний ключ: id з беку якщо є (Guid?), інакше — індекс точки.
+const activeKey = computed(() => activePoint.value?.id ?? `idx-${activeIdx.value}`);
+
 const isRevealed = computed(() => {
   if (!activePoint.value) return true;
   if (!activePoint.value.isSpoiler) return true;
-  return revealedSpoilers.value[activePoint.value.id] === true;
+  return revealedSpoilers.value[activeKey.value] === true;
 });
 
 function reveal(): void {
-  if (activePoint.value) revealedSpoilers.value[activePoint.value.id] = true;
+  if (activePoint.value) revealedSpoilers.value[activeKey.value] = true;
 }
 
 function setActive(i: number): void {
