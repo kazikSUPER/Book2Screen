@@ -249,11 +249,23 @@ async function submitForm(): Promise<void> {
     notifications.pushWarning(t.fillTitleYearType);
     return;
   }
+
+  // Валідація точок відмінностей
+  for (let i = 0; i < form.value.differences.length; i++) {
+    const diff = form.value.differences[i];
+    if (!diff.title?.trim() || !diff.bookText?.trim() || !diff.filmText?.trim()) {
+      notifications.pushWarning(`Будь ласка, заповніть заголовок, опис у книзі та опис в екранізації для точки відмінності №${i + 1}`);
+      return;
+    }
+  }
+
   isSubmitting.value = true;
   try {
     // BUG-045: передаємо type в admin.createBook/updateBook (мапиться в AdaptationDto.type).
     const payload = {
       title: form.value.title,
+      filmTitle: form.value.filmTitle || form.value.title,
+      bookTitle: form.value.title,
       author: form.value.author || undefined,
       year: form.value.year ?? 0,
       genre: form.value.genre,
@@ -263,7 +275,7 @@ async function submitForm(): Promise<void> {
       filmRating: form.value.filmRating,
       description: form.value.description,
       hasMap: form.value.differences.length > 0,
-      differences: form.value.differences.length > 0 ? form.value.differences : undefined,
+      differences: form.value.differences,
       type: form.value.type,
 
       // Distinct adaptation fields

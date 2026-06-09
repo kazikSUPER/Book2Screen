@@ -39,11 +39,13 @@ const revealedSpoilers = ref<Record<string, boolean>>({});
 const isRevealed = computed(() => {
   if (!activePoint.value) return true;
   if (!activePoint.value.isSpoiler) return true;
-  return revealedSpoilers.value[activePoint.value.id] === true;
+  return revealedSpoilers.value[activePoint.value.id ?? ''] === true;
 });
 
 function reveal(): void {
-  if (activePoint.value) revealedSpoilers.value[activePoint.value.id] = true;
+  if (activePoint.value && activePoint.value.id) {
+    revealedSpoilers.value[activePoint.value.id] = true;
+  }
 }
 
 function setActive(i: number): void {

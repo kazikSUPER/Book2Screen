@@ -4,10 +4,10 @@ import { fetchWorks, fetchWorkById } from './works';
 import { ALL_ITEMS } from './items';
 import { USE_MOCK_FALLBACK } from './env';
 
-function toAdaptationDto(item: Partial<BookScreenItem> & { id?: string; type?: string }): AdaptationDto {
+function toAdaptationDto(item: Partial<BookScreenItem> & { id?: string; type?: string; filmTitle?: string; bookTitle?: string }): AdaptationDto {
   return {
     id: item.id,
-    title: item.title ?? '',
+    title: item.filmTitle ?? item.title ?? '',
     type: item.type ?? 'movie',
     description: item.filmSummary ?? item.description,
     releaseYear: item.filmYear ?? item.year,
@@ -16,12 +16,20 @@ function toAdaptationDto(item: Partial<BookScreenItem> & { id?: string; type?: s
     studio: item.director,
 
     // Book fields
-    bookTitle: item.title ?? '',
+    bookTitle: item.bookTitle ?? item.title ?? '',
     bookDescription: item.bookSummary ?? item.description,
     author: item.author,
     genre: item.genre,
     bookYear: item.year,
     bookPoster: item.poster,
+    differences: item.differences?.map((d) => ({
+      id: d.id?.startsWith('new-') ? undefined : d.id,
+      title: d.title ?? '',
+      bookText: d.bookText ?? '',
+      filmText: d.filmText ?? '',
+      isSpoiler: !!d.isSpoiler,
+      importanceLevel: d.importanceLevel || (d.isSpoiler ? 'high' : 'medium'),
+    })) ?? [],
   };
 }
 
@@ -45,6 +53,7 @@ function fromAdaptationDto(a: AdaptationDto): BookScreenItem {
     bookYear: a.bookYear,
     adaptationId: a.id,
     author: a.author,
+    differences: a.differences,
   };
 }
 

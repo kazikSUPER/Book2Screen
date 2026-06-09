@@ -14,10 +14,11 @@
 
 /** Swagger: DifferenceDto */
 export interface DifferencePoint {
-  id: string;
+  id?: string;
   title: string;
   bookText: string;
   filmText: string;
+  importanceLevel?: 'low' | 'medium' | 'high';
   isSpoiler?: boolean;
 }
 
@@ -214,6 +215,7 @@ export interface AdaptationDto {
   genre?: string;
   bookYear?: number;
   bookPoster?: string;
+  differences?: DifferencePoint[];
 }
 
 // ===== ProblemDetails =====

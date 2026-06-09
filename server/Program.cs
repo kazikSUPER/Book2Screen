@@ -285,7 +285,7 @@ using (var scope = app.Services.CreateScope())
             // ---------------------------------------------------------------
             // SCHEMA FREEZING / MIGRATIONS SYNC — Aligning local EF Core with Supabase
             // ---------------------------------------------------------------
-            if (db.Database.IsRelational())
+            if (db.Database.IsRelational() && !app.Environment.IsDevelopment())
             {
                 logger.LogInformation("Syncing EF migration history table...");
                 await using (var command = db.Database.GetDbConnection().CreateCommand())
@@ -319,7 +319,10 @@ using (var scope = app.Services.CreateScope())
                         await command.ExecuteNonQueryAsync();
                     }
                 }
+            }
 
+            if (db.Database.IsRelational())
+            {
                 logger.LogInformation("Applying pending migrations...");
                 await db.Database.MigrateAsync();
                 logger.LogInformation("Database migrations applied successfully.");

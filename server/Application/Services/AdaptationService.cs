@@ -68,7 +68,7 @@ public class AdaptationService : IAdaptationService
 
         var dto = this.mapper.Map<AdaptationDto>(adaptation);
 
-        // Ручне мапування полів, які не можна транслювати в SQL через ProjectTo, але можна через звичайний Map
+        // Ручне мапування полів
         if (adaptation.Work != null && adaptation.Work.Book != null)
         {
             dto.Genre = adaptation.Work.Book.Genre;
@@ -123,7 +123,6 @@ public class AdaptationService : IAdaptationService
         adaptation.Id = Guid.NewGuid();
         adaptation.CreatedAt = DateTime.UtcNow;
 
-        // 1. Підготовка автора
         var authors = new List<Domain.Entities.Author>();
         if (!string.IsNullOrEmpty(adaptationDto.Author))
         {
@@ -139,7 +138,6 @@ public class AdaptationService : IAdaptationService
             authors.Add(author);
         }
 
-        // 2. Створюємо Книгу
         var book = new Domain.Entities.Book
         {
             Id = Guid.NewGuid(),
@@ -152,7 +150,6 @@ public class AdaptationService : IAdaptationService
             CreatedAt = DateTime.UtcNow,
         };
 
-        // 3. Створюємо Твір (Work) та пов'язуємо з Книгою та Адаптацією
         var work = new Domain.Entities.Work
         {
             Id = Guid.NewGuid(),
@@ -162,40 +159,44 @@ public class AdaptationService : IAdaptationService
             Summary = adaptationDto.Description,
             CreatedAt = DateTime.UtcNow,
         };
+        adaptation.Work = work;
 
-        // 3.1. Створюємо сутність Rating
         var rating = new Domain.Entities.Rating
         {
             Id = Guid.NewGuid(),
             WorkId = work.Id,
             BookRating = (decimal?)(adaptationDto.BookRating ?? 0),
             AdaptationRating = (decimal?)(adaptationDto.FilmRating ?? 0),
-            VotesCount = 1, // Початковий голос
+            VotesCount = 1,
             CreatedAt = DateTime.UtcNow,
         };
         work.Rating = rating;
         await this.context.Ratings.AddAsync(rating);
 
-        // 4. Якщо передано розбіжності — створюємо карту
         if (adaptationDto.Differences != null && adaptationDto.Differences.Any())
         {
+            var mapId = Guid.NewGuid();
             var diffMap = new Domain.Entities.DifferenceMap
             {
-                Id = Guid.NewGuid(),
+                Id = mapId,
                 WorkId = work.Id,
                 Title = $"Карта розбіжностей: {work.Title}",
                 CreatedAt = DateTime.UtcNow,
-                Differences = adaptationDto.Differences.Select(d => new Domain.Entities.Difference
-                {
-                    Id = Guid.NewGuid(),
-                    Title = d.Title,
-                    BookText = d.BookText,
-                    FilmText = d.FilmText,
-                    IsSpoiler = d.IsSpoiler,
-                    ImportanceLevel = d.ImportanceLevel ?? (d.IsSpoiler ? "high" : "medium"),
-                    CreatedAt = DateTime.UtcNow,
-                }).ToList(),
+                Version = 1,
             };
+
+            diffMap.Differences = adaptationDto.Differences.Select(d => new Domain.Entities.Difference
+            {
+                Id = Guid.NewGuid(),
+                MapId = mapId,
+                Title = d.Title,
+                BookText = d.BookText,
+                FilmText = d.FilmText,
+                IsSpoiler = d.IsSpoiler,
+                ImportanceLevel = d.ImportanceLevel ?? (d.IsSpoiler ? "high" : "medium"),
+                CreatedAt = DateTime.UtcNow,
+            }).ToList();
+
             work.DifferenceMap = diffMap;
             await this.context.DifferenceMaps.AddAsync(diffMap);
         }
@@ -213,12 +214,26 @@ public class AdaptationService : IAdaptationService
         result.BookDescription = book.Description;
         result.BookYear = book.PublicationYear;
         result.BookPoster = book.CoverImageUrl;
+        if (work.DifferenceMap != null)
+        {
+            result.Differences = work.DifferenceMap.Differences.Select(d => new DifferenceDto
+            {
+                Id = d.Id,
+                Title = d.Title,
+                BookText = d.BookText,
+                FilmText = d.FilmText,
+                IsSpoiler = d.IsSpoiler,
+                ImportanceLevel = d.ImportanceLevel,
+            }).ToList();
+        }
+
         return result;
     }
 
     /// <inheritdoc/>
     public async Task<BookScreenItemDto?> UpdateAdaptationAsync(Guid id, AdaptationDto adaptationDto)
     {
+        // NO SPLIT QUERY for update to avoid tracking inconsistencies
         var adaptation = await this.context.Adaptations
             .Include(a => a.Work)
                 .ThenInclude(w => w!.Book)
@@ -235,7 +250,7 @@ public class AdaptationService : IAdaptationService
             throw new KeyNotFoundException($"Adaptation with ID {id} not found.");
         }
 
-        // 1. Оновлюємо основні поля адаптації
+        // 1. Update Adaptation
         adaptation.Title = adaptationDto.Title;
         adaptation.Type = adaptationDto.Type;
         adaptation.Description = adaptationDto.Description;
@@ -245,60 +260,43 @@ public class AdaptationService : IAdaptationService
         adaptation.Studio = adaptationDto.Studio;
         adaptation.UpdatedAt = DateTime.UtcNow;
 
-        // 2. Оновлюємо пов'язаний твір та книгу
         if (adaptation.Work != null)
         {
+            // 2. Update Work
             adaptation.Work.Title = adaptationDto.Title;
             adaptation.Work.Summary = adaptationDto.Description;
             adaptation.Work.UpdatedAt = DateTime.UtcNow;
 
             if (adaptation.Work.Book != null)
             {
-                adaptation.Work.Book.Title = string.IsNullOrEmpty(adaptationDto.BookTitle) ? adaptationDto.Title : adaptationDto.BookTitle;
-                adaptation.Work.Book.Description = string.IsNullOrEmpty(adaptationDto.BookDescription) ? adaptationDto.Description : adaptationDto.BookDescription;
-                adaptation.Work.Book.Genre = adaptationDto.Genre ?? adaptation.Work.Book.Genre;
-                adaptation.Work.Book.PublicationYear = adaptationDto.BookYear ?? adaptation.Work.Book.PublicationYear;
-                adaptation.Work.Book.CoverImageUrl = adaptationDto.BookPoster ?? adaptation.Work.Book.CoverImageUrl;
-                adaptation.Work.Book.UpdatedAt = DateTime.UtcNow;
+                // 3. Update Book
+                var book = adaptation.Work.Book;
+                book.Title = string.IsNullOrEmpty(adaptationDto.BookTitle) ? adaptationDto.Title : adaptationDto.BookTitle;
+                book.Description = string.IsNullOrEmpty(adaptationDto.BookDescription) ? adaptationDto.Description : adaptationDto.BookDescription;
+                book.Genre = adaptationDto.Genre ?? book.Genre;
+                book.PublicationYear = adaptationDto.BookYear ?? book.PublicationYear;
+                book.CoverImageUrl = adaptationDto.BookPoster ?? book.CoverImageUrl;
+                book.UpdatedAt = DateTime.UtcNow;
 
-                // 3. Синхронізація автора (MVP: підтримуємо одного основного автора)
-                if (!string.IsNullOrEmpty(adaptationDto.Author))
+                // Sync Author
+                if (!string.IsNullOrEmpty(adaptationDto.Author) && !book.Authors.Any(a => a.FullName == adaptationDto.Author))
                 {
-                    var existingAuthors = adaptation.Work.Book.Authors.ToList();
-                    if (!existingAuthors.Any(a => a.FullName == adaptationDto.Author))
+                    book.Authors.Clear();
+                    var author = await this.context.Authors.FirstOrDefaultAsync(a => a.FullName == adaptationDto.Author);
+                    if (author == null)
                     {
-                        // Прибираємо старі зв'язки
-                        adaptation.Work.Book.Authors.Clear();
-
-                        // Шукаємо автора в БД або створюємо нового
-                        var author = await this.context.Authors
-                            .FirstOrDefaultAsync(a => a.FullName == adaptationDto.Author);
-
-                        if (author == null)
-                        {
-                            author = new Domain.Entities.Author
-                            {
-                                Id = Guid.NewGuid(),
-                                FullName = adaptationDto.Author,
-                                CreatedAt = DateTime.UtcNow,
-                            };
-                            await this.context.Authors.AddAsync(author);
-                        }
-
-                        adaptation.Work.Book.Authors.Add(author);
+                        author = new Domain.Entities.Author { Id = Guid.NewGuid(), FullName = adaptationDto.Author };
+                        await this.context.Authors.AddAsync(author);
                     }
+
+                    book.Authors.Add(author);
                 }
             }
 
-            // 4. Оновлення рейтингів
+            // 4. Update Rating
             if (adaptation.Work.Rating == null)
             {
-                adaptation.Work.Rating = new Domain.Entities.Rating
-                {
-                    Id = Guid.NewGuid(),
-                    WorkId = adaptation.Work.Id,
-                    CreatedAt = DateTime.UtcNow,
-                };
+                adaptation.Work.Rating = new Domain.Entities.Rating { Id = Guid.NewGuid(), WorkId = adaptation.Work.Id };
                 await this.context.Ratings.AddAsync(adaptation.Work.Rating);
             }
 
@@ -306,63 +304,87 @@ public class AdaptationService : IAdaptationService
             adaptation.Work.Rating.AdaptationRating = (decimal?)(adaptationDto.FilmRating ?? 0);
             adaptation.Work.Rating.UpdatedAt = DateTime.UtcNow;
 
-            // 5. Оновлення карти розбіжностей (Differences)
+            // 5. Update Map
             if (adaptationDto.Differences != null)
             {
                 if (adaptation.Work.DifferenceMap == null)
                 {
-                    adaptation.Work.DifferenceMap = new Domain.Entities.DifferenceMap
-                    {
-                        Id = Guid.NewGuid(),
-                        WorkId = adaptation.Work.Id,
-                        Title = $"Карта розбіжностей: {adaptation.Work.Title}",
-                        CreatedAt = DateTime.UtcNow,
-                    };
-                    await this.context.DifferenceMaps.AddAsync(adaptation.Work.DifferenceMap);
-                }
+                    // Double check if it exists in DB but wasn't loaded
+                    var existingMap = await this.context.DifferenceMaps
+                        .Include(m => m.Differences)
+                        .FirstOrDefaultAsync(m => m.WorkId == adaptation.Work.Id);
 
-                // Видаляємо старі відмінності, які не передані
-                var incomingIds = adaptationDto.Differences.Where(d => d.Id.HasValue).Select(d => d.Id!.Value).ToList();
-                var obsoleteDiffs = adaptation.Work.DifferenceMap.Differences
-                    .Where(d => !incomingIds.Contains(d.Id))
-                    .ToList();
-                foreach (var oldDiff in obsoleteDiffs)
-                {
-                    this.context.Differences.Remove(oldDiff);
-                    adaptation.Work.DifferenceMap.Differences.Remove(oldDiff);
-                }
-
-                // Оновлюємо або додаємо нові відмінності
-                foreach (var diffDto in adaptationDto.Differences)
-                {
-                    if (diffDto.Id.HasValue)
+                    if (existingMap != null)
                     {
-                        var existingDiff = adaptation.Work.DifferenceMap.Differences
-                            .FirstOrDefault(d => d.Id == diffDto.Id.Value);
-                        if (existingDiff != null)
+                        adaptation.Work.DifferenceMap = existingMap;
+                    }
+                    else
+                    {
+                        adaptation.Work.DifferenceMap = new Domain.Entities.DifferenceMap
                         {
-                            existingDiff.Title = diffDto.Title;
-                            existingDiff.BookText = diffDto.BookText;
-                            existingDiff.FilmText = diffDto.FilmText;
-                            existingDiff.IsSpoiler = diffDto.IsSpoiler;
-                            existingDiff.ImportanceLevel = diffDto.ImportanceLevel ?? (diffDto.IsSpoiler ? "high" : "medium");
-                            existingDiff.UpdatedAt = DateTime.UtcNow;
+                            Id = Guid.NewGuid(),
+                            WorkId = adaptation.Work.Id,
+                            Title = $"Карта розбіжностей: {adaptation.Work.Title}",
+                            Version = 1,
+                        };
+                        await this.context.DifferenceMaps.AddAsync(adaptation.Work.DifferenceMap);
+                    }
+                }
+
+                var map = adaptation.Work.DifferenceMap;
+                map.Title = $"Карта розбіжностей: {adaptation.Work.Title}";
+                map.UpdatedAt = DateTime.UtcNow;
+
+                var incomingIds = adaptationDto.Differences.Where(d => d.Id.HasValue).Select(d => d.Id!.Value).ToHashSet();
+
+                // Remove obsolete
+                var currentDiffs = map.Differences.ToList();
+                foreach (var diff in currentDiffs.Where(diff => !incomingIds.Contains(diff.Id)))
+                {
+                    this.context.Differences.Remove(diff);
+                }
+
+                // Update or Add
+                foreach (var dto in adaptationDto.Differences)
+                {
+                    if (dto.Id.HasValue)
+                    {
+                        var existing = map.Differences.FirstOrDefault(d => d.Id == dto.Id.Value);
+                        if (existing != null)
+                        {
+                            existing.Title = dto.Title;
+                            existing.BookText = dto.BookText;
+                            existing.FilmText = dto.FilmText;
+                            existing.IsSpoiler = dto.IsSpoiler;
+                            existing.ImportanceLevel = dto.ImportanceLevel ?? (dto.IsSpoiler ? "high" : "medium");
+                            existing.UpdatedAt = DateTime.UtcNow;
+                        }
+                        else
+                        {
+                            map.Differences.Add(new Domain.Entities.Difference
+                            {
+                                Id = Guid.NewGuid(),
+                                MapId = map.Id,
+                                Title = dto.Title,
+                                BookText = dto.BookText,
+                                FilmText = dto.FilmText,
+                                IsSpoiler = dto.IsSpoiler,
+                                ImportanceLevel = dto.ImportanceLevel ?? (dto.IsSpoiler ? "high" : "medium"),
+                            });
                         }
                     }
                     else
                     {
-                        var newDiff = new Domain.Entities.Difference
+                        map.Differences.Add(new Domain.Entities.Difference
                         {
                             Id = Guid.NewGuid(),
-                            MapId = adaptation.Work.DifferenceMap.Id,
-                            Title = diffDto.Title,
-                            BookText = diffDto.BookText,
-                            FilmText = diffDto.FilmText,
-                            IsSpoiler = diffDto.IsSpoiler,
-                            ImportanceLevel = diffDto.ImportanceLevel ?? (diffDto.IsSpoiler ? "high" : "medium"),
-                            CreatedAt = DateTime.UtcNow,
-                        };
-                        adaptation.Work.DifferenceMap.Differences.Add(newDiff);
+                            MapId = map.Id,
+                            Title = dto.Title,
+                            BookText = dto.BookText,
+                            FilmText = dto.FilmText,
+                            IsSpoiler = dto.IsSpoiler,
+                            ImportanceLevel = dto.ImportanceLevel ?? (dto.IsSpoiler ? "high" : "medium"),
+                        });
                     }
                 }
             }
@@ -370,8 +392,20 @@ public class AdaptationService : IAdaptationService
 
         await this.context.SaveChangesAsync();
 
-        // Повертаємо BookScreenItemDto для синхронізації фронтенду
-        return this.mapper.Map<BookScreenItemDto>(adaptation.Work);
+        // Reload fresh graph for response
+        if (adaptation.Work == null)
+        {
+            return null;
+        }
+
+        var finalWork = await this.context.Works
+            .Include(w => w.Book).ThenInclude(b => b.Authors)
+            .Include(w => w.Adaptation)
+            .Include(w => w.Rating)
+            .Include(w => w.DifferenceMap).ThenInclude(dm => dm.Differences)
+            .FirstOrDefaultAsync(w => w.Id == adaptation.Work.Id);
+
+        return this.mapper.Map<BookScreenItemDto>(finalWork);
     }
 
     /// <inheritdoc/>
