@@ -37,7 +37,7 @@ const activePoint = computed<DifferencePoint | null>(() => {
 const revealedSpoilers = ref<Record<string, boolean>>({});
 
 // Стабільний ключ: id з беку якщо є (Guid?), інакше — індекс точки.
-const activeKey = computed(() => activePoint.value?.id ?? `idx-${activeIdx.value}`);
+const activeKey = computed((): string => activePoint.value?.id ?? `idx-${activeIdx.value}`);
 
 const isRevealed = computed(() => {
   if (!activePoint.value) return true;
@@ -66,7 +66,7 @@ function setActive(i: number): void {
       <div class="diff-map__line" aria-hidden="true"></div>
       <button
         v-for="(p, i) in points"
-        :key="p.id"
+        :key="p.id ?? i"
         role="tab"
         :aria-selected="i === activeIdx"
         :aria-label="`Точка ${i + 1}: ${p.title}`"
