@@ -43,6 +43,7 @@ public class WorkService : IWorkService
             .Include(w => w.Votes)
             .Include(w => w.Rating)
             .Include(w => w.DifferenceMap)
+                .ThenInclude(dm => dm!.Differences)
             .AsQueryable();
 
         if (filter != null)
@@ -105,6 +106,7 @@ public class WorkService : IWorkService
             .Include(w => w.Votes)
             .Include(w => w.Rating)
             .Include(w => w.DifferenceMap)
+                .ThenInclude(dm => dm!.Differences)
             .ToListAsync();
 
         return works

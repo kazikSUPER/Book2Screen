@@ -471,6 +471,14 @@
                   "if (pm.response.code === 200) {",
                   "  const j = pm.response.json();",
                   "  pm.test('TC-SM-13 · Has differences[]', () => { pm.expect(j).to.have.property('differences'); pm.expect(j.differences).to.be.an('array'); });",
+                  "  if (j.hasMap) {",
+                  "    pm.test('TC-SM-13 · Differences map is not empty', () => { pm.expect(j.differences.length).to.be.above(0); });",
+                  "  }",
+                  "  pm.test('TC-SM-13 · Distinct Book and Movie Posters', () => {",
+                  "    if (j.poster && j.filmPoster) {",
+                  "      pm.expect(j.poster).to.not.equal(j.filmPoster);",
+                  "    }",
+                  "  });",
                   "  console.log('[TC-SM-13] differences: ' + j.differences.length);",
                   "}"
                 ]

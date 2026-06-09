@@ -95,6 +95,11 @@ public class BookScreenItemDto
     public string? FilmSummary { get; set; }
 
     /// <summary>
+    /// Gets or sets тип адаптації (movie, series, anime).
+    /// </summary>
+    public string? Type { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether чи має твір карту розбіжностей.
     /// </summary>
     public bool HasMap { get; set; }
