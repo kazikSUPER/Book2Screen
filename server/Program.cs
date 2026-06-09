@@ -291,7 +291,7 @@ using (var scope = app.Services.CreateScope())
                 await using (var command = db.Database.GetDbConnection().CreateCommand())
                 {
                     await db.Database.OpenConnectionAsync();
-                    
+
                     command.CommandText = @"
                         CREATE TABLE IF NOT EXISTS ""__EFMigrationsHistory"" (
                             ""MigrationId"" character varying(150) NOT NULL,
@@ -307,7 +307,7 @@ using (var scope = app.Services.CreateScope())
                         "20260424155322_UpdateModelsFix",
                         "20260512073329_AddFavoritesAndPasswordReset",
                         "20260513114527_AddSearchIndexesAndFilter",
-                        "20260513114558_UpdateSearchIndexesAndFilter"
+                        "20260513114558_UpdateSearchIndexesAndFilter",
                     };
 
                     foreach (var migration in existingMigrations)
