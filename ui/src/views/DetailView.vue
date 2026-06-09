@@ -343,6 +343,7 @@ const differencesData = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 0 0 300px;
   max-width: 450px;
   flex: 1;
   min-width: 320px;
@@ -358,6 +359,7 @@ const differencesData = computed(() => {
   flex-direction: column;
   gap: 16px;
   color: var(--text-on-dark);
+  height: 370px; /* Фіксована висота, щоб блоки не розтягувались */
 }
 
 .compare-card__main {
@@ -456,6 +458,10 @@ const differencesData = computed(() => {
   border-radius: var(--radius-sm);
   padding: 12px;
   text-align: center;
+  flex: 1; /* Займати весь залишок місця в картці */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Обрізати, якщо виходить за межі */
 }
 
 .compare-card__summary-title {
@@ -463,6 +469,7 @@ const differencesData = computed(() => {
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 6px;
+  flex-shrink: 0;
 }
 
 .compare-card__summary-text {
@@ -470,6 +477,25 @@ const differencesData = computed(() => {
   font-size: 13px;
   line-height: 1.4;
   font-family: var(--font-body);
+  flex: 1;
+  overflow-y: auto; /* Скрол для довгого тексту */
+  padding-right: 4px; /* Відступ для скролбару */
+}
+
+/* Стилізація скролбару для анотації */
+.compare-card__summary-text::-webkit-scrollbar {
+  width: 4px;
+}
+.compare-card__summary-text::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+.compare-card__summary-text::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+.compare-card__summary-text::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 /* ── VS блок між картками ───────────────────────────────── */
