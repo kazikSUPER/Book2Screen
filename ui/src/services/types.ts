@@ -14,12 +14,11 @@
 
 /** Swagger: DifferenceDto */
 export interface DifferencePoint {
-  id: string | null;
+  id: string;
   title: string;
   bookText: string;
   filmText: string;
   isSpoiler?: boolean;
-  importanceLevel?: 'low' | 'medium' | 'high';
 }
 
 /** Swagger: BookScreenItemDto */
@@ -215,9 +214,6 @@ export interface AdaptationDto {
   genre?: string;
   bookYear?: number;
   bookPoster?: string;
-
-  // Карта відмінностей (повертається беком разом з адаптацією)
-  differences?: DifferencePoint[];
 }
 
 // ===== ProblemDetails =====
