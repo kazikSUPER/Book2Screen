@@ -192,4 +192,76 @@ public class WorkServiceTests : IDisposable
         Assert.Single(result);
         Assert.Equal("З картою", result.First().Title);
     }
+
+    [Fact]
+    public async Task GetAllWorksAsync_DoesNotFilterByUserId_ReturnsAllWorksPublicly()
+    {
+        // Arrange
+        // (BUG-056 check): We verify works are returned and not filtered by any user constraint.
+        var work1 = new Work 
+        { 
+            Id = Guid.NewGuid(), 
+            Title = "Work 1", 
+            Book = new Book { Title = "B1" }, 
+            Adaptation = new Adaptation { Title = "A1", Type = "movie" } 
+        };
+        var work2 = new Work 
+        { 
+            Id = Guid.NewGuid(), 
+            Title = "Work 2", 
+            Book = new Book { Title = "B2" }, 
+            Adaptation = new Adaptation { Title = "A2", Type = "movie" } 
+        };
+
+        await _context.Works.AddRangeAsync(work1, work2);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetAllWorksAsync(new WorkFilter());
+
+        // Assert
+        Assert.Equal(2, result.Count());
+    }
+
+    [Fact]
+    public async Task GetWorkByIdAsync_MapsBookAndAdaptationPropertiesSeparately_NoDuplication()
+    {
+        // Arrange
+        // (BUG-058 check): We verify book and movie properties map separately (e.g. poster vs filmPoster, book rating vs film rating).
+        var workId = Guid.NewGuid();
+        var work = new Work 
+        { 
+            Id = workId, 
+            Title = "Test Comparison", 
+            Book = new Book 
+            { 
+                Title = "The Novel", 
+                CoverImageUrl = "book_poster.jpg",
+                Genre = "Drama"
+            }, 
+            Adaptation = new Adaptation 
+            { 
+                Title = "The Film", 
+                Type = "movie", 
+                PosterUrl = "movie_poster.jpg",
+                Country = "Ukraine"
+            } 
+        };
+        
+        await _context.Works.AddAsync(work);
+        
+        work.Rating = new Rating { WorkId = workId, BookRating = 8.5m, AdaptationRating = 9.2m };
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetWorkByIdAsync(workId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("book_poster.jpg", result.Poster);
+        Assert.Equal("movie_poster.jpg", result.FilmPoster);
+        Assert.Equal(8.5, result.BookRating);
+        Assert.Equal(9.2, result.FilmRating);
+        Assert.Equal("Ukraine", result.FilmCountry);
+    }
 }

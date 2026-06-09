@@ -90,4 +90,24 @@ public class AdaptationDto
     /// Gets or sets список акторів.
     /// </summary>
     public List<string>? Actors { get; set; }
+
+    /// <summary>
+    /// Gets or sets назву книги.
+    /// </summary>
+    public string? BookTitle { get; set; }
+
+    /// <summary>
+    /// Gets or sets опис книги.
+    /// </summary>
+    public string? BookDescription { get; set; }
+
+    /// <summary>
+    /// Gets or sets рік видання книги.
+    /// </summary>
+    public int? BookYear { get; set; }
+
+    /// <summary>
+    /// Gets or sets обкладинку книги.
+    /// </summary>
+    public string? BookPoster { get; set; }
 }
