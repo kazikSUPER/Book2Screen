@@ -219,7 +219,8 @@ builder.Services.AddHealthChecks()
     .AddDiskStorageHealthCheck(
         setup =>
         {
-            setup.AddDrive("/", 1024); // 1GB minimum
+            var root = Path.GetPathRoot(Directory.GetCurrentDirectory()) ?? "/";
+            setup.AddDrive(root, 1024); // 1GB minimum
         },
         "Disk Space",
         HealthStatus.Degraded,
