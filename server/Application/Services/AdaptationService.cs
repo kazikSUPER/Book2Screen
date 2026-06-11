@@ -399,11 +399,11 @@ public class AdaptationService : IAdaptationService
         }
 
         var finalWork = await this.context.Works
-            .Include(w => w.Book).ThenInclude(b => b.Authors)
+            .Include(w => w.Book).ThenInclude(b => b!.Authors)
             .Include(w => w.Adaptation)
             .Include(w => w.Rating)
-            .Include(w => w.DifferenceMap).ThenInclude(dm => dm.Differences)
-            .FirstOrDefaultAsync(w => w.Id == adaptation.Work.Id);
+            .Include(w => w.DifferenceMap).ThenInclude(dm => dm!.Differences)
+            .FirstOrDefaultAsync(w => w.Id == adaptation.Work!.Id);
 
         return this.mapper.Map<BookScreenItemDto>(finalWork);
     }
