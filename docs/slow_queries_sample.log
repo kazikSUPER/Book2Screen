@@ -1,0 +1,28 @@
+project_db  | 2026-06-13 14:22:07.341 UTC [88] LOG:  duration: 312.804 ms  statement: SELECT w."Id", w."Title", b."Genre", a."Country",
+        r."Rating" FROM "Works" AS w
+        LEFT JOIN "Books" AS b ON w."BookId" = b."Id"
+        LEFT JOIN "Adaptations" AS a ON w."AdaptationId" = a."Id"
+        LEFT JOIN "Ratings" AS r ON r."WorkId" = w."Id"
+        ORDER BY r."BookRating" DESC NULLS LAST
+        LIMIT 10
+
+project_db  | 2026-06-13 14:22:09.118 UTC [91] LOG:  duration: 487.220 ms  statement: SELECT f."Id", f."Kind", w."Title", bo."Title" AS "BookTitle",
+        au."Name" AS "AuthorName"
+        FROM "Favorites" AS f
+        INNER JOIN "Works" AS w ON f."WorkId" = w."Id"
+        LEFT JOIN "Books" AS bo ON w."BookId" = bo."Id"
+        LEFT JOIN "BookAuthors" AS ba ON bo."Id" = ba."BookId"
+        LEFT JOIN "Authors" AS au ON ba."AuthorId" = au."Id"
+        WHERE f."UserId" = '3f1a9c2e-7b44-4e91-9c0d-1a2b3c4d5e6f'
+
+project_db  | 2026-06-13 14:22:11.902 UTC [93] LOG:  duration: 256.073 ms  statement: SELECT dm."Id", dm."WorkId", d."Id", d."BookEventId",
+        d."AdaptationEventId", d."Description"
+        FROM "DifferenceMaps" AS dm
+        INNER JOIN "Differences" AS d ON d."MapId" = dm."Id"
+        WHERE dm."WorkId" = '7c8d9e0f-1234-5678-9abc-def012345678'
+
+project_db  | 2026-06-13 14:22:13.554 UTC [95] LOG:  duration: 218.441 ms  statement: SELECT COUNT(*) AS total,
+        COUNT(*) FILTER (WHERE v."SelectedOption" = 'book') AS book_votes,
+        COUNT(*) FILTER (WHERE v."SelectedOption" IN ('movie','adaptation')) AS movie_votes
+        FROM "Votes" AS v
+        WHERE v."WorkId" = '7c8d9e0f-1234-5678-9abc-def012345678'
