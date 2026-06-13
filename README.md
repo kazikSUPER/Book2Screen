@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="./marketing_kit/branding/hero_banner.png" alt="Book2Screen Hero Banner" width="100%">
+  <img src="marketing_kit/branding/hero_banner.png" alt="Book2Screen Hero Banner" width="100%">
 </p>
 
-# <img src="./marketing_kit/branding/logo_primary.png" width="40" vertical-align="middle"> Book2Screen
+# <img src="marketing_kit/branding/logo_primary.png" width="40" vertical-align="middle"> Book2Screen
 
 > Читай. Дивись. Порівнюй. — Перша інтерактивна платформа для порівняння сюжетів книг та їх екранізацій.
 
@@ -113,7 +113,7 @@ Book2Screen — це платформа, де користувачі можут�
 Після цього:
 - Frontend: `http://localhost:3000`
 - Backend API: `http://localhost:5000`
-- Swagger UI: `http://localhost:5000/swagger`
+- Swagger UI: `http://localhost:5050/swagger`
 - pgAdmin: `http://localhost:5050`
 
 ### Manual Setup
@@ -167,8 +167,6 @@ Book2Screen/
 └── README.md
 ```
 
-Детальний опис архітектури — у документі 4.2.3 SAD: Internal View у [Project Hub](https://www.notion.so/Project-Hub-Book2Screen-322bbedd49dc80b48c0ad04db0152497).
-
 ---
 
 ## Архітектура
@@ -191,8 +189,6 @@ Book2Screen/
 | Services | Інтеграція з Backend API (Axios) |
 | State | Глобальний стан (Pinia) |
 
-Авторизація: Stateless JWT. Токен зберігається в Pinia store і автоматично додається до кожного HTTP-запиту через axios interceptor.
-
 ---
 
 ## Команда
@@ -210,9 +206,6 @@ Book2Screen/
 ## Документація та артефакти
 
 - Project Hub: [Notion](https://www.notion.so/Project-Hub-Book2Screen-322bbedd49dc80b48c0ad04db0152497)
-- Архітектурні рішення (ADR, SAD, Data Flow): розділ 4.2 Architecture & Tech Stack у Project Hub
-- UI/UX Prototype: розділ 3.2 UI/UX Prototype у Project Hub
-- Test Plan & Cases: розділ 5.1 Test Plan & Strategy у Project Hub
 - Naming Conventions: [`docs/naming-conventions.md`](./docs/naming-conventions.md)
 - Tech Stack (детально): [`docs/tech-stack.md`](./docs/tech-stack.md)
 
@@ -223,58 +216,56 @@ Book2Screen/
 - Code Style: ESLint + Prettier з автоматичним форматуванням при збереженні (Format on Save).
 - Naming Conventions: див. [`docs/naming-conventions.md`](./docs/naming-conventions.md).
 - Pull Requests: використовується шаблон [`pull_request_template.md`](./.github/pull_request_template.md) з обов'язковим Self-Review Checklist.
+
 ---
 
 ## Демонстрація інтерфейсу (Product in Action)
 
 ### Фільтрація та пошук
-![Filter Demo](./marketing_kit/video/demos/ui_filter_demo.gif)
+<img src="marketing_kit/video/demos/ui_filter_demo.gif" width="50%">
 
 ### Додаткові можливості фільтрації
-![Advanced Filter](./marketing_kit/video/demos/ui_advanced_filter_demo.mp4)
+<img src="marketing_kit/video/demos/ui_advanced_filter_demo.gif" width="50%">
 
 ### Вхід у систему (Авторизація)
-![Auth Demo](./marketing_kit/video/demos/ui_auth_demo.gif)
-
-### Процес авторизації
-![Login Demo](./marketing_kit/video/demos/ui_auth_demo.mp4)
+<img src="marketing_kit/video/demos/ui_auth_demo.gif" width="50%">
 
 ### Карта розбіжностей
-![Map View](./marketing_kit/video/demos/ui_map_view_demo.mp4)
+<img src="marketing_kit/video/demos/ui_map_view_demo.gif" width="50%">
 
 ### Система скарг та модерація
-![Report Demo](./marketing_kit/video/demos/ui_report_demo.gif)
+<img src="marketing_kit/video/demos/ui_report_demo.gif" width="50%">
 
 ### Робота з коментарями
-![Comments Demo](./marketing_kit/video/demos/ui_comments_demo.mp4)
+<img src="marketing_kit/video/demos/ui_comments_demo.gif" width="50%">
 
 ### Система голосування
-![Voting Demo](./marketing_kit/video/demos/ui_voting_demo.mp4)
+<img src="marketing_kit/video/demos/ui_voting_demo.gif" width="50%">
 
 ### Профіль та Обране
-![Profile Demo](./marketing_kit/video/demos/ui_user_profile_demo.mp4)
+<img src="marketing_kit/video/demos/ui_user_profile_demo.gif" width="50%">
 
 ---
 
 ## Скріншоти інтерфейсу (Gallery)
 
 ### Каталог творів
-![Каталог творів](./marketing_kit/strategy/assets/catalog_screenshot.jpg)
+<img src="marketing_kit/strategy/assets/catalog_screenshot.jpg" width="70%" alt="Каталог творів">
 
 ### Карта розбіжностей (Детально)
-![Карта розбіжностей](./marketing_kit/strategy/assets/map_screenshot.jpg)
+<img src="marketing_kit/strategy/assets/map_screenshot.jpg" width="70%" alt="Карта розбіжностей">
 
 ### Профіль користувача
-![Профіль користувача](./marketing_kit/strategy/assets/profile_screenshot.jpg)
+<img src="marketing_kit/strategy/assets/profile_screenshot.jpg" width="70%" alt="Профіль користувача">
 
 ---
 
 ## Marketing Kit
 
-Для ознайомлення з маркетинговими матеріалами проєкту перейдіть до папки [`/marketing_kit`](./marketing_kit). 
+Для ознайомлення з маркетинговими матеріалами проєкту перейдіть до папки [/marketing_kit](./marketing_kit). 
 
 ### Структура матеріалів:
-- **[Branding](./marketing_kit/branding)**: Логотипи (primary, white) та гайдлайн по стилю (Style Guide).
-- **[Video](./marketing_kit/video)**: Промо-ролик продукту та обкладинка.
-- **[Copywriting](./marketing_kit/copywriting)**: Текст 60-секундної промови (Elevator Pitch).
-- **[Strategy](./marketing_kit/strategy)**: Аналіз ринку (SWOT, конкуренти) та календарний план просування (Social Media Plan).
+- [Branding](./marketing_kit/branding): Логотипи (primary, white) та гайдлайн по стилю (Style Guide).
+- [Video](./marketing_kit/video): Промо-ролик продукту та обкладинка.
+- [Copywriting](./marketing_kit/copywriting): Текст 60-секундної промови (Elevator Pitch).
+- [Strategy](./marketing_kit/strategy): Аналіз ринку (SWOT, конкуренти) та календарний план просування (Social Media Plan).
