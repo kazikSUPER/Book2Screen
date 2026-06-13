@@ -1,8 +1,18 @@
-# Book2Screen
+<p align="center">
+  <img src="./marketing_kit/branding/hero_banner.png" alt="Book2Screen Hero Banner" width="100%">
+</p>
 
-> **Система відгуків і рейтингів книг та їх екранізацій** — порівняння книги та фільму/серіалу на основі відгуків і рейтингів користувачів.
+# <img src="./marketing_kit/branding/logo_primary.png" width="40" vertical-align="middle"> Book2Screen
 
-Повнофункціональний веб-застосунок (Fullstack), що включає клієнтську частину на Vue.js та серверну частину на ASP.NET Core.
+> Читай. Дивись. Порівнюй. — Перша інтерактивна платформа для порівняння сюжетів книг та їх екранізацій.
+
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/kazikSUPER/Book2Screen)
+[![Framework](https://img.shields.io/badge/.NET-10.0-512bd4)](https://dotnet.microsoft.com/download)
+[![Frontend](https://img.shields.io/badge/Vue.js-3.5-4fc08d)](https://vuejs.org/)
+[![Database](https://img.shields.io/badge/PostgreSQL-15-336791)](https://www.postgresql.org/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+Повнофункціональний веб-застосунок (Fullstack), що об'єднує літературний та кінематографічний світи в одному інтерфейсі.
 
 ---
 
@@ -12,7 +22,7 @@ Book2Screen — це платформа, де користувачі можут�
 - Порівнювати книжки з їхніми кіноекранізаціями
 - Читати й писати відгуки з можливістю позначення спойлерів
 - Голосувати, що краще — книга чи її екранізація
-- Досліджувати розбіжності сюжетів через **Інтерактивну карту відмінностей**
+- Досліджувати розбіжності сюжетів через Інтерактивну карту відмінностей
 
 ### Killer Feature: Інтерактивна карта відмінностей
 
@@ -20,14 +30,26 @@ Book2Screen — це платформа, де користувачі можут�
 
 ---
 
-## Ключові можливості MVP
+## Основні переваги (Features)
 
-- **Реєстрація та авторизація** — створення акаунту, вхід, відновлення паролю (JWT)
-- **Пошук і фільтри** — за жанром, країною, роком, назвою
-- **Обране** — збереження улюблених творів у профілі користувача
-- **Голосування «Книга vs Фільм»** — з живим прогрес-баром результатів
-- **Відгуки зі спойлерами** — автоматичне блюрення тексту, позначеного як спойлер
-- **Інтерактивна карта відмінностей** — візуальне порівняння сюжетів
+- Безпека банківського рівня — надійна авторизація через JWT та хешування паролів за стандартом Argon2/BCrypt.
+- Блискавичний пошук — миттєва фільтрація серед десятків творів завдяки оптимізованим SQL-запитам (час відповіді <150мс).
+- Персоналізація — зберігайте улюблені книги та фільми в "Обраному", формуючи власну цифрову бібліотеку.
+- Голос спільноти — беріть участь у вічній битві "Книга vs Фільм" та дивіться реальну статистику в реальному часі.
+- Відгуки без сюрпризів — читайте думки інших користувачів безпечно завдяки автоматичному блюренню спойлерів.
+- Унікальний візуальний досвід — досліджуйте кожну зміну сюжету через першу у світі Інтерактивну карту розбіжностей.
+
+---
+
+## Швидкий доступ (Demo Credentials)
+
+Для швидкої перевірки функціоналу в локальному Docker-середовищі використовуйте ці облікові дані:
+
+| Роль | Email | Пароль |
+| :--- | :--- | :--- |
+| Адміністратор | `admin@book2screen.com` | `Admin123!` |
+| Критик | `mike@book2screen.com` | `User123!` |
+| Користувач | `user@book2screen.com` | `User123!` |
 
 ---
 
@@ -62,10 +84,10 @@ Book2Screen — це платформа, де користувачі можут�
 
 ### Prerequisites
 
-- **Node.js** ≥ 20.x ([завантажити](https://nodejs.org/))
-- **npm** ≥ 10.x
-- **.NET SDK 10.0** ([завантажити](https://dotnet.microsoft.com/download))
-- **Docker & Docker Compose** (рекомендовано)
+- Node.js ≥ 20.x ([завантажити](https://nodejs.org/))
+- npm ≥ 10.x
+- .NET SDK 10.0 ([завантажити](https://dotnet.microsoft.com/download))
+- Docker & Docker Compose (рекомендовано)
 
 ### Installation & Running (Docker - Quick Start)
 
@@ -82,16 +104,17 @@ Book2Screen — це платформа, де користувачі можут�
    cp .env.example .env
    ```
 
-3. Запустити через Docker Compose:
+3. Запустити через Docker Compose (чиста збірка та запуск):
    ```bash
-   docker-compose up --build
+   docker compose build --no-cache
+   docker compose up -d
    ```
 
 Після цього:
-- **Frontend:** `http://localhost:3000`
-- **Backend API:** `http://localhost:5000`
-- **Swagger UI:** `http://localhost:5000/swagger`
-- **pgAdmin:** `http://localhost:5050`
+- Frontend: `http://localhost:3000`
+- Backend API: `http://localhost:5000`
+- Swagger UI: `http://localhost:5000/swagger`
+- pgAdmin: `http://localhost:5050`
 
 ### Manual Setup
 
@@ -144,31 +167,31 @@ Book2Screen/
 └── README.md
 ```
 
-Детальний опис архітектури — у документі *4.2.3 SAD: Internal View* у [Project Hub](https://www.notion.so/Project-Hub-Book2Screen-322bbedd49dc80b48c0ad04db0152497).
+Детальний опис архітектури — у документі 4.2.3 SAD: Internal View у [Project Hub](https://www.notion.so/Project-Hub-Book2Screen-322bbedd49dc80b48c0ad04db0152497).
 
 ---
 
 ## Архітектура
 
-Проєкт побудований на принципах **Clean Architecture** (Backend) та **Component-Based Architecture** (Frontend):
+Проєкт побудований на принципах Clean Architecture (Backend) та Component-Based Architecture (Frontend):
 
 ### Backend (Clean Architecture)
-| Шар | Відповідальність |
+| Шар | Відповідльність |
 |-----|------------------|
-| **Domain** | Корневі сутності та бізнес-виключення |
-| **Application** | Бізнес-логіка, DTO, валідатори, інтерфейси |
-| **Infrastructure** | Робота з БД (EF Core), зовнішні сервіси (Email, Tokens) |
-| **API (Web)** | Контролери, Middleware, конфігурація DI |
+| Domain | Корневі сутності та бізнес-виключення |
+| Application | Бізнес-логіка, DTO, валідатори, інтерфейси |
+| Infrastructure | Робота з БД (EF Core), зовнішні сервіси (Email, Tokens) |
+| API (Web) | Контролери, Middleware, конфігурація DI |
 
 ### Frontend
-| Шар | Відповідальність |
+| Шар | Відповідльність |
 |-----|------------------|
-| **Pages (Views)** | Сторінки, прив'язані до маршрутів |
-| **Presentation** | Перевикористовувані UI-компоненти |
-| **Services** | Інтеграція з Backend API (Axios) |
-| **State** | Глобальний стан (Pinia) |
+| Pages (Views) | Сторінки, прив'язані до маршрутів |
+| Presentation | Перевикористовувані UI-компоненти |
+| Services | Інтеграція з Backend API (Axios) |
+| State | Глобальний стан (Pinia) |
 
-**Авторизація:** Stateless JWT. Токен зберігається в Pinia store і автоматично додається до кожного HTTP-запиту через axios interceptor.
+Авторизація: Stateless JWT. Токен зберігається в Pinia store і автоматично додається до кожного HTTP-запиту через axios interceptor.
 
 ---
 
@@ -176,28 +199,82 @@ Book2Screen/
 
 | Роль | Ім'я |
 |------|------|
-| **Project Manager** | Урсуляк Олександра |
-| **Backend Developer** | Казімір Віталій |
-| **Frontend Developer** | Андрющенко Людмила |
-| **QA Engineer** | Костецька Христина |
-| **Database Developer** | Іщук Єгор |
+| Project Manager | Урсуляк Олександра |
+| Backend Developer | Казімір Віталій |
+| Frontend Developer | Андрющенко Людмила |
+| QA Engineer | Костецька Христина |
+| Database Developer | Іщук Єгор |
 
 ---
 
 ## Документація та артефакти
 
-- **Project Hub:** [Notion](https://www.notion.so/Project-Hub-Book2Screen-322bbedd49dc80b48c0ad04db0152497)
-- **Архітектурні рішення (ADR, SAD, Data Flow):** розділ *4.2 Architecture & Tech Stack* у Project Hub
-- **UI/UX Prototype:** розділ *3.2 UI/UX Prototype* у Project Hub
-- **Test Plan & Cases:** розділ *5.1 Test Plan & Strategy* у Project Hub
-- **Naming Conventions:** [`docs/naming-conventions.md`](./docs/naming-conventions.md)
-- **Tech Stack (детально):** [`docs/tech-stack.md`](./docs/tech-stack.md)
+- Project Hub: [Notion](https://www.notion.so/Project-Hub-Book2Screen-322bbedd49dc80b48c0ad04db0152497)
+- Архітектурні рішення (ADR, SAD, Data Flow): розділ 4.2 Architecture & Tech Stack у Project Hub
+- UI/UX Prototype: розділ 3.2 UI/UX Prototype у Project Hub
+- Test Plan & Cases: розділ 5.1 Test Plan & Strategy у Project Hub
+- Naming Conventions: [`docs/naming-conventions.md`](./docs/naming-conventions.md)
+- Tech Stack (детально): [`docs/tech-stack.md`](./docs/tech-stack.md)
 
 ---
 
 ## Процес розробки
 
-- **Code Style:** ESLint + Prettier з автоматичним форматуванням при збереженні (Format on Save).
-- **Naming Conventions:** див. [`docs/naming-conventions.md`](./docs/naming-conventions.md).
-- **Pull Requests:** використовується шаблон [`pull_request_template.md`](./.github/pull_request_template.md) з обов'язковим Self-Review Checklist.
-- **Заборонені назви змінних:** `data`, `info`, `temp` (контролюється через ESLint правило `id-denylist`).
+- Code Style: ESLint + Prettier з автоматичним форматуванням при збереженні (Format on Save).
+- Naming Conventions: див. [`docs/naming-conventions.md`](./docs/naming-conventions.md).
+- Pull Requests: використовується шаблон [`pull_request_template.md`](./.github/pull_request_template.md) з обов'язковим Self-Review Checklist.
+---
+
+## Демонстрація інтерфейсу (Product in Action)
+
+### Фільтрація та пошук
+![Filter Demo](./marketing_kit/video/demos/ui_filter_demo.gif)
+
+### Додаткові можливості фільтрації
+![Advanced Filter](./marketing_kit/video/demos/ui_advanced_filter_demo.mp4)
+
+### Вхід у систему (Авторизація)
+![Auth Demo](./marketing_kit/video/demos/ui_auth_demo.gif)
+
+### Процес авторизації
+![Login Demo](./marketing_kit/video/demos/ui_auth_demo.mp4)
+
+### Карта розбіжностей
+![Map View](./marketing_kit/video/demos/ui_map_view_demo.mp4)
+
+### Система скарг та модерація
+![Report Demo](./marketing_kit/video/demos/ui_report_demo.gif)
+
+### Робота з коментарями
+![Comments Demo](./marketing_kit/video/demos/ui_comments_demo.mp4)
+
+### Система голосування
+![Voting Demo](./marketing_kit/video/demos/ui_voting_demo.mp4)
+
+### Профіль та Обране
+![Profile Demo](./marketing_kit/video/demos/ui_user_profile_demo.mp4)
+
+---
+
+## Скріншоти інтерфейсу (Gallery)
+
+### Каталог творів
+![Каталог творів](./marketing_kit/strategy/assets/catalog_screenshot.jpg)
+
+### Карта розбіжностей (Детально)
+![Карта розбіжностей](./marketing_kit/strategy/assets/map_screenshot.jpg)
+
+### Профіль користувача
+![Профіль користувача](./marketing_kit/strategy/assets/profile_screenshot.jpg)
+
+---
+
+## Marketing Kit
+
+Для ознайомлення з маркетинговими матеріалами проєкту перейдіть до папки [`/marketing_kit`](./marketing_kit). 
+
+### Структура матеріалів:
+- **[Branding](./marketing_kit/branding)**: Логотипи (primary, white) та гайдлайн по стилю (Style Guide).
+- **[Video](./marketing_kit/video)**: Промо-ролик продукту та обкладинка.
+- **[Copywriting](./marketing_kit/copywriting)**: Текст 60-секундної промови (Elevator Pitch).
+- **[Strategy](./marketing_kit/strategy)**: Аналіз ринку (SWOT, конкуренти) та календарний план просування (Social Media Plan).
