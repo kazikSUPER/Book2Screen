@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="marketing_kit/branding/hero_banner.png" alt="Book2Screen Hero Banner" width="100%">
+  <img src="marketing_kit/branding/hero_banner.jpg" alt="Book2Screen Hero Banner" width="100%">
 </p>
 
 # <img src="marketing_kit/branding/logo_primary.png" width="40" vertical-align="middle"> Book2Screen
