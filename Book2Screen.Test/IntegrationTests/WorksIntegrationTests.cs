@@ -25,7 +25,7 @@ public class WorksIntegrationTests : IClassFixture<CustomWebApplicationFactory<P
         var works = await response.Content.ReadFromJsonAsync<IEnumerable<BookScreenItemDto>>();
         Assert.NotNull(works);
         Assert.NotEmpty(works);
-        Assert.Contains(works, w => w.Title.Contains("Dune"));
+        Assert.Contains(works, w => w.Title.Contains("Дюна"));
     }
 
     [Fact]

@@ -6,6 +6,9 @@ import { useVotesStore } from '../state/votes';
 import { useUserStore } from '../state/user';
 import { useNotificationsStore } from '../state/notifications';
 import { extractErrorMessage } from '../services/error';
+import { STR } from '../constants';
+
+const t = STR.detail;
 
 /**
  * SCRUM-70 / SCRUM-71 — блок голосування "Книга vs Фільм".
@@ -56,7 +59,7 @@ async function loadResults(): Promise<void> {
 
 async function vote(type: VoteType): Promise<void> {
   if (!userStore.isAuthenticated) {
-    notifications.pushWarning('Увійдіть, щоб голосувати');
+    notifications.pushWarning(t.voteNeedAuth);
     return;
   }
   if (isSubmitting.value) return;
@@ -66,7 +69,7 @@ async function vote(type: VoteType): Promise<void> {
     const response = await submitVote(props.workId, type);
     result.value = response;
     votesStore.setMyVote(props.workId, type);
-    notifications.pushSuccess('Дякуємо за ваш голос!');
+    notifications.pushSuccess(t.voteThanks);
   } catch (err) {
     notifications.pushError(extractErrorMessage(err));
   } finally {
@@ -95,7 +98,7 @@ watch(
 
 <template>
   <section class="voting" aria-label="Голосування Книга vs Фільм">
-    <h2 class="voting__title">Що, на вашу думку, вдалося краще?</h2>
+    <h2 class="voting__title">{{ t.voteTitle }}</h2>
 
     <!-- ── Кнопки ─────────────────────────────────────── -->
     <div class="voting__buttons">
@@ -103,36 +106,36 @@ watch(
         type="button"
         class="voting__btn voting__btn--book"
         :class="{
-          'voting__btn--active': myVote === 'BOOK',
-          'voting__btn--inactive': myVote && myVote !== 'BOOK',
+          'voting__btn--active': myVote === 'book',
+          'voting__btn--inactive': myVote && myVote !== 'book',
         }"
         :disabled="isSubmitting"
-        :aria-pressed="myVote === 'BOOK'"
-        @click="vote('BOOK')"
+        :aria-pressed="myVote === 'book'"
+        @click="vote('book')"
       >
-        Книга
+        {{ t.voteBook }}
       </button>
 
-      <span class="voting__vs" aria-hidden="true">VS</span>
+      <span class="voting__vs" aria-hidden="true">{{ t.voteVs }}</span>
 
       <button
         type="button"
         class="voting__btn voting__btn--film"
         :class="{
-          'voting__btn--active': myVote === 'MOVIE',
-          'voting__btn--inactive': myVote && myVote !== 'MOVIE',
+          'voting__btn--active': myVote === 'movie',
+          'voting__btn--inactive': myVote && myVote !== 'movie',
         }"
         :disabled="isSubmitting"
-        :aria-pressed="myVote === 'MOVIE'"
-        @click="vote('MOVIE')"
+        :aria-pressed="myVote === 'movie'"
+        @click="vote('movie')"
       >
-        Фільми
+        {{ t.voteFilm }}
       </button>
     </div>
 
     <!-- ── Результати (SCRUM-71): прогрес-бар з % ────── -->
     <div v-if="showResults" class="voting__results">
-      <div class="voting__bar" :aria-label="`Книга ${bookPct}%, фільм ${moviePct}%`">
+      <div class="voting__bar" :aria-label="`${t.voteBook} ${bookPct}%, ${t.voteFilm} ${moviePct}%`">
         <div class="voting__bar-book" :style="{ width: bookPct + '%' }">
           <span v-if="bookPct >= 8" class="voting__bar-pct">{{ bookPct }}%</span>
         </div>
@@ -140,10 +143,10 @@ watch(
           <span v-if="moviePct >= 8" class="voting__bar-pct">{{ moviePct }}%</span>
         </div>
       </div>
-      <p class="voting__total">Всього голосів: {{ totalVotes }}</p>
+      <p class="voting__total">{{ t.voteTotal(totalVotes) }}</p>
     </div>
 
-    <p v-else-if="myVote" class="voting__hint">Завантажуємо результати…</p>
+    <p v-else-if="myVote" class="voting__hint">{{ t.voteLoadingResults }}</p>
   </section>
 </template>
 
@@ -153,17 +156,21 @@ watch(
   flex-direction: column;
   align-items: center;
   gap: 18px;
-  padding: 24px 16px;
-  margin: 0 16px;
-  background: var(--color-page);
+  padding: 24px;
+  margin: 24px auto;
+  background-color: #391418;
+  border-radius: var(--radius-md);
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
 .voting__title {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-family: var(--font-display);
   font-weight: 400;
-  color: var(--text-on-light);
+  color: #fff;
   text-align: center;
 }
 
@@ -175,10 +182,10 @@ watch(
 }
 
 .voting__btn {
-  background: var(--color-card);
-  color: var(--text-on-dark);
-  border: 2px solid var(--color-card);
-  border-radius: var(--radius-md);
+  background-color: #721c24;
+  color: #fff;
+  border: 1px solid #5a141c;
+  border-radius: var(--radius-sm);
   padding: 10px 28px;
   font-family: var(--font-display);
   font-size: 16px;
@@ -189,8 +196,7 @@ watch(
 }
 
 .voting__btn:hover:not(:disabled) {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background-color: #8c232c;
 }
 
 .voting__btn:disabled {
@@ -199,21 +205,20 @@ watch(
 }
 
 .voting__btn--active {
-  background: var(--color-primary);
-  border-color: var(--color-primary-dark);
-  box-shadow: var(--shadow-md);
+  background-color: #5a141c;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .voting__btn--inactive {
-  background: var(--color-card);
+  background-color: #721c24;
   opacity: 0.6;
 }
 
 .voting__vs {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-primary);
+  font-size: 20px;
+  font-weight: 500;
+  color: #fff;
 }
 
 /* ── Прогрес-бар результатів (SCRUM-71) ──────────────── */

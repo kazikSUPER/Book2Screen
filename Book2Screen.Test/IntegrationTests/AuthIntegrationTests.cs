@@ -59,7 +59,7 @@ public class AuthIntegrationTests : IClassFixture<CustomWebApplicationFactory<Pr
         // Arrange
         var request = new RegisterRequest 
         { 
-            Nickname = "testuser", 
+            Username = "testuser", 
             Email = "test@example.com", 
             Password = weakPassword 
         };

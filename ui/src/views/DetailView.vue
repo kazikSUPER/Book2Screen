@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import type { BookScreenItem } from '../services/types';
+import type { BookScreenItem, DifferencePoint } from '../services/types';
 import { fetchWorkById } from '../services/works';
 import { extractErrorMessage } from '../services/error';
 import { useWishlistStore } from '../state/wishlist';
@@ -12,6 +12,9 @@ import StarRating from '../components/StarRating.vue';
 import DifferencesMap from '../components/DifferencesMap.vue';
 import VotingBlock from '../components/VotingBlock.vue';
 import ReviewsBlock from '../components/ReviewsBlock.vue';
+import { STR } from '../constants';
+
+const t = STR.detail;
 
 /**
  * SCRUM-68 (US 3.2) — Book Details.
@@ -22,7 +25,8 @@ import ReviewsBlock from '../components/ReviewsBlock.vue';
  *  - кнопки "+ Хочу прочитати / переглянути" (через wishlist store)
  *  - зіркові оцінки (інтерактивні — userRatings store)
  *  - інтерактивна карта відмінностей (компонент DifferencesMap)
- *  - блоки голосування і коментарів — заглушки під SCRUM-70/71/72
+ *  - блок голосування "Книга vs Фільм" (VotingBlock, SCRUM-70)
+ *  - блок коментарів/відгуків (ReviewsBlock, SCRUM-72)
  */
 
 const route = useRoute();
@@ -54,17 +58,13 @@ onMounted(loadItem);
 watch(() => route.params.id, loadItem);
 
 // ── Wishlist (хочу прочитати / переглянути) ─────────────────
-const inReadList = computed(() =>
-  item.value ? wishlist.isInWishlist(item.value.id, 'read') : false
-);
-const inWatchList = computed(() =>
-  item.value ? wishlist.isInWishlist(item.value.id, 'watch') : false
-);
+const inReadList = computed(() => (item.value ? wishlist.isInWishlist(item.value.id, 'read') : false));
+const inWatchList = computed(() => (item.value ? wishlist.isInWishlist(item.value.id, 'watch') : false));
 
 function toggleRead(): void {
   if (!item.value) return;
   if (!userStore.isAuthenticated) {
-    notifications.pushWarning('Увійдіть, щоб додавати до списку');
+    notifications.pushWarning(t.wishlistNeedAuth);
     return;
   }
   wishlist.toggle(item.value.id, 'read');
@@ -73,7 +73,7 @@ function toggleRead(): void {
 function toggleWatch(): void {
   if (!item.value) return;
   if (!userStore.isAuthenticated) {
-    notifications.pushWarning('Увійдіть, щоб додавати до списку');
+    notifications.pushWarning(t.wishlistNeedAuth);
     return;
   }
   wishlist.toggle(item.value.id, 'watch');
@@ -85,7 +85,7 @@ const myBookRating = computed({
   set: (v: number) => {
     if (!item.value) return;
     if (!userStore.isAuthenticated) {
-      notifications.pushWarning('Увійдіть, щоб ставити оцінку');
+      notifications.pushWarning(t.ratingNeedAuth);
       return;
     }
     userRatings.setRating(item.value.id, 'book', v);
@@ -97,7 +97,7 @@ const myFilmRating = computed({
   set: (v: number) => {
     if (!item.value) return;
     if (!userStore.isAuthenticated) {
-      notifications.pushWarning('Увійдіть, щоб ставити оцінку');
+      notifications.pushWarning(t.ratingNeedAuth);
       return;
     }
     userRatings.setRating(item.value.id, 'film', v);
@@ -110,112 +110,173 @@ const filmCountryLabel = computed(() => item.value?.filmCountry ?? item.value?.c
 const bookSummary = computed(() => item.value?.bookSummary ?? item.value?.description ?? '');
 const filmSummary = computed(() => item.value?.filmSummary ?? item.value?.description ?? '');
 
+watch(
+  item,
+  (newItem) => {
+    if (newItem) {
+      document.title = `${newItem.title} — порівняння книги та екранізації — Book2Screen`;
+    }
+  },
+  { immediate: true }
+);
+
 const goBack = () => router.push({ name: 'home' });
+
+const defaultDifferences: DifferencePoint[] = [];
+
+const differencesData = computed(() => {
+  if (item.value?.differences && item.value.differences.length > 0) {
+    return item.value.differences;
+  }
+  return defaultDifferences;
+});
 </script>
 
 <template>
   <div class="detail">
     <!-- Брейкрумна стрічка під шапкою (з Figma) -->
     <div v-if="item" class="detail__crumb">
-      <button class="detail__crumb-back" type="button" aria-label="Назад" @click="goBack">←</button>
+      <button class="detail__crumb-back" type="button" :aria-label="STR.common.back" @click="goBack">←</button>
       <span class="detail__crumb-text">{{ item.genre }} / {{ item.title }}</span>
     </div>
 
-    <p v-if="isLoading" class="detail__status">Завантаження…</p>
+    <p v-if="isLoading" class="detail__status">{{ STR.common.loading }}</p>
 
     <div v-else-if="errorMessage" class="detail__status">
       <p>⚠ {{ errorMessage }}</p>
-      <button class="detail__retry" type="button" @click="loadItem">Повторити</button>
+      <button class="detail__retry" type="button" @click="loadItem">{{ STR.common.retry }}</button>
     </div>
 
-    <p v-else-if="!item" class="detail__status">Елемент не знайдено</p>
+    <p v-else-if="!item" class="detail__status">{{ t.notFound }}</p>
 
     <template v-else>
+      <h1 class="sr-only">Порівняння твору: {{ item.title }} (книга та екранізація)</h1>
+      <!-- ── Дві картки порівняння ─────────────────────────── -->
       <!-- ── Дві картки порівняння ─────────────────────────── -->
       <section class="detail__compare">
         <!-- Книга -->
-        <article class="compare-card">
-          <h2 class="compare-card__title">{{ item.title }}</h2>
-          <div class="compare-card__row">
-            <div class="compare-card__poster">
-              <img :src="item.poster" :alt="item.title" />
+        <div class="compare-col">
+          <article class="compare-card">
+            <div class="compare-card__main">
+              <div class="compare-card__poster">
+                <img :src="item.poster" :alt="item.title" loading="lazy" />
+              </div>
+              <div class="compare-card__info">
+                <h2 class="compare-card__title">{{ item.title }}</h2>
+                <dl class="compare-card__meta">
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookYear }}</dt>
+                    <dd>{{ item.bookYear ?? item.year }}</dd>
+                  </div>
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookGenre }}</dt>
+                    <dd>{{ item.genre }}</dd>
+                  </div>
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookCountry }}</dt>
+                    <dd>{{ item.country }}</dd>
+                  </div>
+                  <div v-if="item.author" class="compare-card__meta-row">
+                    <dt>{{ t.bookAuthor }}</dt>
+                    <dd>{{ item.author }}</dd>
+                  </div>
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookRating }}</dt>
+                    <dd>{{ item.bookRating }} / 5</dd>
+                  </div>
+                </dl>
+                <button
+                  class="compare-card__wish"
+                  :class="{ 'compare-card__wish--active': inReadList }"
+                  type="button"
+                  @click="toggleRead"
+                >
+                  <span class="compare-card__wish-icon">{{ inReadList ? '✓' : '+' }}</span>
+                  {{ inReadList ? t.inList : t.wantToRead }}
+                </button>
+              </div>
             </div>
-            <dl class="compare-card__meta">
-              <div class="compare-card__meta-row"><dt>Рік:</dt><dd>{{ item.year }}</dd></div>
-              <div class="compare-card__meta-row"><dt>Жанр:</dt><dd>{{ item.genre }}</dd></div>
-              <div class="compare-card__meta-row"><dt>Країна:</dt><dd>{{ item.country }}</dd></div>
-              <div v-if="item.author" class="compare-card__meta-row"><dt>Автор:</dt><dd>{{ item.author }}</dd></div>
-              <div class="compare-card__meta-row"><dt>Рейтинг:</dt><dd>{{ item.bookRating }} / 10</dd></div>
-            </dl>
+            <div class="compare-card__summary">
+              <div class="compare-card__summary-title">{{ t.summaryTitle }}</div>
+              <p class="compare-card__summary-text">{{ bookSummary }}</p>
+            </div>
+          </article>
+          <div class="user-rating">
+            <span class="user-rating__label">{{ t.bookRatingLabel }}</span>
+            <StarRating v-model="myBookRating" :size="32" />
           </div>
-          <button
-            class="compare-card__wish"
-            :class="{ 'compare-card__wish--active': inReadList }"
-            type="button"
-            @click="toggleRead"
-          >
-            <span class="compare-card__wish-icon">{{ inReadList ? '✓' : '+' }}</span>
-            {{ inReadList ? 'У списку' : 'Хочу прочитати' }}
-          </button>
-          <p class="compare-card__summary">
-            <strong>Коротка анотація</strong><br />
-            {{ bookSummary }}
-          </p>
-        </article>
+        </div>
 
         <!-- VS / Екранізовано -->
         <div class="detail__vs" aria-hidden="true">
-          <span class="detail__vs-text">Екранізовано</span>
-          <svg width="40" height="20" viewBox="0 0 40 20" fill="none">
-            <path d="M0 10H35M35 10L26 2M35 10L26 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          <span class="detail__vs-text">{{ t.adapted }}</span>
+          <svg width="60" height="20" viewBox="0 0 60 20" fill="none">
+            <path
+              d="M0 10H55M55 10L46 2M55 10L46 18"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
         </div>
 
         <!-- Екранізація -->
-        <article class="compare-card">
-          <h2 class="compare-card__title">{{ item.title }}</h2>
-          <div class="compare-card__row">
-            <div class="compare-card__poster">
-              <img :src="item.filmPoster ?? item.poster" :alt="item.title" />
+        <div class="compare-col">
+          <article class="compare-card compare-card--mirror">
+            <div class="compare-card__main">
+              <div class="compare-card__info">
+                <h2 class="compare-card__title">{{ item.title }}</h2>
+                <dl class="compare-card__meta">
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookYear }}</dt>
+                    <dd>{{ filmYearLabel }}</dd>
+                  </div>
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookGenre }}</dt>
+                    <dd>{{ item.genre }}</dd>
+                  </div>
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookCountry }}</dt>
+                    <dd>{{ filmCountryLabel }}</dd>
+                  </div>
+                  <div v-if="item.director" class="compare-card__meta-row">
+                    <dt>{{ t.bookDirector }}</dt>
+                    <dd>{{ item.director }}</dd>
+                  </div>
+                  <div class="compare-card__meta-row">
+                    <dt>{{ t.bookRating }}</dt>
+                    <dd>{{ item.filmRating }} / 5</dd>
+                  </div>
+                </dl>
+                <button
+                  class="compare-card__wish"
+                  :class="{ 'compare-card__wish--active': inWatchList }"
+                  type="button"
+                  @click="toggleWatch"
+                >
+                  <span class="compare-card__wish-icon">{{ inWatchList ? '✓' : '+' }}</span>
+                  {{ inWatchList ? t.inList : t.wantToWatch }}
+                </button>
+              </div>
+              <div class="compare-card__poster">
+                <img :src="item.filmPoster ?? item.poster" :alt="item.title" loading="lazy" />
+              </div>
             </div>
-            <dl class="compare-card__meta">
-              <div class="compare-card__meta-row"><dt>Рік:</dt><dd>{{ filmYearLabel }}</dd></div>
-              <div class="compare-card__meta-row"><dt>Жанр:</dt><dd>{{ item.genre }}</dd></div>
-              <div class="compare-card__meta-row"><dt>Країна:</dt><dd>{{ filmCountryLabel }}</dd></div>
-              <div v-if="item.director" class="compare-card__meta-row"><dt>Режисер:</dt><dd>{{ item.director }}</dd></div>
-              <div class="compare-card__meta-row"><dt>Рейтинг:</dt><dd>{{ item.filmRating }} / 10</dd></div>
-            </dl>
+            <div class="compare-card__summary">
+              <div class="compare-card__summary-title">{{ t.summaryTitle }}</div>
+              <p class="compare-card__summary-text">{{ filmSummary }}</p>
+            </div>
+          </article>
+          <div class="user-rating">
+            <span class="user-rating__label">{{ t.filmRatingLabel }}</span>
+            <StarRating v-model="myFilmRating" :size="32" />
           </div>
-          <button
-            class="compare-card__wish"
-            :class="{ 'compare-card__wish--active': inWatchList }"
-            type="button"
-            @click="toggleWatch"
-          >
-            <span class="compare-card__wish-icon">{{ inWatchList ? '✓' : '+' }}</span>
-            {{ inWatchList ? 'У списку' : 'Хочу переглянути' }}
-          </button>
-          <p class="compare-card__summary">
-            <strong>Коротка анотація</strong><br />
-            {{ filmSummary }}
-          </p>
-        </article>
-      </section>
-
-      <!-- ── Зіркові оцінки користувача ─────────────────────── -->
-      <section class="detail__user-ratings">
-        <div class="user-rating">
-          <span class="user-rating__label">Оцінка книги</span>
-          <StarRating v-model="myBookRating" :size="32" />
-        </div>
-        <div class="user-rating">
-          <span class="user-rating__label">Оцінка екранізації</span>
-          <StarRating v-model="myFilmRating" :size="32" />
         </div>
       </section>
 
       <!-- ── Карта відмінностей (інтерактивна) ─────────────── -->
-      <DifferencesMap v-if="item.differences && item.differences.length" :points="item.differences" />
+      <DifferencesMap :points="differencesData" />
 
       <!-- ── Голосування (SCRUM-70 / SCRUM-71) ─────────────── -->
       <VotingBlock :work-id="item.id" />
@@ -255,8 +316,13 @@ const goBack = () => router.push({ name: 'home' });
   color: inherit;
   font-size: 20px;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 8px 16px;
   line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .detail__crumb-back:hover {
@@ -265,47 +331,65 @@ const goBack = () => router.push({ name: 'home' });
 
 /* ── Двокартковий блок ──────────────────────────────────── */
 .detail__compare {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 16px;
-  align-items: stretch;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
   padding: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.compare-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 0 0 300px;
+  max-width: 450px;
+  flex: 1;
+  min-width: 320px;
 }
 
 .compare-card {
-  background: var(--color-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-md);
+  background-color: #391418; /* Темно-бордовий фон */
+  border: 1px solid #23080a;
+  border-radius: var(--radius-sm);
   padding: 16px;
   box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   color: var(--text-on-dark);
+  height: 370px; /* Фіксована висота, щоб блоки не розтягувались */
+}
+
+.compare-card__main {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.compare-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
 }
 
 .compare-card__title {
   margin: 0;
   font-family: var(--font-body);
   font-size: 16px;
-  text-align: center;
   font-weight: 500;
-}
-
-.compare-card__row {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 12px;
-  align-items: start;
+  text-align: center;
 }
 
 .compare-card__poster {
-  width: 110px;
-  height: 160px;
+  width: 130px;
+  height: 190px;
   flex-shrink: 0;
   overflow: hidden;
-  border: 1px solid var(--border-card);
   border-radius: var(--radius-xs);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 .compare-card__poster img {
@@ -338,47 +422,80 @@ const goBack = () => router.push({ name: 'home' });
 }
 
 .compare-card__wish {
-  align-self: flex-start;
-  background: transparent;
-  border: 1px solid var(--text-on-dark);
-  color: var(--text-on-dark);
+  background-color: #721c24; /* Вишневий фон кнопки */
+  border: 1px solid #5a141c;
+  color: #fff;
   border-radius: var(--radius-sm);
-  padding: 6px 14px;
+  padding: 8px 16px;
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 8px;
   transition: all 0.15s;
+  align-self: center; /* По центру колонки інфо */
+  width: 100%;
 }
 
 .compare-card__wish:hover {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background-color: #8c232c;
 }
 
 .compare-card__wish--active {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background-color: #5a141c;
 }
 
 .compare-card__wish-icon {
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
+  font-weight: bold;
 }
 
 .compare-card__summary {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text-on-dark);
+  background-color: #872832; /* Світло-вишневий фон анотації */
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  text-align: center;
+  flex: 1; /* Займати весь залишок місця в картці */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Обрізати, якщо виходить за межі */
 }
 
-.compare-card__summary strong {
+.compare-card__summary-title {
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.compare-card__summary-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  font-family: var(--font-body);
+  flex: 1;
+  overflow-y: auto; /* Скрол для довгого тексту */
+  padding-right: 4px; /* Відступ для скролбару */
+}
+
+/* Стилізація скролбару для анотації */
+.compare-card__summary-text::-webkit-scrollbar {
+  width: 4px;
+}
+.compare-card__summary-text::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+.compare-card__summary-text::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+.compare-card__summary-text::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 /* ── VS блок між картками ───────────────────────────────── */
@@ -387,26 +504,23 @@ const goBack = () => router.push({ name: 'home' });
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 4px;
   color: var(--text-on-light);
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .detail__vs-text {
   white-space: nowrap;
-  font-weight: 500;
+  font-weight: 600;
+  color: #333; /* Темний колір для стрілки та тексту */
 }
 
-/* ── Зіркові оцінки ─────────────────────────────────────── */
-.detail__user-ratings {
-  display: flex;
-  justify-content: space-around;
-  gap: 16px;
-  padding: 0 16px;
-  flex-wrap: wrap;
+.detail__vs svg {
+  color: #333;
 }
 
+/* ── Зіркові оцінки під кожною карткою ───────────────────── */
 .user-rating {
   display: flex;
   flex-direction: column;
@@ -416,32 +530,9 @@ const goBack = () => router.push({ name: 'home' });
 
 .user-rating__label {
   font-family: var(--font-display);
-  font-size: 14px;
-  color: var(--text-on-light);
-}
-
-/* ── Заглушки голосування + коментарі ───────────────────── */
-.detail__placeholder {
-  background: var(--color-panel-box);
-  border-radius: var(--radius-md);
-  padding: 24px;
-  margin: 0 16px;
-  text-align: center;
-  border: 1px dashed var(--color-card);
-}
-
-.detail__placeholder-title {
-  margin: 0 0 8px 0;
-  font-family: var(--font-display);
-  font-size: 18px;
-  color: var(--text-on-light);
-}
-
-.detail__placeholder-note {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-muted);
-  font-family: var(--font-body);
+  font-size: 15px;
+  color: #333;
+  font-weight: 500;
 }
 
 /* ── Status ─────────────────────────────────────────────── */

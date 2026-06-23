@@ -1,19 +1,24 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useFilter } from '../hooks/useFilter';
+import { ref, computed, onMounted } from 'vue';
+import { useFilter } from '../composables/useFilter';
 import type { BookScreenItem } from '../services/types';
 import { fetchWorks } from '../services/works';
 import { extractErrorMessage } from '../services/error';
 import TopFilterBar from '../components/TopFilterBar.vue';
 import WorkCard from '../components/WorkCard.vue';
+import { STR } from '../constants';
+
+const t = STR.top;
 
 /**
  * SCRUM-67 (US 3.1) — Top Lists.
- * Сторінка "Найкращі адаптації": горизонтальна панель фільтрів +
- * сітка карток у стилі Figma.
  *
- * Фільтрація — на стороні клієнта через useFilter (зчитує з useFiltersStore).
- * Дані — з fetchWorks(); fallback на mock у services/works.ts.
+ * За Figma (Frame 7) сторінка має ДВІ секції:
+ *   • "Найкращі адаптації" — твори, де bookRating/filmRating близькі (вдала екранізація)
+ *   • "Найгірші адаптації" — твори з великою розбіжністю рейтингів (невдала екранізація)
+ *
+ * Над секціями — горизонтальна панель фільтрів і чекбокс
+ * "Лише з картою відмінностей". Фільтрація — на стороні клієнта (useFilter).
  */
 
 const items = ref<BookScreenItem[]>([]);
@@ -21,6 +26,20 @@ const isLoading = ref(false);
 const errorMessage = ref('');
 
 const { filteredItems } = useFilter(items);
+
+// "Найкращі" — за середнім рейтингом (книги + фільму), спадання.
+const bestAdaptations = computed<BookScreenItem[]>(() => {
+  return [...filteredItems.value]
+    .sort((a, b) => (b.bookRating + b.filmRating) / 2 - (a.bookRating + a.filmRating) / 2)
+    .slice(0, 8);
+});
+
+// "Найгірші" — за розривом між рейтингом книги і екранізації (більший розрив = гірша адаптація).
+const worstAdaptations = computed<BookScreenItem[]>(() => {
+  return [...filteredItems.value]
+    .sort((a, b) => Math.abs(b.bookRating - b.filmRating) - Math.abs(a.bookRating - a.filmRating))
+    .slice(0, 8);
+});
 
 async function loadItems(): Promise<void> {
   isLoading.value = true;
@@ -40,24 +59,43 @@ onMounted(loadItems);
 
 <template>
   <div class="top-page">
+    <h1 class="sr-only">Рейтинг адаптацій книг та фільмів — Book2Screen</h1>
     <TopFilterBar />
 
-    <h1 class="top-page__title">Найкращі адаптації</h1>
-
-    <p v-if="isLoading" class="top-page__status">Завантаження…</p>
+    <p v-if="isLoading" class="top-page__status">{{ STR.common.loading }}</p>
 
     <div v-else-if="errorMessage" class="top-page__status">
-      <p>⚠ {{ errorMessage }}</p>
-      <button class="top-page__retry" @click="loadItems">Повторити</button>
+      <p>{{ errorMessage }}</p>
+      <button type="button" class="top-page__retry" @click="loadItems">
+        {{ STR.common.retry }}
+      </button>
     </div>
 
     <p v-else-if="filteredItems.length === 0" class="top-page__status">
-      За обраними фільтрами нічого не знайдено
+      {{ t.emptyByFilters }}
     </p>
 
-    <div v-else class="top-page__grid">
-      <WorkCard v-for="item in filteredItems" :key="item.id" :item="item" />
-    </div>
+    <template v-else>
+      <section class="top-section">
+        <header class="top-section__head">
+          <h2 class="top-section__title">{{ t.bestTitle }}</h2>
+          <button type="button" class="top-section__more" :aria-label="STR.common.showMore">&rsaquo;</button>
+        </header>
+        <div class="top-section__row">
+          <WorkCard v-for="item in bestAdaptations" :key="`best-${item.id}`" :item="item" />
+        </div>
+      </section>
+
+      <section class="top-section">
+        <header class="top-section__head">
+          <h2 class="top-section__title">{{ t.worstTitle }}</h2>
+          <button type="button" class="top-section__more" :aria-label="STR.common.showMore">&rsaquo;</button>
+        </header>
+        <div class="top-section__row">
+          <WorkCard v-for="item in worstAdaptations" :key="`worst-${item.id}`" :item="item" />
+        </div>
+      </section>
+    </template>
   </div>
 </template>
 
@@ -70,28 +108,66 @@ onMounted(loadItems);
   font-family: var(--font-body);
 }
 
-.top-page__title {
-  font-size: 32px;
+.top-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.top-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.top-section__title {
+  font-size: 28px;
   font-family: var(--font-display);
   font-weight: 400;
   color: var(--text-on-light);
   margin: 0;
 }
 
-/* ── Grid карток ─────────────────────────────────────────── */
-.top-page__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 24px;
+.top-section__more {
+  background: var(--color-input-bg);
+  color: var(--text-on-light);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  width: 36px;
+  height: 36px;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
 }
 
-@media (min-width: 1600px) {
-  .top-page__grid {
-    grid-template-columns: repeat(5, 1fr);
-  }
+.top-section__more:hover {
+  background: var(--color-panel-box);
 }
 
-/* ── Status ─────────────────────────────────────────────── */
+.top-section__row {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) transparent;
+}
+
+.top-section__row::-webkit-scrollbar {
+  height: 6px;
+}
+.top-section__row::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-radius: 3px;
+}
+
 .top-page__status {
   text-align: center;
   padding: 40px 0;
@@ -122,12 +198,8 @@ onMounted(loadItems);
     padding: 12px;
     gap: 16px;
   }
-  .top-page__title {
-    font-size: 24px;
-  }
-  .top-page__grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 16px;
+  .top-section__title {
+    font-size: 22px;
   }
 }
 </style>

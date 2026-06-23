@@ -65,10 +65,20 @@ builder.Services.AddControllers();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    var allowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")?.Split(',') ?? new[] { "http://localhost:5173" };
+    options.AddPolicy("DefaultPolicy", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
+        if (allowedOrigins.Contains("*"))
+        {
+            policy.AllowAnyOrigin();
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowCredentials();
+        }
+
+        policy.AllowAnyMethod()
               .AllowAnyHeader();
     });
 });
@@ -171,6 +181,16 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? httpContext.Request.Headers.Host.ToString(),
+            factory: partition => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1),
+            }));
+
     options.AddPolicy("auth", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? httpContext.Request.Headers.Host.ToString(),
@@ -195,22 +215,42 @@ builder.Services.AddHealthChecks()
     timeout: TimeSpan.FromSeconds(5))
     .AddDbContextCheck<ApplicationDbContext>(
     name: "EF_Core_Context",
-    tags: new[] { "orm", "efcore" });
+    tags: new[] { "orm", "efcore" })
+    .AddDiskStorageHealthCheck(
+        setup =>
+        {
+            var root = Path.GetPathRoot(Directory.GetCurrentDirectory()) ?? "/";
+            setup.AddDrive(root, 1024); // 1GB minimum
+        },
+        "Disk Space",
+        HealthStatus.Degraded,
+        new[] { "storage" });
 
 var app = builder.Build();
 
-app.UseCors("AllowAll");
+app.UseExceptionHandler();
+
+app.UseCors("DefaultPolicy");
 
 app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseSerilogRequestLogging();
+app.UseSerilogRequestLogging(options =>
+{
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        var user = httpContext.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            diagnosticContext.Set("UserEmail", user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value);
+            diagnosticContext.Set("UserId", user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
+        }
+    };
+});
 
 app.MapControllers();
-
-app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
@@ -236,28 +276,76 @@ using (var scope = app.Services.CreateScope())
         {
             logger.LogInformation("Applying migrations and seeding (Attempts left: {Count})", retryCount);
 
-            try
+            // 1. Перевірка з'єднання
+            if (!await db.Database.CanConnectAsync())
             {
+                logger.LogWarning("Database is not ready yet. Retrying...");
+                throw new InvalidOperationException("Cannot connect to DB");
+            }
+
+            // ---------------------------------------------------------------
+            // SCHEMA FREEZING / MIGRATIONS SYNC — Aligning local EF Core with Supabase
+            // ---------------------------------------------------------------
+            if (db.Database.IsRelational() && !app.Environment.IsDevelopment())
+            {
+                logger.LogInformation("Syncing EF migration history table...");
+                await using (var command = db.Database.GetDbConnection().CreateCommand())
+                {
+                    await db.Database.OpenConnectionAsync();
+
+                    command.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS ""__EFMigrationsHistory"" (
+                            ""MigrationId"" character varying(150) NOT NULL,
+                            ""ProductVersion"" character varying(32) NOT NULL,
+                            CONSTRAINT ""PK___EFMigrationsHistory"" PRIMARY KEY (""MigrationId"")
+                        );";
+                    await command.ExecuteNonQueryAsync();
+
+                    var existingMigrations = new[]
+                    {
+                        "20260421114950_InitialCreate",
+                        "20260424153950_AddVotesAndReviewUpdates",
+                        "20260424155322_UpdateModelsFix",
+                        "20260512073329_AddFavoritesAndPasswordReset",
+                        "20260513114527_AddSearchIndexesAndFilter",
+                        "20260513114558_UpdateSearchIndexesAndFilter",
+                    };
+
+                    foreach (var migration in existingMigrations)
+                    {
+                        command.CommandText = $@"
+                            INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                            VALUES ('{migration}', '10.0.0')
+                            ON CONFLICT (""MigrationId"") DO NOTHING;";
+                        await command.ExecuteNonQueryAsync();
+                    }
+                }
+            }
+
+            if (db.Database.IsRelational())
+            {
+                logger.LogInformation("Applying pending migrations...");
                 await db.Database.MigrateAsync();
                 logger.LogInformation("Database migrations applied successfully.");
             }
-            catch (Exception migrateEx)
-            {
-                logger.LogWarning(migrateEx, "Migration skipped - database may already be up to date. Message: {Message}", migrateEx.Message);
-            }
 
-            try
-            {
-                await DbSeeder.SeedAsync(db);
-                logger.LogInformation("Database seeding completed.");
-            }
-            catch (Exception seedEx)
-            {
-                logger.LogWarning(seedEx, "Database seeding skipped - data may already exist. Message: {Message}", seedEx.Message);
-            }
+            // ---------------------------------------------------------------
+            // Seed
+            // ---------------------------------------------------------------
+            await DbSeeder.SeedAsync(db);
+            logger.LogInformation("Database seeding completed.");
 
             logger.LogInformation("Database is ready.");
+
+            // Warmup EF Core and JIT
+            logger.LogInformation("Warming up application...");
+            _ = await db.Works.AsNoTracking().FirstOrDefaultAsync();
+            logger.LogInformation("Warmup completed.");
             break;
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Schema freeze"))
+        {
+            throw;
         }
         catch (Exception ex)
         {

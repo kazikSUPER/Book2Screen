@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useFiltersStore, type SortOption } from '../state/filters';
+import { useFiltersStore } from '../state/filters';
+import { GENRES, SORT_OPTIONS_TOP, STR } from '../constants';
 
 /**
  * Горизонтальна панель фільтрів для TopView (SCRUM-67).
@@ -37,28 +38,9 @@ const selectedYear = computed<number | null>({
 const CURRENT_YEAR = new Date().getFullYear();
 const yearOptions: number[] = Array.from({ length: CURRENT_YEAR - 1949 }, (_, i) => CURRENT_YEAR - i);
 
-// Жанри і сортування — ті ж самі, що у вертикальній FilterPanel.
-// Дублюємо для незалежності компонентів. Якщо стане боляче — винесемо у constants.ts.
-const genres: string[] = [
-  'Комедія',
-  'Драма',
-  'Фантастика',
-  'Фентезі',
-  'Жахи',
-  'Детектив',
-  'Кримінал',
-  'Пригоди',
-  'Історичні',
-  'Біографічні',
-  'Документальні',
-];
-
-const sortOptions: Array<{ value: SortOption; label: string }> = [
-  { value: 'popular', label: 'За популярністю' },
-  { value: 'rating-desc', label: 'За рейтингом' },
-  { value: 'year-desc', label: 'Спочатку нові' },
-  { value: 'year-asc', label: 'Спочатку старі' },
-];
+const genres = GENRES;
+const sortOptions = SORT_OPTIONS_TOP;
+const t = STR.top;
 </script>
 
 <template>
@@ -67,7 +49,7 @@ const sortOptions: Array<{ value: SortOption; label: string }> = [
       <!-- Рік виходу -->
       <label class="top-filter-bar__field">
         <select v-model.number="selectedYear" class="top-filter-bar__select">
-          <option :value="null">Рік виходу</option>
+          <option :value="null">{{ t.yearOption }}</option>
           <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
         </select>
       </label>
@@ -75,7 +57,7 @@ const sortOptions: Array<{ value: SortOption; label: string }> = [
       <!-- Жанр -->
       <label class="top-filter-bar__field">
         <select v-model="filters.genre" class="top-filter-bar__select">
-          <option :value="null">Оберіть жанр</option>
+          <option :value="null">{{ t.genreOption }}</option>
           <option v-for="g in genres" :key="g" :value="g">{{ g }}</option>
         </select>
       </label>
@@ -93,10 +75,16 @@ const sortOptions: Array<{ value: SortOption; label: string }> = [
       <input v-model="filters.onlyWithMap" type="checkbox" />
       <span class="top-filter-bar__checkmark" aria-hidden="true">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path d="M2 7.5L5.5 11L12 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          <path
+            d="M2 7.5L5.5 11L12 3.5"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
       </span>
-      <span class="top-filter-bar__label">Лише з картою відмінностей</span>
+      <span class="top-filter-bar__label">{{ t.onlyWithMap }}</span>
     </label>
   </div>
 </template>
@@ -142,7 +130,8 @@ const sortOptions: Array<{ value: SortOption; label: string }> = [
   outline: none;
   appearance: none;
   /* стрілочка справа */
-  background-image: linear-gradient(45deg, transparent 50%, var(--text-on-light) 50%),
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-on-light) 50%),
     linear-gradient(135deg, var(--text-on-light) 50%, transparent 50%);
   background-position:
     calc(100% - 14px) 50%,

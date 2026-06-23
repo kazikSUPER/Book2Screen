@@ -1,20 +1,67 @@
 import { apiClient } from './api';
-import type { ReviewResponse } from './types';
+import type { ReviewResponse, UserProfileDto } from './types';
+import { USE_MOCK_FALLBACK } from './env';
 
 /**
- * SCRUM-64 — Personal Profile.
+ * User Profile API (Book2Screen v1).
  *
- * Backend endpoints (заплановані):
- *   GET  /api/v1/users/me/reviews       — мої відгуки
- *   PUT  /api/v1/users/me               — оновити профіль
- *   POST /api/v1/users/me/avatar        — завантажити аватар
+ * Endpoints (Swagger):
+ *   GET  /api/v1/users/me            — отримати профіль (UserProfileDto)
+ *   PUT  /api/v1/users/me            — оновити профіль (body: UserProfileDto)
+ *   POST /api/v1/users/me/avatar     — оновити URL аватара (body: рядок з URL)
+ *   GET  /api/v1/users/me/reviews    — мої відгуки
  *
- * Поки бекенд не готовий — повертаємо мок-список відгуків з тих самих
- * сидових даних, які seed'ить services/reviews.ts.
+ * УВАГА: на беку немає поля `birthDate`. Зберігаємо `username`, `email`, `avatarUrl`, `joinedAt`.
  */
 
-const USE_MOCK_FALLBACK = true;
+// GET /api/v1/users/me
+export async function fetchMyProfile(): Promise<UserProfileDto> {
+  try {
+    const response = await apiClient.get<UserProfileDto>('/api/v1/users/me');
+    return response.data;
+  } catch (err) {
+    if (USE_MOCK_FALLBACK) {
+      console.warn('[profile] Backend unavailable, returning mock profile', err);
+      return {
+        username: 'Ви',
+        email: 'demo@book2screen.local',
+        avatarUrl: '',
+        joinedAt: new Date().toISOString(),
+      };
+    }
+    throw err;
+  }
+}
 
+// PUT /api/v1/users/me
+export async function updateMyProfile(patch: UserProfileDto): Promise<void> {
+  try {
+    await apiClient.put('/api/v1/users/me', patch);
+  } catch (err) {
+    if (USE_MOCK_FALLBACK) {
+      console.warn('[profile] Mock update profile:', patch);
+      return;
+    }
+    throw err;
+  }
+}
+
+// POST /api/v1/users/me/avatar — body: рядок з URL
+export async function updateMyAvatar(avatarUrl: string): Promise<void> {
+  try {
+    await apiClient.post('/api/v1/users/me/avatar', JSON.stringify(avatarUrl), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    if (USE_MOCK_FALLBACK) {
+      console.warn('[profile] Mock avatar update:', avatarUrl.slice(0, 60));
+      return;
+    }
+    throw err;
+  }
+}
+
+// GET /api/v1/users/me/reviews
 export async function fetchMyReviews(): Promise<ReviewResponse[]> {
   try {
     const response = await apiClient.get<ReviewResponse[]>('/api/v1/users/me/reviews');
@@ -22,7 +69,6 @@ export async function fetchMyReviews(): Promise<ReviewResponse[]> {
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
       console.warn('[profile] Backend unavailable, returning mock reviews', err);
-      // Кілька прикладів — щоб у ProfileView було що показати.
       const now = new Date().toISOString();
       return [
         {
@@ -32,17 +78,8 @@ export async function fetchMyReviews(): Promise<ReviewResponse[]> {
           userNickname: 'Ви',
           text: 'Чарівний світ — і книга, і фільм. Перечитую щороку.',
           isSpoiler: false,
-          rating: 5,
-          createdAt: now,
-        },
-        {
-          reviewId: 'me-2',
-          workId: '22222222-2222-2222-2222-222222222222',
-          userId: 'me',
-          userNickname: 'Ви',
-          text: 'Мабуть, найкраща екранізація трилогії з усіх можливих.',
-          isSpoiler: false,
-          rating: 5,
+          rating: 10,
+          targetType: 'comparison',
           createdAt: now,
         },
       ];
@@ -51,24 +88,14 @@ export async function fetchMyReviews(): Promise<ReviewResponse[]> {
   }
 }
 
+// DELETE /api/v1/Reviews/{id} — використовуємо звідси для ProfileView.
+// Бек не має /users/me/reviews/{id} — видалення через Reviews controller.
 export async function deleteMyReview(reviewId: string): Promise<void> {
   try {
-    await apiClient.delete(`/api/v1/reviews/${reviewId}`);
+    await apiClient.delete(`/api/v1/Reviews/${reviewId}`);
   } catch (err) {
     if (USE_MOCK_FALLBACK) {
       console.warn('[profile] Mock delete review:', reviewId);
-      return;
-    }
-    throw err;
-  }
-}
-
-export async function updateMyReview(reviewId: string, text: string, isSpoiler: boolean): Promise<void> {
-  try {
-    await apiClient.put(`/api/v1/reviews/${reviewId}`, { text, isSpoiler });
-  } catch (err) {
-    if (USE_MOCK_FALLBACK) {
-      console.warn('[profile] Mock update review:', { reviewId, text, isSpoiler });
       return;
     }
     throw err;

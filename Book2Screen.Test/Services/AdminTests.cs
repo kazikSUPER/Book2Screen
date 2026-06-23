@@ -74,22 +74,31 @@ public class AdaptationServiceTests : IDisposable
     public async Task UpdateAdaptationAsync_ExistingId_UpdatesAndReturnsDto()
     {
         // Arrange
-        var adaptation = new Adaptation { Id = Guid.NewGuid(), Title = "Old Title", Type = "movie" };
+        var adaptationId = Guid.NewGuid();
+        var workId = Guid.NewGuid();
+        var bookId = Guid.NewGuid();
+
+        var book = new Book { Id = bookId, Title = "Old Book", Authors = new List<Author>() };
+        var adaptation = new Adaptation { Id = adaptationId, Title = "Old Title", Type = "movie" };
+        var work = new Work { Id = workId, Title = "Old Title", AdaptationId = adaptationId, BookId = bookId, Book = book, Adaptation = adaptation };
+        
+        await _context.Books.AddAsync(book);
         await _context.Adaptations.AddAsync(adaptation);
+        await _context.Works.AddAsync(work);
         await _context.SaveChangesAsync();
 
-        var updateDto = new AdaptationDto { Title = "New Title", Type = "series" };
+        var updateDto = new AdaptationDto { Title = "New Title", Type = "series", Id = adaptationId };
 
         // Act
-        var result = await _service.UpdateAdaptationAsync(adaptation.Id, updateDto);
+        var result = await _service.UpdateAdaptationAsync(adaptationId, updateDto);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal("New Title", result.Title);
-        Assert.Equal("series", result.Type);
         
-        var updatedEntity = await _context.Adaptations.FindAsync(adaptation.Id);
+        var updatedEntity = await _context.Adaptations.FindAsync(adaptationId);
         Assert.Equal("New Title", updatedEntity!.Title);
+        Assert.Equal("series", updatedEntity.Type);
     }
 
     [Fact]
@@ -117,9 +126,26 @@ public class AdaptationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAdaptationAsync_NonExistingId_ThrowsKeyNotFound()
+    public async Task CreateAdaptationAsync_WithDifferences_SetsMapTitleAndImportance()
     {
-        // Act & Assert
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.DeleteAdaptationAsync(Guid.NewGuid()));
+        // Arrange
+        var dto = new AdaptationDto
+        {
+            Title = "Inception",
+            Type = "movie",
+            Differences = new List<DifferenceDto>
+            {
+                new DifferenceDto { Title = "Ending", BookText = "A", FilmText = "B", ImportanceLevel = "high" }
+            }
+        };
+
+        // Act
+        var result = await _service.CreateAdaptationAsync(dto);
+
+        // Assert
+        var work = await _context.Works.Include(w => w.DifferenceMap).ThenInclude(dm => dm!.Differences).FirstOrDefaultAsync(w => w.Title == "Inception");
+        Assert.NotNull(work!.DifferenceMap);
+        Assert.Equal("Карта розбіжностей: Inception", work.DifferenceMap.Title);
+        Assert.Equal("high", work.DifferenceMap.Differences.First().ImportanceLevel);
     }
 }

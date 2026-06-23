@@ -225,25 +225,36 @@ namespace Book2Screen.Migrations
                     b.Property<Guid?>("BookEventId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
+                    b.Property<string>("BookText")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("DifferenceType")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<string>("FilmText")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("ImportanceLevel")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<bool>("IsSpoiler")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("MapId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -299,6 +310,11 @@ namespace Book2Screen.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -312,7 +328,7 @@ namespace Book2Screen.Migrations
 
                     b.HasIndex("WorkId");
 
-                    b.HasIndex("UserId", "WorkId")
+                    b.HasIndex("UserId", "WorkId", "Kind")
                         .IsUnique();
 
                     b.ToTable("Favorites");
@@ -346,6 +362,9 @@ namespace Book2Screen.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
 
                     b.ToTable("PasswordResetTokens");
                 });
@@ -489,7 +508,6 @@ namespace Book2Screen.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.Property<string>("Text")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")

@@ -222,7 +222,8 @@ public class ApplicationDbContext : DbContext
         // Налаштування Favorite
         modelBuilder.Entity<Favorite>(entity =>
         {
-            entity.HasIndex(f => new { f.UserId, f.WorkId }).IsUnique();
+            // Виправляємо унікальність: UserId + WorkId + Kind (дозволяє додавати в різні списки)
+            entity.HasIndex(f => new { f.UserId, f.WorkId, f.Kind }).IsUnique();
 
             entity.HasOne(f => f.User)
                 .WithMany(u => u.Favorites)
@@ -233,6 +234,12 @@ public class ApplicationDbContext : DbContext
                 .WithMany(w => w.Favorites)
                 .HasForeignKey(f => f.WorkId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Налаштування PasswordResetToken
+        modelBuilder.Entity<PasswordResetToken>(entity =>
+        {
+            entity.HasIndex(t => t.Code).IsUnique();
         });
 
         // Налаштування Report

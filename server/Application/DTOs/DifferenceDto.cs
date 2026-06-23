@@ -13,7 +13,7 @@ public class DifferenceDto
     /// <summary>
     /// Gets or sets унікальний ідентифікатор.
     /// </summary>
-    public Guid Id { get; set; }
+    public Guid? Id { get; set; }
 
     /// <summary>
     /// Gets or sets заголовок сцени.
@@ -29,6 +29,11 @@ public class DifferenceDto
     /// Gets or sets текст для колонки "Екранізація".
     /// </summary>
     public string FilmText { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets рівень важливості (low, medium, high).
+    /// </summary>
+    public string ImportanceLevel { get; set; } = "medium";
 
     /// <summary>
     /// Gets or sets a value indicating whether чи є точка спойлером.

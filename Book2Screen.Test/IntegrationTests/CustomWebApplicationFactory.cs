@@ -1,9 +1,11 @@
+using Book2Screen.Application.Interfaces;
 using Book2Screen.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace Book2Screen.Test.IntegrationTests;
 
@@ -14,13 +16,13 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
         builder.ConfigureServices(services =>
         {
             // Видаляємо всі реєстрації, пов'язані з DbContext та його опціями
-            var descriptors = services.Where(
+            var dbDescriptors = services.Where(
                 d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>) ||
                      d.ServiceType == typeof(ApplicationDbContext) ||
                      d.ServiceType.FullName?.Contains("EntityFrameworkCore") == true)
                 .ToList();
 
-            foreach (var descriptor in descriptors)
+            foreach (var descriptor in dbDescriptors)
             {
                 services.Remove(descriptor);
             }
@@ -30,6 +32,16 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
                 options.UseInMemoryDatabase("InMemoryDbForTesting");
                 options.ConfigureWarnings(x => x.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning));
             });
+
+            // Замінюємо IEmailService на мок, щоб не відправляти реальні листи
+            var emailDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailService));
+            if (emailDescriptor != null)
+            {
+                services.Remove(emailDescriptor);
+            }
+
+            var emailServiceMock = new Mock<IEmailService>();
+            services.AddScoped(_ => emailServiceMock.Object);
 
             var sp = services.BuildServiceProvider();
 

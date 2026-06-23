@@ -15,6 +15,11 @@ public class BookScreenItemDto
     public Guid Id { get; set; }
 
     /// <summary>
+    /// Gets or sets унікальний ідентифікатор адаптації.
+    /// </summary>
+    public Guid AdaptationId { get; set; }
+
+    /// <summary>
     /// Gets or sets назву твору (книги/адаптації).
     /// </summary>
     public string Title { get; set; } = null!;
@@ -88,6 +93,11 @@ public class BookScreenItemDto
     /// Gets or sets короткий опис фільму.
     /// </summary>
     public string? FilmSummary { get; set; }
+
+    /// <summary>
+    /// Gets or sets тип адаптації (movie, series, anime).
+    /// </summary>
+    public string? Type { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether чи має твір карту розбіжностей.

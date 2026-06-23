@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { DifferencePoint } from '../services/types';
+import { STR } from '../constants';
+
+const t = STR.detail;
 
 /**
  * SCRUM-68 — Інтерактивна карта відмінностей між книгою і екранізацією.
@@ -36,11 +39,13 @@ const revealedSpoilers = ref<Record<string, boolean>>({});
 const isRevealed = computed(() => {
   if (!activePoint.value) return true;
   if (!activePoint.value.isSpoiler) return true;
-  return revealedSpoilers.value[activePoint.value.id] === true;
+  return revealedSpoilers.value[activePoint.value.id ?? ''] === true;
 });
 
 function reveal(): void {
-  if (activePoint.value) revealedSpoilers.value[activePoint.value.id] = true;
+  if (activePoint.value && activePoint.value.id) {
+    revealedSpoilers.value[activePoint.value.id] = true;
+  }
 }
 
 function setActive(i: number): void {
@@ -49,11 +54,14 @@ function setActive(i: number): void {
 </script>
 
 <template>
-  <section v-if="points.length > 0" class="diff-map">
-    <h2 class="diff-map__title">Карта відмінностей</h2>
+  <section class="diff-map">
+    <h2 class="diff-map__title">{{ t.differencesTitle }}</h2>
+
+    <!-- Плейсхолдер коли точок ще немає (адмін їх ще не додав). -->
+    <p v-if="points.length === 0" class="diff-map__empty">Карта відмінностей для цього твору ще не створена</p>
 
     <!-- ── Горизонтальна вісь точок ─────────────────────── -->
-    <div class="diff-map__axis" role="tablist">
+    <div v-else class="diff-map__axis" role="tablist">
       <div class="diff-map__line" aria-hidden="true"></div>
       <button
         v-for="(p, i) in points"
@@ -88,8 +96,8 @@ function setActive(i: number): void {
       </div>
 
       <div v-if="!isRevealed" class="diff-map__spoiler-overlay">
-        <p class="diff-map__spoiler-msg">⚠ Цей пункт містить спойлер</p>
-        <button class="diff-map__reveal" type="button" @click="reveal">Показати</button>
+        <p class="diff-map__spoiler-msg">{{ t.spoilerWarning }}</p>
+        <button class="diff-map__reveal" type="button" @click="reveal">{{ t.spoilerReveal }}</button>
       </div>
     </article>
   </section>
@@ -101,16 +109,30 @@ function setActive(i: number): void {
   flex-direction: column;
   gap: 16px;
   padding: 24px 16px;
-  background: var(--color-page);
+  background: transparent;
 }
 
 .diff-map__title {
-  margin: 0;
+  margin: 0 0 16px 0;
   font-size: 24px;
   font-family: var(--font-display);
-  font-weight: 400;
-  color: var(--text-on-light);
+  font-weight: 500;
+  color: #23080a;
   text-align: center;
+}
+
+.diff-map__empty {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-muted);
+  padding: 24px;
+  background: var(--color-panel-box);
+  border-radius: var(--radius-sm);
+  max-width: 600px;
+  width: 100%;
+  align-self: center;
 }
 
 /* ── Горизонтальна вісь ──────────────────────────────────── */
@@ -119,32 +141,50 @@ function setActive(i: number): void {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 12px;
-  max-width: 700px;
+  padding: 40px 24px 24px 24px;
+  max-width: 600px;
   width: 100%;
   margin: 0 auto;
 }
 
 .diff-map__line {
   position: absolute;
-  left: 24px;
-  right: 24px;
-  top: 50%;
-  height: 2px;
-  background: var(--color-card);
+  left: 36px;
+  right: 36px;
+  top: 55%;
+  height: 1px;
+  background: #333;
   transform: translateY(-50%);
   z-index: 0;
+}
+
+/* Засічки, що проходять через першу і останню точки */
+.diff-map__line::before,
+.diff-map__line::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 80px;
+  background: #333;
+}
+.diff-map__line::before {
+  left: 0;
+}
+.diff-map__line::after {
+  right: 0;
 }
 
 .diff-map__point {
   position: relative;
   z-index: 1;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-pill);
-  border: 2px solid var(--color-card);
-  background: var(--color-card);
-  color: var(--text-on-dark);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: #23080a; /* Темні кружечки */
+  color: #fff;
   font-family: var(--font-display);
   font-size: 14px;
   font-weight: 600;
@@ -153,6 +193,18 @@ function setActive(i: number): void {
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.diff-map__point::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  pointer-events: auto;
 }
 
 .diff-map__point:hover {
@@ -160,44 +212,38 @@ function setActive(i: number): void {
 }
 
 .diff-map__point--active {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--text-on-primary);
+  background: #5a141c; /* Трохи світліший при виборі */
   transform: scale(1.15);
-  box-shadow: var(--shadow-sm);
 }
 
 /* ── Картка деталі ──────────────────────────────────────── */
 .diff-map__detail {
   position: relative;
-  background: var(--color-card);
+  background-color: #b18a88; /* Світло-коричневий фон картки (як на скріні) */
   border-radius: var(--radius-md);
-  padding: 20px;
-  box-shadow: var(--shadow-md);
+  padding: 24px;
   max-width: 800px;
   width: 100%;
   margin: 0 auto;
 }
 
 .diff-map__detail-head {
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 24px;
 }
 
 .diff-map__detail-title {
-  font-size: 18px;
+  font-size: 20px;
   font-family: var(--font-display);
-  color: var(--text-on-dark);
+  color: #23080a;
   text-align: center;
   margin: 0;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .diff-map__columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 24px;
   transition: filter 0.2s;
 }
 
@@ -208,27 +254,31 @@ function setActive(i: number): void {
 }
 
 .diff-map__col {
-  background: var(--color-panel-box);
+  background-color: #391418; /* Темно-бордовий фон колонок */
   border-radius: var(--radius-sm);
-  padding: 12px 14px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
 .diff-map__col-label {
   font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-on-light);
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+  text-align: center;
+  margin-bottom: 8px;
 }
 
 .diff-map__col-text {
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
-  color: var(--text-on-light);
+  color: #fff;
   margin: 0;
+  text-align: center;
 }
 
 /* ── Спойлер-оверлей ──────────────────────────────────────── */
