@@ -1,0 +1,114 @@
+// <copyright file="FavoritesController.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
+namespace Book2Screen.API__Web_.Controllers;
+
+using System.Security.Claims;
+using Book2Screen.Application.DTOs;
+using Book2Screen.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+
+/// <summary>
+/// Контролер для керування списком обраних творів.
+/// </summary>
+[Authorize]
+[ApiController]
+[Route("api/v1/[controller]")]
+[Produces("application/json")]
+public class FavoritesController : ControllerBase
+{
+    private readonly IFavoriteService favoriteService;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FavoritesController"/> class.
+    /// </summary>
+    /// <param name="favoriteService">Сервіс обраного.</param>
+    public FavoritesController(IFavoriteService favoriteService)
+    {
+        this.favoriteService = favoriteService;
+    }
+
+    /// <summary>
+    /// Отримує список обраних творів поточного користувача.
+    /// </summary>
+    /// <param name="kind">Тип (опційно).</param>
+    /// <returns>Список творів.</returns>
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<BookScreenItemDto>))]
+    public async Task<IActionResult> GetFavorites([FromQuery] string? kind)
+    {
+        var userId = this.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return this.Unauthorized();
+        }
+
+        var favorites = await this.favoriteService.GetUserFavoritesAsync(userId, kind);
+        return this.Ok(favorites);
+    }
+
+    /// <summary>
+    /// Додає твір в обране.
+    /// </summary>
+    /// <param name="request">Запит з ID твору та типом.</param>
+    /// <returns>Статус операції.</returns>
+    [HttpPost]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddToFavorites([FromBody] FavoriteRequest request)
+    {
+        var userId = this.GetUserId();
+        if (!request.WorkId.HasValue)
+        {
+            return this.BadRequest("WorkId is required.");
+        }
+
+        await this.favoriteService.AddToFavoritesAsync(userId, request.WorkId.Value, request.Kind);
+        return this.Ok(new { message = "Added to favorites." });
+    }
+
+    /// <summary>
+    /// Видалити твір з обраного.
+    /// </summary>
+    /// <param name="workId">ID твору.</param>
+    /// <param name="kind">Тип (опційно).</param>
+    /// <returns>Статус операції.</returns>
+    [HttpDelete("{workId:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RemoveFromFavorites(Guid workId, [FromQuery] string? kind)
+    {
+        var userId = this.GetUserId();
+        await this.favoriteService.RemoveFromFavoritesAsync(userId, workId, kind);
+        return this.Ok(new { message = "Removed from favorites." });
+    }
+
+    /// <summary>
+    /// Перевіряє, чи є твір в обраному.
+    /// </summary>
+    /// <param name="workId">ID твору.</param>
+    /// <param name="kind">Тип (опційно).</param>
+    /// <returns>Boolean значення.</returns>
+    [HttpGet("check/{workId:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
+    public async Task<IActionResult> CheckFavorite(Guid workId, [FromQuery] string? kind)
+    {
+        var userId = this.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return this.Ok(false);
+        }
+
+        var isFavorite = await this.favoriteService.IsFavoriteAsync(userId, workId, kind);
+        return this.Ok(isFavorite);
+    }
+
+    private Guid GetUserId()
+    {
+        var userIdClaim = this.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(userIdClaim, out var userId) ? userId : Guid.Empty;
+    }
+}

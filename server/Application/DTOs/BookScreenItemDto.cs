@@ -1,0 +1,116 @@
+// <copyright file="BookScreenItemDto.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
+namespace Book2Screen.Application.DTOs;
+
+/// <summary>
+/// Об'єкт передачі даних для фронтенду (BookScreenItem).
+/// </summary>
+public class BookScreenItemDto
+{
+    /// <summary>
+    /// Gets or sets унікальний ідентифікатор твору.
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets унікальний ідентифікатор адаптації.
+    /// </summary>
+    public Guid AdaptationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets назву твору (книги/адаптації).
+    /// </summary>
+    public string Title { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets рік виходу адаптації.
+    /// </summary>
+    public int Year { get; set; }
+
+    /// <summary>
+    /// Gets or sets основний жанр.
+    /// </summary>
+    public string Genre { get; set; } = "Драма";
+
+    /// <summary>
+    /// Gets or sets країну виробництва.
+    /// </summary>
+    public string Country { get; set; } = "Unknown";
+
+    /// <summary>
+    /// Gets or sets URL-посилання на постер.
+    /// </summary>
+    public string Poster { get; set; } = "https://via.placeholder.com/300x450";
+
+    /// <summary>
+    /// Gets or sets середній рейтинг книги.
+    /// </summary>
+    public double BookRating { get; set; }
+
+    /// <summary>
+    /// Gets or sets середній рейтинг фільму/серіалу.
+    /// </summary>
+    public double FilmRating { get; set; }
+
+    /// <summary>
+    /// Gets or sets короткий опис сюжету.
+    /// </summary>
+    public string Description { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets ім'я автора книги.
+    /// </summary>
+    public string? Author { get; set; }
+
+    /// <summary>
+    /// Gets or sets рік виходу фільму (якщо відрізняється від книги).
+    /// </summary>
+    public int? FilmYear { get; set; }
+
+    /// <summary>
+    /// Gets or sets країну фільму.
+    /// </summary>
+    public string? FilmCountry { get; set; }
+
+    /// <summary>
+    /// Gets or sets постер фільму.
+    /// </summary>
+    public string? FilmPoster { get; set; }
+
+    /// <summary>
+    /// Gets or sets режисера.
+    /// </summary>
+    public string? Director { get; set; }
+
+    /// <summary>
+    /// Gets or sets короткий опис книги.
+    /// </summary>
+    public string? BookSummary { get; set; }
+
+    /// <summary>
+    /// Gets or sets короткий опис фільму.
+    /// </summary>
+    public string? FilmSummary { get; set; }
+
+    /// <summary>
+    /// Gets or sets тип адаптації (movie, series, anime).
+    /// </summary>
+    public string? Type { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether чи має твір карту розбіжностей.
+    /// </summary>
+    public bool HasMap { get; set; }
+
+    /// <summary>
+    /// Gets or sets список розбіжностей.
+    /// </summary>
+    public List<DifferenceDto> Differences { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets статистику голосування (Book vs Film).
+    /// </summary>
+    public VoteResponse? VoteStats { get; set; }
+}
