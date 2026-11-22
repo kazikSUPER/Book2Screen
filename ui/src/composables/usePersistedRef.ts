@@ -11,11 +11,7 @@ import { ref, watch, type Ref } from 'vue';
  *   const cart   = usePersistedRef<CartItem[]>('b2s_cart', [], sessionStorage);
  *   const token  = usePersistedRef<string | null>('b2s_token', null);
  */
-export function usePersistedRef<T>(
-  key: string,
-  initial: T,
-  storage: Storage = localStorage
-): Ref<T> {
+export function usePersistedRef<T>(key: string, initial: T, storage: Storage = localStorage): Ref<T> {
   // 1. Намагаємось прочитати збережене значення.
   let initialValue: T = initial;
   try {

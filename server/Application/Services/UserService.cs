@@ -54,6 +54,10 @@ public class UserService : IUserService
 
         user.Username = profileDto.Username;
         user.Email = profileDto.Email;
+        if (!string.IsNullOrEmpty(profileDto.AvatarUrl))
+        {
+            user.AvatarUrl = profileDto.AvatarUrl;
+        }
 
         await this.context.SaveChangesAsync();
     }

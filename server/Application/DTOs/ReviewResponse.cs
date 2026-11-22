@@ -25,9 +25,19 @@ public class ReviewResponse
     public Guid UserId { get; set; }
 
     /// <summary>
+    /// Gets or sets нікнейм автора.
+    /// </summary>
+    public string UserNickname { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets URL аватара автора.
+    /// </summary>
+    public string? UserAvatar { get; set; }
+
+    /// <summary>
     /// Gets or sets текст відгуку.
     /// </summary>
-    public string Text { get; set; } = null!;
+    public string? Text { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether наявність спойлерів.
@@ -43,6 +53,11 @@ public class ReviewResponse
     /// Gets or sets тип об'єкта (book, adaptation, comparison).
     /// </summary>
     public string TargetType { get; set; } = "comparison";
+
+    /// <summary>
+    /// Gets or sets кількість лайків.
+    /// </summary>
+    public int LikesCount { get; set; }
 
     /// <summary>
     /// Gets or sets дата створення.

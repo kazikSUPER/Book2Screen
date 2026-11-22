@@ -34,10 +34,11 @@ public class FavoritesController : ControllerBase
     /// <summary>
     /// Отримує список обраних творів поточного користувача.
     /// </summary>
+    /// <param name="kind">Тип (опційно).</param>
     /// <returns>Список творів.</returns>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<BookScreenItemDto>))]
-    public async Task<IActionResult> GetFavorites()
+    public async Task<IActionResult> GetFavorites([FromQuery] string? kind)
     {
         var userId = this.GetUserId();
         if (userId == Guid.Empty)
@@ -45,14 +46,14 @@ public class FavoritesController : ControllerBase
             return this.Unauthorized();
         }
 
-        var favorites = await this.favoriteService.GetUserFavoritesAsync(userId);
+        var favorites = await this.favoriteService.GetUserFavoritesAsync(userId, kind);
         return this.Ok(favorites);
     }
 
     /// <summary>
     /// Додає твір в обране.
     /// </summary>
-    /// <param name="request">Запит з ID твору.</param>
+    /// <param name="request">Запит з ID твору та типом.</param>
     /// <returns>Статус операції.</returns>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -66,7 +67,7 @@ public class FavoritesController : ControllerBase
             return this.BadRequest("WorkId is required.");
         }
 
-        await this.favoriteService.AddToFavoritesAsync(userId, request.WorkId.Value);
+        await this.favoriteService.AddToFavoritesAsync(userId, request.WorkId.Value, request.Kind);
         return this.Ok(new { message = "Added to favorites." });
     }
 
@@ -74,13 +75,14 @@ public class FavoritesController : ControllerBase
     /// Видалити твір з обраного.
     /// </summary>
     /// <param name="workId">ID твору.</param>
+    /// <param name="kind">Тип (опційно).</param>
     /// <returns>Статус операції.</returns>
     [HttpDelete("{workId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> RemoveFromFavorites(Guid workId)
+    public async Task<IActionResult> RemoveFromFavorites(Guid workId, [FromQuery] string? kind)
     {
         var userId = this.GetUserId();
-        await this.favoriteService.RemoveFromFavoritesAsync(userId, workId);
+        await this.favoriteService.RemoveFromFavoritesAsync(userId, workId, kind);
         return this.Ok(new { message = "Removed from favorites." });
     }
 
@@ -88,10 +90,11 @@ public class FavoritesController : ControllerBase
     /// Перевіряє, чи є твір в обраному.
     /// </summary>
     /// <param name="workId">ID твору.</param>
+    /// <param name="kind">Тип (опційно).</param>
     /// <returns>Boolean значення.</returns>
     [HttpGet("check/{workId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
-    public async Task<IActionResult> CheckFavorite(Guid workId)
+    public async Task<IActionResult> CheckFavorite(Guid workId, [FromQuery] string? kind)
     {
         var userId = this.GetUserId();
         if (userId == Guid.Empty)
@@ -99,7 +102,7 @@ public class FavoritesController : ControllerBase
             return this.Ok(false);
         }
 
-        var isFavorite = await this.favoriteService.IsFavoriteAsync(userId, workId);
+        var isFavorite = await this.favoriteService.IsFavoriteAsync(userId, workId, kind);
         return this.Ok(isFavorite);
     }
 

@@ -43,4 +43,9 @@ public class ReportResponse
     /// Gets or sets текст відгуку (для зручності модерації).
     /// </summary>
     public string? ReviewText { get; set; }
+
+    /// <summary>
+    /// Gets or sets об'єкт відгуку (для фронтенду).
+    /// </summary>
+    public ReviewResponse? Review { get; set; }
 }

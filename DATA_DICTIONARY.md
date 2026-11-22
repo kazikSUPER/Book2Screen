@@ -9,233 +9,476 @@
 Основна мета документа:
 
 * надати команді розробки єдине джерело опису структури бази даних;
-* забезпечити узгодженість між ER-діаграмою, DDL-скриптом та реалізацією в PostgreSQL;
+* забезпечити узгодженість між ER-діаграмою, міграціями EF Core та реалізацією в PostgreSQL;
 * зафіксувати всі таблиці, поля та їхні характеристики;
 * пояснити логіку використання кожної сутності;
 * підтвердити відповідність фізичної моделі правилам іменування з **Code Style Guide**.
 
-Цей документ сформований на основі затвердженої структури таблиць, зовнішніх ключів, стратегій `ON DELETE`, обмежень `CHECK`, `UNIQUE`, `NOT NULL` та `DEFAULT`, визначених у SQL-скрипті фізичної моделі.
+Цей документ сформований на основі `ApplicationDbContextModelSnapshot.cs` та всіх міграцій EF Core станом на **17.05.2026** (остання міграція: `AddUserAvatar`).
 
 ---
 
 ## 2. Конвенції іменування (Naming Convention)
 
-У фізичній моделі використовується **snake_case**, що відповідає обраному стилю іменування для PostgreSQL.
+У EF Core моделі використовується **PascalCase** для назв таблиць та полів (стандарт C# / EF Core).
 
 ### Використані правила:
 
-* назви таблиць записуються малими літерами у множині: `users`, `books`, `reviews`, `votes`;
-* назви полів записуються малими літерами через підкреслення: `created_at`, `updated_at`, `publication_year`;
-* первинний ключ у всіх таблицях має назву `id`;
-* зовнішні ключі мають формат `<entity>_id`: `user_id`, `book_id`, `work_id`, `map_id`;
-* технічні назви є короткими, однозначними та зрозумілими для Database Engineer і Backend Developer;
-* для назв таблиць і полів не використовуються пробіли, кирилиця чи спеціальні символи.
-
-### Переваги такого підходу:
-
-* покращує читабельність SQL-коду;
-* спрощує підтримку схеми бази даних;
-* забезпечує єдність стилю в усій системі;
-* відповідає типовій практиці розробки на PostgreSQL.
+* назви таблиць записуються у множині з великої літери: `Users`, `Books`, `Reviews`, `Votes`;
+* назви полів у PascalCase: `CreatedAt`, `UpdatedAt`, `PublicationYear`;
+* первинний ключ у всіх таблицях має назву `Id` (тип `uuid`);
+* зовнішні ключі мають формат `<Entity>Id`: `UserId`, `BookId`, `WorkId`, `MapId`;
+* виняток: таблиця `book_authors` — назва задана явно через `.ToTable("book_authors")`.
 
 ---
 
 ## 3. Загальна характеристика фізичної моделі
 
-Фізична модель бази даних охоплює сутності, необхідні для роботи платформи порівняння книг та екранізацій. Центральною сутністю є `works`, яка поєднує одну книгу та одну екранізацію в межах одного об’єкта порівняння. Навколо цієї сутності організовані таблиці користувацької взаємодії (`reviews`, `votes`, `ratings`), таблиці предметної області (`books`, `authors`, `adaptations`, `actors`), а також таблиці для побудови карти відмінностей (`plot_events`, `difference_maps`, `differences`).
+Фізична модель бази даних охоплює **16 таблиць**. Центральною сутністю є `Works`, яка поєднує одну книгу (`Books`) та одну екранізацію (`Adaptations`) в межах одного об'єкта порівняння. Навколо цієї сутності організовані таблиці користувацької взаємодії (`Reviews`, `Votes`, `Ratings`, `Favorites`), таблиці предметної області (`Books`, `Authors`, `Adaptations`, `Actors`), допоміжні таблиці безпеки (`PasswordResetTokens`), таблиця звітності (`Reports`), а також таблиці для побудови карти відмінностей (`PlotEvent`, `DifferenceMaps`, `Differences`).
 
-Зв’язки **many-to-many** реалізовано через проміжні таблиці:
+### Повний перелік таблиць:
 
-* `book_authors`;
-* `adaptation_actors`.
+| № | Таблиця               | Призначення                                      |
+|---|-----------------------|--------------------------------------------------|
+| 1 | `Users`               | Облікові записи користувачів                     |
+| 2 | `Authors`             | Автори книг                                      |
+| 3 | `Books`               | Книги                                            |
+| 4 | `Adaptations`         | Екранізації (фільми / серіали)                   |
+| 5 | `Actors`              | Актори                                           |
+| 6 | `Works`               | Центральна сутність: пара книга + екранізація    |
+| 7 | `book_authors`        | M2M: книги ↔ автори                              |
+| 8 | `AdaptationActor`     | M2M: екранізації ↔ актори (з роллю)              |
+| 9 | `Reviews`             | Відгуки користувачів                             |
+| 10| `Votes`               | Голосування (книга / екранізація)                |
+| 11| `Ratings`             | Агрегований рейтинг до `Works`                   |
+| 12| `Favorites`           | Закладки/обране користувача                      |
+| 13| `PasswordResetTokens` | Токени скидання пароля                           |
+| 14| `Reports`             | Скарги на відгуки                                |
+| 15| `PlotEvent`           | Події сюжету (книга або екранізація)             |
+| 16| `DifferenceMaps`      | Карта відмінностей між книгою та екранізацією    |
+| 17| `Differences`         | Окремі відмінності в межах карти                 |
 
-У фізичній моделі також зафіксовано стратегії видалення батьківських записів:
+### Стратегії видалення:
 
 * `ON DELETE CASCADE` — якщо дочірній запис не має сенсу без батьківського;
-* `ON DELETE SET NULL` — якщо дочірній запис повинен зберігатися як історичний.
+* `ON DELETE SET NULL` — якщо дочірній запис повинен зберігатися як історичний (відгуки, звіти після видалення користувача).
 
 ---
 
 ## 4. Опис сутностей та їх атрибутів
 
-### 4.1. Таблиця `users`
+### 4.1. Таблиця `Users`
 
-**Призначення сутності:**
-Таблиця `users` містить облікові записи користувачів платформи. У ній зберігаються дані, необхідні для автентифікації, авторизації та відображення інформації про користувача в системі.
+**Призначення:** Облікові записи користувачів платформи. Містить дані для автентифікації, авторизації та відображення профілю.
 
-| Поле                | Тип даних      | Обмеження                           | Опис                                           |
-| ------------------- | -------------- | ----------------------------------- | ---------------------------------------------- |
-| `id`                | `uuid`         | PK, NOT NULL                        | Унікальний ідентифікатор користувача           |
-| `username`          | `varchar(50)`  | NOT NULL, UNIQUE                    | Унікальне ім’я користувача                     |
-| `email`             | `varchar(255)` | NOT NULL, UNIQUE                    | Електронна адреса користувача                  |
-| `password_hash`     | `text`         | NOT NULL                            | Хеш пароля                                     |
-| `role`              | `varchar(20)`  | NOT NULL, CHECK                     | Роль користувача: `user`, `admin`, `moderator` |
-| `registration_date` | `timestamp`    | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Дата та час реєстрації                         |
-| `is_active`         | `boolean`      | NOT NULL, DEFAULT true              | Прапорець активності акаунта                   |
+| Поле           | Тип (PostgreSQL)         | Обмеження                        | Опис                                           |
+|----------------|--------------------------|----------------------------------|------------------------------------------------|
+| `Id`           | `uuid`                   | PK, NOT NULL                     | Унікальний ідентифікатор                       |
+| `Username`     | `character varying(50)`  | NOT NULL, UNIQUE                 | Унікальне ім'я користувача                     |
+| `Email`        | `character varying(255)` | NOT NULL, UNIQUE                 | Електронна адреса                              |
+| `PasswordHash` | `text`                   | NOT NULL                         | Хеш пароля                                     |
+| `Role`         | `character varying(20)`  | NOT NULL, CHECK                  | Роль: `user`, `admin`, `moderator`             |
+| `IsActive`     | `boolean`                | NOT NULL                         | Прапорець активності акаунта                   |
+| `AvatarUrl`    | `character varying(1000)`| NULL                             | URL аватара користувача *(додано: 17.05.2026)* |
+| `CreatedAt`    | `timestamp with time zone`| NOT NULL                        | Дата створення запису                          |
+| `UpdatedAt`    | `timestamp with time zone`| NOT NULL                        | Дата останнього оновлення                      |
 
-**Додаткові обмеження і правила:**
+**CHECK:** `CK_User_Role` — `Role IN ('user', 'admin', 'moderator')`
 
-* `username` та `email` не можуть повторюватися;
-* поле `role` обмежене переліком допустимих значень;
-* `registration_date` автоматично заповнюється поточним часом;
-* `is_active` за замовчуванням дорівнює `true`.
+**Індекси:** `IX_Users_Email` (UNIQUE), `IX_Users_Username` (UNIQUE)
 
-**Функціональна роль у системі:**
-Користувачі можуть створювати відгуки, голосувати та брати участь у взаємодії з контентом. Видалення користувача не завжди повинно видаляти історію його активності, тому в деяких дочірніх таблицях використовується `ON DELETE SET NULL`.
+**Зв'язки (дочірні таблиці):** `Reviews` (SET NULL), `Votes` (CASCADE), `Favorites` (CASCADE), `Reports` (SET NULL)
 
 ---
 
-### 4.2. Таблиця `authors`
+### 4.2. Таблиця `Authors`
 
-**Призначення сутності:**
-Таблиця `authors` зберігає інформацію про авторів книг, що представлені на платформі.
+**Призначення:** Довідник авторів книг.
 
-| Поле          | Тип даних      | Обмеження    | Опис                            |
-| ------------- | -------------- | ------------ | ------------------------------- |
-| `id`          | `uuid`         | PK, NOT NULL | Унікальний ідентифікатор автора |
-| `full_name`   | `varchar(150)` | NOT NULL     | Повне ім’я автора               |
-| `birth_date`  | `date`         | NULL         | Дата народження                 |
-| `nationality` | `varchar(100)` | NULL         | Національність                  |
-| `biography`   | `text`         | NULL         | Біографічна довідка             |
+| Поле          | Тип (PostgreSQL)         | Обмеження    | Опис                        |
+|---------------|--------------------------|--------------|-----------------------------|
+| `Id`          | `uuid`                   | PK, NOT NULL | Унікальний ідентифікатор    |
+| `FullName`    | `character varying(150)` | NOT NULL     | Повне ім'я автора           |
+| `BirthDate`   | `timestamp with time zone`| NULL        | Дата народження             |
+| `Nationality` | `text`                   | NULL         | Національність              |
+| `Biography`   | `text`                   | NULL         | Біографічна довідка         |
+| `CreatedAt`   | `timestamp with time zone`| NOT NULL    | Дата створення запису       |
+| `UpdatedAt`   | `timestamp with time zone`| NOT NULL    | Дата останнього оновлення   |
 
-**Функціональна роль у системі:**
-Один автор може бути пов’язаний із багатьма книгами. Для цього зв’язок винесено в окрему таблицю `book_authors`, що відповідає вимогам нормалізації.
-
----
-
-### 4.3. Таблиця `books`
-
-**Призначення сутності:**
-Таблиця `books` містить основні дані про книги, які використовуються на платформі як база для порівняння з екранізаціями.
-
-| Поле               | Тип даних      | Обмеження                           | Опис                           |
-| ------------------ | -------------- | ----------------------------------- | ------------------------------ |
-| `id`               | `uuid`         | PK, NOT NULL                        | Унікальний ідентифікатор книги |
-| `title`            | `varchar(255)` | NOT NULL                            | Назва книги                    |
-| `description`      | `text`         | NULL                                | Короткий опис або анотація     |
-| `genre`            | `varchar(100)` | NULL                                | Жанр                           |
-| `publication_year` | `integer`      | NULL, CHECK                         | Рік публікації                 |
-| `language`         | `varchar(50)`  | NULL                                | Мова оригіналу                 |
-| `cover_image_url`  | `text`         | NULL                                | Посилання на обкладинку        |
-| `created_at`       | `timestamp`    | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Дата створення запису          |
-| `updated_at`       | `timestamp`    | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Дата останнього оновлення      |
-
-**Додаткові обмеження і правила:**
-
-* `publication_year` може бути `NULL`, але якщо значення задано, воно повинно бути більшим за 0;
-* `created_at` та `updated_at` автоматично заповнюються поточним часом.
-
-**Функціональна роль у системі:**
-Кожна книга може бути пов’язана з одним записом у таблиці `works`, а також із одним чи кількома авторами через `book_authors`.
+**Зв'язки:** M2M з `Books` через `book_authors`
 
 ---
 
-### 4.4. Таблиця `adaptations`
+### 4.3. Таблиця `Books`
 
-**Призначення сутності:**
-Таблиця `adaptations` містить інформацію про екранізації книг у форматі фільму або серіалу.
+**Призначення:** Книги, що є основою для порівняння з екранізаціями.
 
-| Поле               | Тип даних      | Обмеження                           | Опис                                 |
-| ------------------ | -------------- | ----------------------------------- | ------------------------------------ |
-| `id`               | `uuid`         | PK, NOT NULL                        | Унікальний ідентифікатор екранізації |
-| `title`            | `varchar(255)` | NOT NULL                            | Назва екранізації                    |
-| `type`             | `varchar(20)`  | NOT NULL, CHECK                     | Тип: `movie` або `series`            |
-| `description`      | `text`         | NULL                                | Опис екранізації                     |
-| `release_year`     | `integer`      | NULL, CHECK                         | Рік виходу                           |
-| `duration_minutes` | `integer`      | NULL, CHECK                         | Тривалість у хвилинах                |
-| `poster_url`       | `text`         | NULL                                | Посилання на постер                  |
-| `studio`           | `varchar(150)` | NULL                                | Студія-виробник                      |
-| `created_at`       | `timestamp`    | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Дата створення                       |
-| `updated_at`       | `timestamp`    | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Дата оновлення                       |
+| Поле              | Тип (PostgreSQL)         | Обмеження    | Опис                        |
+|-------------------|--------------------------|--------------|-----------------------------|
+| `Id`              | `uuid`                   | PK, NOT NULL | Унікальний ідентифікатор    |
+| `Title`           | `character varying(255)` | NOT NULL     | Назва книги                 |
+| `Description`     | `text`                   | NULL         | Опис / анотація             |
+| `Genre`           | `text`                   | NULL         | Жанр                        |
+| `PublicationYear` | `integer`                | NULL         | Рік публікації              |
+| `Language`        | `text`                   | NULL         | Мова оригіналу              |
+| `CoverImageUrl`   | `text`                   | NULL         | URL обкладинки              |
+| `CreatedAt`       | `timestamp with time zone`| NOT NULL    | Дата створення              |
+| `UpdatedAt`       | `timestamp with time zone`| NOT NULL    | Дата оновлення              |
 
-**Додаткові обмеження і правила:**
+**Індекси:** `IX_Books_Genre`
 
-* `type` обмежується значеннями `movie` та `series`;
-* `release_year` і `duration_minutes`, якщо задані, повинні бути додатними числами.
-
-**Функціональна роль у системі:**
-Кожна екранізація бере участь в одному об’єкті порівняння в таблиці `works`. Також вона може бути пов’язана з багатьма акторами через таблицю `adaptation_actors`.
+**Зв'язки:** 1:1 з `Works` (CASCADE); M2M з `Authors` через `book_authors`
 
 ---
 
-### 4.5. Таблиця `actors`
+### 4.4. Таблиця `Adaptations`
 
-**Призначення сутності:**
-Таблиця `actors` зберігає довідкові відомості про акторів, що беруть участь в екранізаціях.
+**Призначення:** Екранізації книг у форматі фільму або серіалу.
 
-| Поле          | Тип даних      | Обмеження    | Опис                            |
-| ------------- | -------------- | ------------ | ------------------------------- |
-| `id`          | `uuid`         | PK, NOT NULL | Унікальний ідентифікатор актора |
-| `full_name`   | `varchar(150)` | NOT NULL     | Повне ім’я актора               |
-| `birth_date`  | `date`         | NULL         | Дата народження                 |
-| `nationality` | `varchar(100)` | NULL         | Національність                  |
-| `biography`   | `text`         | NULL         | Коротка біографія               |
+| Поле              | Тип (PostgreSQL)         | Обмеження    | Опис                                    |
+|-------------------|--------------------------|--------------|-----------------------------------------|
+| `Id`              | `uuid`                   | PK, NOT NULL | Унікальний ідентифікатор                |
+| `Title`           | `character varying(255)` | NOT NULL     | Назва екранізації                       |
+| `Type`            | `character varying(20)`  | NOT NULL     | Тип: `movie` або `series`               |
+| `Description`     | `text`                   | NULL         | Опис                                    |
+| `ReleaseYear`     | `integer`                | NULL         | Рік виходу                              |
+| `DurationMinutes` | `integer`                | NULL         | Тривалість у хвилинах                   |
+| `PosterUrl`       | `text`                   | NULL         | URL постера                             |
+| `Studio`          | `text`                   | NULL         | Студія-виробник                         |
+| `Country`         | `text`                   | NULL         | Країна виробництва *(додано пізніше)*   |
+| `CreatedAt`       | `timestamp with time zone`| NOT NULL    | Дата створення                          |
+| `UpdatedAt`       | `timestamp with time zone`| NOT NULL    | Дата оновлення                          |
 
-**Функціональна роль у системі:**
-Інформація про акторів не дублюється в таблиці `adaptations`. Натомість зв’язок між акторами та екранізаціями реалізується через `adaptation_actors`, що дозволяє зберігати роль актора в конкретній екранізації.
+**Індекси:** `IX_Adaptations_Country`
+
+**Зв'язки:** 1:1 з `Works` (CASCADE); M2M з `Actors` через `AdaptationActor`
 
 ---
 
-### 4.6. Таблиця `works`
+### 4.5. Таблиця `Actors`
 
-**Призначення сутності:**
-Таблиця `works` є центральною сутністю всієї фізичної моделі. Вона об’єднує одну книгу та одну екранізацію в межах одного логічного об’єкта порівняння.
+**Призначення:** Довідник акторів, що беруть участь в екранізаціях.
 
-| Поле            | Тип даних      | Обмеження                           | Опис                                       |
-| --------------- | -------------- | ----------------------------------- | ------------------------------------------ |
-| `id`            | `uuid`         | PK, NOT NULL                        | Унікальний ідентифікатор запису порівняння |
-| `book_id`       | `uuid`         | FK, NOT NULL, UNIQUE                | Посилання на книгу                         |
-| `adaptation_id` | `uuid`         | FK, NOT NULL, UNIQUE                | Посилання на екранізацію                   |
-| `title`         | `varchar(255)` | NOT NULL                            | Назва сторінки порівняння                  |
-| `summary`       | `text`         | NULL                                | Узагальнений опис порівняння               |
-| `created_at`    | `timestamp`    | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Дата створення                             |
-| `updated_at`    | `timestamp`    | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Дата оновлення                             |
+| Поле          | Тип (PostgreSQL)         | Обмеження    | Опис                      |
+|---------------|--------------------------|--------------|---------------------------|
+| `Id`          | `uuid`                   | PK, NOT NULL | Унікальний ідентифікатор  |
+| `FullName`    | `character varying(150)` | NOT NULL     | Повне ім'я актора         |
+| `BirthDate`   | `timestamp with time zone`| NULL        | Дата народження           |
+| `Nationality` | `text`                   | NULL         | Національність            |
+| `Biography`   | `text`                   | NULL         | Коротка біографія         |
+| `CreatedAt`   | `timestamp with time zone`| NOT NULL    | Дата створення            |
+| `UpdatedAt`   | `timestamp with time zone`| NOT NULL    | Дата оновлення            |
 
-**Зовнішні ключі:**
+**Зв'язки:** M2M з `Adaptations` через `AdaptationActor`
 
-* `book_id` → `books.id`, `ON DELETE CASCADE`;
-* `adaptation_id` → `adaptations.id`, `ON DELETE CASCADE`.
+---
 
-**Функціональна роль у системі:**
-Таблиця `works` пов’язує з собою відгуки, голосування, рейтинги, події сюжету та карту відмінностей. Вона є центром всієї предметної області платформи.
+### 4.6. Таблиця `Works`
+
+**Призначення:** Центральна сутність моделі. Об'єднує книгу та екранізацію в один об'єкт порівняння.
+
+| Поле           | Тип (PostgreSQL)         | Обмеження          | Опис                               |
+|----------------|--------------------------|--------------------|------------------------------------|
+| `Id`           | `uuid`                   | PK, NOT NULL       | Унікальний ідентифікатор           |
+| `BookId`       | `uuid`                   | FK, NOT NULL, UNIQUE| Посилання на `Books`              |
+| `AdaptationId` | `uuid`                   | FK, NOT NULL, UNIQUE| Посилання на `Adaptations`        |
+| `Title`        | `character varying(255)` | NOT NULL           | Назва сторінки порівняння          |
+| `Summary`      | `text`                   | NULL               | Узагальнений опис                  |
+| `CreatedAt`    | `timestamp with time zone`| NOT NULL          | Дата створення                     |
+| `UpdatedAt`    | `timestamp with time zone`| NOT NULL          | Дата оновлення                     |
+
+**Індекси:** `IX_Works_BookId` (UNIQUE), `IX_Works_AdaptationId` (UNIQUE), `IX_Works_Title`
+
+**Зовнішні ключі:** `BookId` → `Books.Id` (CASCADE), `AdaptationId` → `Adaptations.Id` (CASCADE)
+
+**Дочірні таблиці:** `Reviews`, `Votes`, `Ratings`, `Favorites`, `PlotEvent`, `DifferenceMaps`
 
 ---
 
 ### 4.7. Таблиця `book_authors`
 
-**Призначення сутності:**
-Таблиця `book_authors` реалізує зв’язок many-to-many між книгами та авторами.
+**Призначення:** Реалізує зв'язок M2M між `Books` та `Authors`.
 
-| Поле        | Тип даних | Обмеження    | Опис                             |
-| ----------- | --------- | ------------ | -------------------------------- |
-| `id`        | `uuid`    | PK, NOT NULL | Унікальний ідентифікатор зв’язку |
-| `book_id`   | `uuid`    | FK, NOT NULL | Посилання на книгу               |
-| `author_id` | `uuid`    | FK, NOT NULL | Посилання на автора              |
+| Поле        | Тип (PostgreSQL) | Обмеження    | Опис                          |
+|-------------|------------------|--------------|-------------------------------|
+| `AuthorsId` | `uuid`           | PK (part), FK| Посилання на `Authors`        |
+| `BooksId`   | `uuid`           | PK (part), FK| Посилання на `Books`          |
 
-**Зовнішні ключі:**
+> **Примітка:** Складний PK `(AuthorsId, BooksId)`. Таблиця не має окремого поля `Id`.
 
-* `book_id` → `books.id`, `ON DELETE CASCADE`;
-* `author_id` → `authors.id`, `ON DELETE CASCADE`.
-
-**Додаткові обмеження:**
-
-* `UNIQUE(book_id, author_id)` — забороняє дублювати один і той самий зв’язок між книгою та автором.
-
-**Функціональна роль у системі:**
-Забезпечує гнучке зв’язування книг із кількома авторами без дублювання даних у таблицях `books` або `authors`.
+**Зовнішні ключі:** `AuthorsId` → `Authors.Id` (CASCADE), `BooksId` → `Books.Id` (CASCADE)
 
 ---
 
-### 4.8. Таблиця `adaptation_actors`
+### 4.8. Таблиця `AdaptationActor`
 
-**Призначення сутності:**
-Таблиця `adaptation_actors` реалізує зв’язок many-to-many між екранізаціями та акторами.
+**Призначення:** Реалізує зв'язок M2M між `Adaptations` та `Actors` з додатковим атрибутом — роллю актора.
 
-| Поле            | Тип даних      | Обмеження    | Опис                                       |
-| --------------- | -------------- | ------------ | ------------------------------------------ |
-| `id`            | `uuid`         | PK, NOT NULL | Унікальний ідентифікатор зв’язку           |
-| `adaptation_id` | `uuid`         | FK, NOT NULL | Посилання на екранізацію                   |
-| `actor_id`      | `uuid`         | FK, NOT NULL | Посилання на актора                        |
-| `role_name`     | `varchar(150)` | NULL         | Назва ролі актора в конкретній екранізації |
+| Поле           | Тип (PostgreSQL)         | Обмеження    | Опис                                    |
+|----------------|--------------------------|--------------|-----------------------------------------|
+| `AdaptationId` | `uuid`                   | PK (part), FK| Посилання на `Adaptations`              |
+| `ActorId`      | `uuid`                   | PK (part), FK| Посилання на `Actors`                   |
+| `RoleName`     | `character varying(150)` | PK (part)    | Назва ролі (входить до складеного PK)   |
+| `Id`           | `uuid`                   | NOT NULL     | Додатковий UUID (не PK)                 |
+| `CreatedAt`    | `timestamp with time zone`| NOT NULL    | Дата створення                          |
+| `UpdatedAt`    | `timestamp with time zone`| NOT NULL    | Дата оновлення                          |
 
-**Зов
+> **Примітка:** Складний PK `(AdaptationId, ActorId, RoleName)` — дозволяє одному актору грати кілька ролей в одній екранізації.
+
+**Зовнішні ключі:** `AdaptationId` → `Adaptations.Id` (CASCADE), `ActorId` → `Actors.Id` (CASCADE)
+
+---
+
+### 4.9. Таблиця `Reviews`
+
+**Призначення:** Відгуки користувачів на книги або екранізації в межах конкретного `Work`.
+
+| Поле         | Тип (PostgreSQL)        | Обмеження    | Опис                                          |
+|--------------|-------------------------|--------------|-----------------------------------------------|
+| `Id`         | `uuid`                  | PK, NOT NULL | Унікальний ідентифікатор                      |
+| `WorkId`     | `uuid`                  | FK, NOT NULL | Посилання на `Works`                          |
+| `UserId`     | `uuid`                  | FK, NULL     | Посилання на `Users` (NULL після видалення)   |
+| `Text`       | `text`                  | NOT NULL     | Текст відгуку                                 |
+| `TargetType` | `character varying(20)` | NOT NULL     | Об'єкт відгуку: книга або екранізація         |
+| `Rating`     | `double precision`      | NOT NULL     | Оцінка відгуку *(додано: 24.04.2026)*         |
+| `IsSpoiler`  | `boolean`               | NOT NULL     | Прапорець спойлера *(додано: 24.04.2026)*     |
+| `LikesCount` | `integer`               | NOT NULL     | Кількість лайків                              |
+| `CreatedAt`  | `timestamp with time zone`| NOT NULL   | Дата створення                                |
+| `UpdatedAt`  | `timestamp with time zone`| NOT NULL   | Дата оновлення                                |
+
+**Індекси:** `IX_Reviews_UserId`, `IX_Reviews_WorkId`
+
+**Зовнішні ключі:** `WorkId` → `Works.Id` (CASCADE), `UserId` → `Users.Id` (SET NULL)
+
+---
+
+### 4.10. Таблиця `Votes`
+
+**Призначення:** Голосування користувачів — за книгу або екранізацію.
+
+| Поле             | Тип (PostgreSQL)        | Обмеження    | Опис                                          |
+|------------------|-------------------------|--------------|-----------------------------------------------|
+| `Id`             | `uuid`                  | PK, NOT NULL | Унікальний ідентифікатор                      |
+| `WorkId`         | `uuid`                  | FK, NOT NULL | Посилання на `Works`                          |
+| `UserId`         | `uuid`                  | FK, NULL     | Посилання на `Users`                          |
+| `SelectedOption` | `character varying(20)` | NOT NULL     | Вибір: `book`, `adaptation`, `movie`          |
+| `CreatedAt`      | `timestamp with time zone`| NOT NULL   | Дата створення                                |
+| `UpdatedAt`      | `timestamp with time zone`| NOT NULL   | Дата оновлення                                |
+
+**CHECK:** `CK_Vote_Option` — `SelectedOption IN ('book', 'adaptation', 'movie')`
+
+**Індекси:** `IX_Votes_WorkId`, `IX_Votes_UserId_WorkId` (UNIQUE)
+
+**Зовнішні ключі:** `WorkId` → `Works.Id` (CASCADE), `UserId` → `Users.Id` (CASCADE)
+
+---
+
+### 4.11. Таблиця `Ratings`
+
+**Призначення:** Агрегований рейтинг для кожного `Work` (1:1). Зберігає підсумкові оцінки книги та екранізації.
+
+| Поле               | Тип (PostgreSQL) | Обмеження        | Опис                           |
+|--------------------|------------------|------------------|--------------------------------|
+| `Id`               | `uuid`           | PK, NOT NULL     | Унікальний ідентифікатор       |
+| `WorkId`           | `uuid`           | FK, NOT NULL, UNIQUE| Посилання на `Works`        |
+| `BookRating`       | `numeric`        | NULL, CHECK ≥0 ≤10| Рейтинг книги                 |
+| `AdaptationRating` | `numeric`        | NULL, CHECK ≥0 ≤10| Рейтинг екранізації           |
+| `VotesCount`       | `integer`        | NOT NULL         | Кількість голосів              |
+| `CreatedAt`        | `timestamp with time zone`| NOT NULL| Дата створення               |
+| `UpdatedAt`        | `timestamp with time zone`| NOT NULL| Дата оновлення               |
+
+**CHECK:** `CK_Rating_Book` — `BookRating BETWEEN 0 AND 10`; `CK_Rating_Adaptation` — `AdaptationRating BETWEEN 0 AND 10`
+
+**Індекси:** `IX_Ratings_WorkId` (UNIQUE)
+
+**Зовнішні ключі:** `WorkId` → `Works.Id` (CASCADE)
+
+---
+
+### 4.12. Таблиця `Favorites`
+
+**Призначення:** Закладки — зберігає `Works`, додані користувачем до обраного. *(Додано: 12.05.2026)*
+
+| Поле        | Тип (PostgreSQL) | Обмеження    | Опис                     |
+|-------------|------------------|--------------|--------------------------|
+| `Id`        | `uuid`           | PK, NOT NULL | Унікальний ідентифікатор |
+| `UserId`    | `uuid`           | FK, NOT NULL | Посилання на `Users`     |
+| `WorkId`    | `uuid`           | FK, NOT NULL | Посилання на `Works`     |
+| `CreatedAt` | `timestamp with time zone`| NOT NULL| Дата додавання        |
+| `UpdatedAt` | `timestamp with time zone`| NOT NULL| Дата оновлення        |
+
+**Індекси:** `IX_Favorites_WorkId`, `IX_Favorites_UserId_WorkId` (UNIQUE — один запис на пару)
+
+**Зовнішні ключі:** `UserId` → `Users.Id` (CASCADE), `WorkId` → `Works.Id` (CASCADE)
+
+---
+
+### 4.13. Таблиця `PasswordResetTokens`
+
+**Призначення:** Токени (одноразові коди) для скидання паролю через email. *(Додано: 12.05.2026)*
+
+| Поле         | Тип (PostgreSQL)        | Обмеження    | Опис                           |
+|--------------|-------------------------|--------------|--------------------------------|
+| `Id`         | `uuid`                  | PK, NOT NULL | Унікальний ідентифікатор       |
+| `Email`      | `text`                  | NOT NULL     | Email, для якого видано токен  |
+| `Code`       | `character varying(10)` | NOT NULL     | Одноразовий код                |
+| `ExpiryTime` | `timestamp with time zone`| NOT NULL   | Час закінчення дії токена      |
+| `IsUsed`     | `boolean`               | NOT NULL     | Чи використано токен           |
+| `CreatedAt`  | `timestamp with time zone`| NOT NULL   | Дата створення                 |
+| `UpdatedAt`  | `timestamp with time zone`| NOT NULL   | Дата оновлення                 |
+
+> **Примітка:** Не має FK на `Users` — токен прив'язаний до email, а не до id користувача. Це дозволяє скидати пароль навіть до входу в систему.
+
+---
+
+### 4.14. Таблиця `Reports`
+
+**Призначення:** Скарги користувачів на відгуки для модерації. *(Додано: 17.05.2026)*
+
+| Поле       | Тип (PostgreSQL)        | Обмеження    | Опис                                            |
+|------------|-------------------------|--------------|-------------------------------------------------|
+| `Id`       | `uuid`                  | PK, NOT NULL | Унікальний ідентифікатор                        |
+| `ReviewId` | `uuid`                  | FK, NULL     | Посилання на `Reviews` (NULL після видалення)   |
+| `UserId`   | `uuid`                  | FK, NULL     | Посилання на `Users` (NULL після видалення)     |
+| `Reason`   | `character varying(500)`| NOT NULL     | Причина скарги                                  |
+| `Status`   | `character varying(20)` | NOT NULL     | Статус: `Pending`, `Resolved`, `Dismissed`      |
+| `CreatedAt`| `timestamp with time zone`| NOT NULL   | Дата створення                                  |
+| `UpdatedAt`| `timestamp with time zone`| NOT NULL   | Дата оновлення                                  |
+
+**CHECK:** `CK_Report_Status` — `Status IN ('Pending', 'Resolved', 'Dismissed')`
+
+**Індекси:** `IX_Reports_ReviewId`, `IX_Reports_UserId`
+
+**Зовнішні ключі:** `ReviewId` → `Reviews.Id` (SET NULL), `UserId` → `Users.Id` (SET NULL)
+
+---
+
+### 4.15. Таблиця `PlotEvent`
+
+**Призначення:** Події сюжету — елементи для побудови карти відмінностей між книгою та екранізацією.
+
+| Поле             | Тип (PostgreSQL)        | Обмеження    | Опис                                           |
+|------------------|-------------------------|--------------|------------------------------------------------|
+| `Id`             | `uuid`                  | PK, NOT NULL | Унікальний ідентифікатор                       |
+| `WorkId`         | `uuid`                  | FK, NOT NULL | Посилання на `Works`                           |
+| `Title`          | `character varying(255)`| NOT NULL     | Назва події                                    |
+| `Description`    | `text`                  | NULL         | Опис події                                     |
+| `SourceType`     | `character varying(20)` | NOT NULL     | Джерело: книга або екранізація                 |
+| `SequenceNumber` | `integer`               | NOT NULL     | Порядковий номер події в межах `Work`          |
+| `CreatedAt`      | `timestamp with time zone`| NOT NULL   | Дата створення                                 |
+| `UpdatedAt`      | `timestamp with time zone`| NOT NULL   | Дата оновлення                                 |
+
+**Індекси:** `IX_PlotEvent_WorkId`
+
+**Зовнішні ключі:** `WorkId` → `Works.Id` (CASCADE)
+
+---
+
+### 4.16. Таблиця `DifferenceMaps`
+
+**Призначення:** Карта відмінностей між книгою та екранізацією. Один `Work` має рівно одну карту (1:1).
+
+| Поле        | Тип (PostgreSQL)         | Обмеження         | Опис                           |
+|-------------|--------------------------|-------------------|--------------------------------|
+| `Id`        | `uuid`                   | PK, NOT NULL      | Унікальний ідентифікатор       |
+| `WorkId`    | `uuid`                   | FK, NOT NULL, UNIQUE| Посилання на `Works`         |
+| `Title`     | `character varying(255)` | NOT NULL          | Назва карти                    |
+| `Version`   | `integer`                | NOT NULL          | Версія карти                   |
+| `CreatedAt` | `timestamp with time zone`| NOT NULL         | Дата створення                 |
+| `UpdatedAt` | `timestamp with time zone`| NOT NULL         | Дата оновлення                 |
+
+**Індекси:** `IX_DifferenceMaps_WorkId` (UNIQUE)
+
+**Зовнішні ключі:** `WorkId` → `Works.Id` (CASCADE)
+
+---
+
+### 4.17. Таблиця `Differences`
+
+**Призначення:** Конкретні відмінності між сюжетними подіями книги та екранізації в межах карти.
+
+| Поле                | Тип (PostgreSQL)        | Обмеження    | Опис                                              |
+|---------------------|-------------------------|--------------|---------------------------------------------------|
+| `Id`                | `uuid`                  | PK, NOT NULL | Унікальний ідентифікатор                          |
+| `MapId`             | `uuid`                  | FK, NOT NULL | Посилання на `DifferenceMaps`                     |
+| `BookEventId`       | `uuid`                  | FK, NULL     | Посилання на подію книги в `PlotEvent`            |
+| `AdaptationEventId` | `uuid`                  | FK, NULL     | Посилання на подію екранізації в `PlotEvent`      |
+| `Description`       | `text`                  | NOT NULL     | Опис відмінності                                  |
+| `DifferenceType`    | `character varying(20)` | NOT NULL     | Тип відмінності                                   |
+| `ImportanceLevel`   | `character varying(20)` | NOT NULL     | Рівень важливості                                 |
+| `CreatedAt`         | `timestamp with time zone`| NOT NULL   | Дата створення                                    |
+| `UpdatedAt`         | `timestamp with time zone`| NOT NULL   | Дата оновлення                                    |
+
+**Індекси:** `IX_Differences_MapId`, `IX_Differences_BookEventId`, `IX_Differences_AdaptationEventId`
+
+**Зовнішні ключі:** `MapId` → `DifferenceMaps.Id` (CASCADE), `BookEventId` → `PlotEvent.Id` (no action), `AdaptationEventId` → `PlotEvent.Id` (no action)
+
+---
+
+## 5. Зведена таблиця індексів
+
+| Таблиця           | Індекс                          | Тип      | Додано міграцією                        |
+|-------------------|---------------------------------|----------|-----------------------------------------|
+| `Users`           | `IX_Users_Email`                | UNIQUE   | `InitialCreate`                         |
+| `Users`           | `IX_Users_Username`             | UNIQUE   | `InitialCreate`                         |
+| `Works`           | `IX_Works_AdaptationId`         | UNIQUE   | `InitialCreate`                         |
+| `Works`           | `IX_Works_BookId`               | UNIQUE   | `InitialCreate`                         |
+| `Works`           | `IX_Works_Title`                | Regular  | `UpdateSearchIndexesAndFilter`          |
+| `Books`           | `IX_Books_Genre`                | Regular  | `UpdateSearchIndexesAndFilter`          |
+| `Adaptations`     | `IX_Adaptations_Country`        | Regular  | `UpdateSearchIndexesAndFilter`          |
+| `Votes`           | `IX_Votes_UserId_WorkId`        | UNIQUE   | `AddVotesAndReviewUpdates`              |
+| `Favorites`       | `IX_Favorites_UserId_WorkId`    | UNIQUE   | `AddFavoritesAndPasswordReset`          |
+| `Ratings`         | `IX_Ratings_WorkId`             | UNIQUE   | `InitialCreate`                         |
+| `DifferenceMaps`  | `IX_DifferenceMaps_WorkId`      | UNIQUE   | `AddSearchIndexesAndFilter`             |
+| `Reports`         | `IX_Reports_ReviewId`           | Regular  | `AddReports`                            |
+| `Reports`         | `IX_Reports_UserId`             | Regular  | `AddReports`                            |
+
+---
+
+## 6. Зведена таблиця CHECK-обмежень
+
+| Таблиця   | Назва обмеження        | Правило                                              |
+|-----------|------------------------|------------------------------------------------------|
+| `Users`   | `CK_User_Role`         | `Role IN ('user', 'admin', 'moderator')`             |
+| `Votes`   | `CK_Vote_Option`       | `SelectedOption IN ('book', 'adaptation', 'movie')`  |
+| `Ratings` | `CK_Rating_Book`       | `BookRating >= 0 AND BookRating <= 10`               |
+| `Ratings` | `CK_Rating_Adaptation` | `AdaptationRating >= 0 AND AdaptationRating <= 10`   |
+| `Reports` | `CK_Report_Status`     | `Status IN ('Pending', 'Resolved', 'Dismissed')`     |
+
+---
+
+## 7. Журнал змін схеми (Migration History)
+
+| Дата       | Міграція                          | Зміни                                                                                    |
+|------------|-----------------------------------|------------------------------------------------------------------------------------------|
+| 21.04.2026 | `InitialCreate`                   | Початкова схема: всі базові таблиці                                                      |
+| 24.04.2026 | `AddVotesAndReviewUpdates`        | `Vote` → `Votes`; додано `IsSpoiler`, `Rating` до `Reviews`; UNIQUE індекс на Votes     |
+| 24.04.2026 | `UpdateModelsFix`                 | Порожня міграція (виправлення моделі без змін схеми)                                     |
+| 12.05.2026 | `AddFavoritesAndPasswordReset`    | Нові таблиці: `Favorites`, `PasswordResetTokens`                                         |
+| 13.05.2026 | `AddSearchIndexesAndFilter`       | `DifferenceMap` → `DifferenceMaps`; `Difference` → `Differences`; перейменування FK     |
+| 13.05.2026 | `UpdateSearchIndexesAndFilter`    | Нові індекси: `IX_Works_Title`, `IX_Books_Genre`, `IX_Adaptations_Country`               |
+| 17.05.2026 | `AddReports`                      | Нова таблиця: `Reports` з CHECK на `Status`                                              |
+| 17.05.2026 | `AddUserAvatar`                   | Додано `AvatarUrl` до `Users`; `Reports.ReviewId` та `UserId` змінено на nullable+SET NULL|
+
+---
+
+
+
+*Документ актуалізовано: **17.05.2026**. Відповідає стану `ApplicationDbContextModelSnapshot.cs` після міграції `AddUserAvatar`.*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

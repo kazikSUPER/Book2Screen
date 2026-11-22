@@ -471,6 +471,14 @@
                   "if (pm.response.code === 200) {",
                   "  const j = pm.response.json();",
                   "  pm.test('TC-SM-13 · Has differences[]', () => { pm.expect(j).to.have.property('differences'); pm.expect(j.differences).to.be.an('array'); });",
+                  "  if (j.hasMap) {",
+                  "    pm.test('TC-SM-13 · Differences map is not empty', () => { pm.expect(j.differences.length).to.be.above(0); });",
+                  "  }",
+                  "  pm.test('TC-SM-13 · Distinct Book and Movie Posters', () => {",
+                  "    if (j.poster && j.filmPoster) {",
+                  "      pm.expect(j.poster).to.not.equal(j.filmPoster);",
+                  "    }",
+                  "  });",
                   "  console.log('[TC-SM-13] differences: ' + j.differences.length);",
                   "}"
                 ]
@@ -1085,6 +1093,52 @@
                 "v1",
                 "admin",
                 "adaptations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-SM-29 · PUT /admin/adaptations/{id} — оновлення автора (fix validation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC-SM-29 · Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-SM-29 · Author updated', () => { pm.expect(pm.response.json().author).to.equal('Updated Author Name'); });",
+                  "pm.test('TC-SM-29 · BookRating updated', () => { pm.expect(pm.response.json().bookRating).to.equal(6); });",
+                  "pm.test('TC-SM-29 · FilmRating updated', () => { pm.expect(pm.response.json().filmRating).to.equal(5); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Title\": \"Updated Title via Smoke Test\",\n  \"Type\": \"movie\",\n  \"Author\": \"Updated Author Name\",\n  \"Genre\": \"Sci-Fi\",\n  \"Description\": \"Updated description\",\n  \"ReleaseYear\": 2025,\n  \"BookRating\": 6.0,\n  \"FilmRating\": 5.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{itemId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "adaptations",
+                "{{itemId}}"
               ]
             }
           }

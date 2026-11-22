@@ -1,0 +1,595 @@
+{
+  "info": {
+    "name": "Book2Screen — Admin CRUD RC Testing",
+    "description": "Перевірка виправлень адмін-панелі в release/v1.0.0. Тестує CREATE, UPDATE, DELETE адаптацій та реєстрацію з Nickname.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
+    { "key": "adminToken", "value": "", "type": "string" },
+    { "key": "createdAdaptationId", "value": "", "type": "string" },
+    { "key": "existingAdaptationId", "value": "", "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "0. AUTH",
+      "item": [
+        {
+          "name": "POST /auth/login — admin (зберігає adminToken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('Token present', () => pm.expect(j.token).to.be.a('string'));",
+                  "pm.collectionVariables.set('adminToken', j.token);",
+                  "console.log('[AUTH] adminToken saved');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/Auth/login", "host": ["{{baseUrl}}"], "path": ["api","v1","Auth","login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"Email\": \"admin@book2screen.com\",\n  \"Password\": \"Admin123!\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "1. GET — отримати список (зберегти existingAdaptationId)",
+      "item": [
+        {
+          "name": "GET /admin/adaptations — список всіх",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "pm.test('Масив не порожній', () => pm.expect(items.length).to.be.greaterThan(0));",
+                  "const first = items[0];",
+                  "pm.collectionVariables.set('existingAdaptationId', first.id);",
+                  "console.log('[GET] existingAdaptationId =', first.id);",
+                  "pm.test('Поля наявні: id, title, type', () => {",
+                  "  pm.expect(first).to.have.property('id');",
+                  "  pm.expect(first).to.have.property('title');",
+                  "  pm.expect(first).to.have.property('type');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations"] }
+          }
+        },
+        {
+          "name": "GET /admin/adaptations/{id} — один твір",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const item = pm.response.json();",
+                  "pm.test('ID збігається', () => pm.expect(item.id).to.eql(pm.collectionVariables.get('existingAdaptationId')));",
+                  "pm.test('Title не порожній', () => pm.expect(item.title).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{existingAdaptationId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","{{existingAdaptationId}}"] }
+          }
+        },
+        {
+          "name": "GET /admin/adaptations/{id} — неіснуючий → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","00000000-0000-0000-0000-000000000000"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "2. CREATE — POST /admin/adaptations",
+      "item": [
+        {
+          "name": "POST — валідний твір (всі поля) → 201",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const item = pm.response.json();",
+                  "pm.test('ID присутній', () => pm.expect(item.id).to.be.a('string'));",
+                  "pm.test('Title збігається', () => pm.expect(item.title).to.eql('Гаррі Поттер і філософський камінь'));",
+                  "pm.collectionVariables.set('createdAdaptationId', item.id);",
+                  "console.log('[CREATE] createdAdaptationId =', item.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Гаррі Поттер і філософський камінь\",\n  \"type\": \"movie\",\n  \"releaseYear\": 2001,\n  \"genre\": \"Фентезі\",\n  \"author\": \"Дж. К. Ролінґ\",\n  \"country\": \"Велика Британія\",\n  \"description\": \"Тестова книга — QA RC перевірка\",\n  \"posterUrl\": \"https://static.yakaboo.ua/media/catalog/product/cache/1/image/992x1117/602f0fa2c1f0d1ba5e241f914e856ff/h/a/harry_potter_1_ua_rgb1.jpg\",\n  \"bookRating\": 4.8,\n  \"filmRating\": 4.5\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "POST — без автора → 201 (автор необов'язковий)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const item = pm.response.json();",
+                  "pm.test('ID присутній', () => pm.expect(item.id).to.be.a('string'));",
+                  "console.log('[CREATE no author] id =', item.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Тест без автора {{$timestamp}}\",\n  \"type\": \"series\",\n  \"releaseYear\": 2020,\n  \"genre\": \"Драма\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "POST — з картою відмінностей → 201",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const item = pm.response.json();",
+                  "pm.test('ID присутній', () => pm.expect(item.id).to.be.a('string'));",
+                  "console.log('[CREATE with differences] id =', item.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Тест з картою {{$timestamp}}\",\n  \"type\": \"movie\",\n  \"releaseYear\": 2023,\n  \"genre\": \"Фантастика\",\n  \"author\": \"QA Author\",\n  \"differences\": [\n    {\n      \"title\": \"Перша відмінність\",\n      \"bookText\": \"У книзі герой летить\",\n      \"filmText\": \"У фільмі герой їде\",\n      \"isSpoiler\": false\n    },\n    {\n      \"title\": \"Спойлер\",\n      \"bookText\": \"Він виживає\",\n      \"filmText\": \"Він теж виживає\",\n      \"isSpoiler\": true\n    }\n  ]\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "POST — без title → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations"] },
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"movie\",\n  \"releaseYear\": 2021\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "POST — без авторизації → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Без токену\",\n  \"type\": \"movie\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "3. UPDATE — PUT /admin/adaptations/{id}",
+      "item": [
+        {
+          "name": "PUT — оновити назву → 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const item = pm.response.json();",
+                  "pm.test('Title оновлено', () => pm.expect(item.title).to.eql('Гаррі Поттер — оновлена назва'));",
+                  "pm.test('ID не змінився', () => pm.expect(item.id).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{createdAdaptationId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","{{createdAdaptationId}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Гаррі Поттер — оновлена назва\",\n  \"type\": \"movie\",\n  \"releaseYear\": 2001,\n  \"genre\": \"Фентезі\",\n  \"author\": \"Дж. К. Ролінґ\",\n  \"country\": \"Велика Британія\",\n  \"description\": \"Оновлений опис\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "PUT — оновити автора → 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Відповідь не порожня', () => pm.expect(pm.response.json()).to.be.an('object'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{createdAdaptationId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","{{createdAdaptationId}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Гаррі Поттер — оновлена назва\",\n  \"type\": \"movie\",\n  \"releaseYear\": 2001,\n  \"genre\": \"Фентезі\",\n  \"author\": \"Новий Автор\",\n  \"description\": \"Оновлений опис\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "PUT — existingAdaptationId (BUG-054 перевірка) → 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 — BUG-054 FIXED', () => pm.response.to.have.status(200));",
+                  "pm.test('Відповідь не порожня', () => pm.expect(pm.response.json()).to.be.an('object'));",
+                  "console.log('[BUG-054] PUT existing adaptation:', pm.response.status);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{existingAdaptationId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","{{existingAdaptationId}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Дюна — RC тест оновлення\",\n  \"type\": \"movie\",\n  \"releaseYear\": 2021,\n  \"genre\": \"Фантастика\",\n  \"author\": \"Френк Герберт\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "PUT — неіснуючий ID → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","00000000-0000-0000-0000-000000000000"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Тест 404\",\n  \"type\": \"movie\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "PUT — без авторизації → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{createdAdaptationId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","{{createdAdaptationId}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Без токену\",\n  \"type\": \"movie\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "4. DELETE — DELETE /admin/adaptations/{id}",
+      "item": [
+        {
+          "name": "DELETE — існуючий → 204",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));",
+                  "pm.test('Body порожній', () => pm.expect(pm.response.text()).to.be.empty);",
+                  "console.log('[DELETE] createdAdaptationId видалено');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{createdAdaptationId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","{{createdAdaptationId}}"] }
+          }
+        },
+        {
+          "name": "DELETE — повторне видалення → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{createdAdaptationId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","{{createdAdaptationId}}"] }
+          }
+        },
+        {
+          "name": "DELETE — неіснуючий ID → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","00000000-0000-0000-0000-000000000000"] }
+          }
+        },
+        {
+          "name": "DELETE — без авторизації → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{existingAdaptationId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","{{existingAdaptationId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "5. РЕЄСТРАЦІЯ — Nickname fix",
+      "item": [
+        {
+          "name": "POST /auth/register — з Nickname → 201",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test('Token присутній', () => pm.expect(j.token).to.be.a('string'));",
+                  "console.log('[REGISTER] Nickname fix OK');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/Auth/register", "host": ["{{baseUrl}}"], "path": ["api","v1","Auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"Nickname\": \"qa_rc_test_{{$timestamp}}\",\n  \"Email\": \"qa_rc_{{$timestamp}}@test.com\",\n  \"Password\": \"TestPass123!\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "POST /auth/register — без Nickname, з Username → 201",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Token присутній', () => pm.expect(pm.response.json().token).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/Auth/register", "host": ["{{baseUrl}}"], "path": ["api","v1","Auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"Username\": \"qa_username_{{$timestamp}}\",\n  \"Email\": \"qa_user_{{$timestamp}}@test.com\",\n  \"Password\": \"TestPass123!\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "POST /auth/register — без Username і Nickname → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/Auth/register", "host": ["{{baseUrl}}"], "path": ["api","v1","Auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"Email\": \"no_username@test.com\",\n  \"Password\": \"TestPass123!\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "6. РЕГРЕСІЯ — суміжний функціонал",
+      "item": [
+        {
+          "name": "GET /works — список творів не зламався",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Масив творів', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/Works", "host": ["{{baseUrl}}"], "path": ["api","v1","Works"] }
+          }
+        },
+        {
+          "name": "GET /works/top — топ не зламався",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Масив топ-творів', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/Works/top", "host": ["{{baseUrl}}"], "path": ["api","v1","Works","top"] }
+          }
+        },
+        {
+          "name": "POST /votes — голосування не зламалось",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 або 201', () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/Votes", "host": ["{{baseUrl}}"], "path": ["api","v1","Votes"] },
+            "body": { "mode": "raw", "raw": "{\n  \"workId\": \"{{existingAdaptationId}}\",\n  \"voteType\": \"book\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "GET /reviews/work/{id} — відгуки не зламались",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Масив відгуків', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/Reviews/work/{{existingAdaptationId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","Reviews","work","{{existingAdaptationId}}"] }
+          }
+        }
+      ]
+    }
+
+  ]
+}

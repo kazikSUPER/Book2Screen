@@ -1,91 +1,124 @@
 import { defineStore } from 'pinia';
 import { computed } from 'vue';
 import * as authApi from '../services/auth';
-import type { LoginRequest, RegisterRequest } from '../services/types';
+import * as profileApi from '../services/profile';
+import type {
+  LoginRequest,
+  RegisterRequest,
+  ResetPasswordRequest,
+  AuthResponse,
+  UserProfileDto,
+} from '../services/types';
 import { usePersistedRef } from '../composables/usePersistedRef';
 
 /**
- * Стор автентифікації + профіль користувача.
+ * Стор автентифікації + профілю користувача (Book2Screen v1).
  *
- * Persistence через usePersistedRef — сесія і профіль автоматично
- * зберігаються у localStorage між сесіями браузера.
+ * Зберігаємо у localStorage через usePersistedRef — щоб сесія переживала перезавантаження.
+ *
+ * Поля з бекенду (AuthResponse): token, userId, email, nickname, role.
+ * Поля з бекенду (UserProfileDto): username, email, avatarUrl, joinedAt.
+ *
+ * УВАГА: на беку немає `birthDate`. Якщо потрібно — додати на бекенді.
  */
 export const useUserStore = defineStore('user', () => {
   // ── Auth ─────────────────────────────────────────────────
   const token = usePersistedRef<string>('b2s_token', '');
+  const userId = usePersistedRef<string>('b2s_userId', '');
   const email = usePersistedRef<string>('b2s_email', '');
   const nickname = usePersistedRef<string>('b2s_nickname', '');
-  const userId = usePersistedRef<string>('b2s_userId', '');
+  const role = usePersistedRef<string>('b2s_role', '');
 
-  // ── Profile (SCRUM-64) ───────────────────────────────────
-  // Опційні поля, що користувач може заповнити у ProfileView.
-  const fullName = usePersistedRef<string>('b2s_profile_name', '');
-  const birthDate = usePersistedRef<string>('b2s_profile_dob', ''); // ISO-формат YYYY-MM-DD
+  // ── Профіль (SCRUM-64) — підвантажується з /users/me ─────
+  const username = usePersistedRef<string>('b2s_profile_username', '');
   const avatarUrl = usePersistedRef<string>('b2s_profile_avatar', '');
+  const joinedAt = usePersistedRef<string>('b2s_profile_joined', '');
 
   const isAuthenticated = computed(() => !!token.value && !!email.value);
+  const isAdmin = computed(() => role.value === 'admin' || role.value === 'moderator');
 
-  function setSession(payload: { token: string; userId: string; email: string; nickname: string }): void {
+  function applySession(payload: AuthResponse): void {
     token.value = payload.token;
+    userId.value = payload.userId;
     email.value = payload.email;
     nickname.value = payload.nickname;
-    userId.value = payload.userId;
+    role.value = payload.role ?? 'user';
   }
 
   async function login(payload: LoginRequest): Promise<void> {
-    const loginResponse = await authApi.login(payload);
-    setSession(loginResponse);
+    const res = await authApi.login(payload);
+    applySession(res);
+    // Підтягуємо профіль (username/avatar/joinedAt).
+    await refreshProfile().catch(() => undefined);
   }
 
   async function register(payload: RegisterRequest): Promise<void> {
-    const registerResponse = await authApi.register(payload);
-    setSession({
-      token: registerResponse.token,
-      userId: registerResponse.userId,
-      email: registerResponse.email,
-      nickname: registerResponse.nickname,
-    });
+    const res = await authApi.register(payload);
+    applySession(res);
+    await refreshProfile().catch(() => undefined);
   }
 
-  // SCRUM-24 тФА Підтвердження зміни паролю.
-  async function resetPassword(payload: authApi.PasswordResetConfirmRequest): Promise<void> {
-    const response = await authApi.confirmPasswordReset(payload);
-    setSession(response);
+  /** Крок 3 password-reset: ResetPasswordRequest = { email, code, newPassword }. */
+  async function resetPassword(payload: ResetPasswordRequest): Promise<void> {
+    await authApi.resetPassword(payload);
+    // Бек відповідає 200 OK без токена — потрібен явний логін.
+    await login({ email: payload.email, password: payload.newPassword });
   }
 
   function logout(): void {
     token.value = '';
+    userId.value = '';
     email.value = '';
     nickname.value = '';
-    userId.value = '';
-    // Профіль (фото, ПІБ, ДН) — лишаємо: при наступному логіні людина
-    // не хоче знов заповнювати. Якщо треба — окрема дія "Видалити дані".
+    role.value = '';
+    // Профільні дані лишаємо в localStorage — після наступного login підвантажимо.
   }
 
-  // SCRUM-64 — методи для редагування профілю.
-  // Поки бекенд не готовий — пишемо тільки локально. TODO: PUT /api/v1/users/me.
-  function updateProfile(patch: { fullName?: string; nickname?: string; birthDate?: string; avatarUrl?: string }): void {
-    if (patch.fullName !== undefined) fullName.value = patch.fullName;
-    if (patch.nickname !== undefined) nickname.value = patch.nickname;
-    if (patch.birthDate !== undefined) birthDate.value = patch.birthDate;
-    if (patch.avatarUrl !== undefined) avatarUrl.value = patch.avatarUrl;
+  // ── Profile (SCRUM-64) ───────────────────────────────────
+
+  async function refreshProfile(): Promise<void> {
+    const profile = await profileApi.fetchMyProfile();
+    username.value = profile.username;
+    if (profile.avatarUrl !== undefined) avatarUrl.value = profile.avatarUrl;
+    joinedAt.value = profile.joinedAt;
+  }
+
+  async function updateProfile(patch: Partial<UserProfileDto>): Promise<void> {
+    const next: UserProfileDto = {
+      username: patch.username ?? username.value,
+      email: patch.email ?? email.value,
+      avatarUrl: patch.avatarUrl ?? avatarUrl.value,
+      joinedAt: patch.joinedAt ?? (joinedAt.value || new Date().toISOString()),
+    };
+    await profileApi.updateMyProfile(next);
+    username.value = next.username;
+    if (next.avatarUrl !== undefined) avatarUrl.value = next.avatarUrl;
+  }
+
+  async function setAvatar(url: string): Promise<void> {
+    await profileApi.updateMyAvatar(url);
+    avatarUrl.value = url;
   }
 
   return {
     // auth
     isAuthenticated,
+    isAdmin,
+    token,
+    userId,
     email,
     nickname,
-    userId,
-    token,
+    role,
     login,
     register,
     resetPassword,
     logout,
     // profile
-    fullName,
-    birthDate,
+    username,
     avatarUrl,
+    joinedAt,
+    refreshProfile,
     updateProfile,
+    setAvatar,
   };
 });

@@ -6,21 +6,33 @@
 
 :root {
   /* ── Surfaces / фони ───────────────────────────────────── */
-  --color-header: #311620; /* темно-винний — шапка */
-  --color-page: #f7cccc; /* рожевий — основний фон сторінки (з Figma) */
-  --color-card: #3d0f1a; /* винний — фон картки твору */
-  --color-panel: #f7cccc; /* фон фільтр-панелі (як сторінка) */
-  --color-panel-box: #e4afaf; /* блок усередині панелі */
-  --color-input-bg: #f7cccc; /* фон інпуту/пошуку */
-  --color-modal-bg: #f7cccc; /* фон модалок */
-  --color-stripe: #311620; /* стрічка під шапкою (заголовок розділу) */
+  --color-header: #311620;
+  /* темно-винний — шапка */
+  --color-page: #ffe3e3;
+  /* рожевий — основний фон сторінки (з Figma) */
+  --color-card: #3d0f1a;
+  /* винний — фон картки твору */
+  --color-panel: #f7cccc;
+  /* фон фільтр-панелі (як сторінка) */
+  --color-panel-box: #e4afaf;
+  /* блок усередині панелі */
+  --color-input-bg: #f7cccc;
+  /* фон інпуту/пошуку */
+  --color-modal-bg: #f7cccc;
+  /* фон модалок */
+  --color-stripe: #311620;
+  /* стрічка під шапкою (заголовок розділу) */
 
   /* ── Бренд / акценти ───────────────────────────────────── */
-  --color-primary: #8e182f; /* кнопки primary, активні стани */
+  --color-primary: #8e182f;
+  /* кнопки primary, активні стани */
   --color-primary-hover: #a82040;
-  --color-primary-dark: #5c0f1f; /* бордер кнопок з Figma */
-  --color-accent: #311620; /* "темна" варіація кнопки primary */
-  --color-star: #f0c040; /* зірочки рейтингу */
+  --color-primary-dark: #5c0f1f;
+  /* бордер кнопок з Figma */
+  --color-accent: #311620;
+  /* "темна" варіація кнопки primary */
+  --color-star: #f0c040;
+  /* зірочки рейтингу */
 
   /* ── Текст ─────────────────────────────────────────────── */
   --text-on-dark: #f7cccc;
@@ -55,13 +67,6 @@
   /* ── Розміри ─────────────────────────────────────────── */
   --header-height: 80px;
   --filter-panel-width: 220px;
-
-  /* ── Backward-compat aliases (TODO: видалити після рефактору всіх views) ── */
-  --pink-light: var(--text-on-dark);
-  --pink-mid: var(--color-panel-box);
-  --dark-bg: var(--color-page);
-  --dark-card: var(--text-on-light);
-  --accent: var(--color-primary);
 }
 
 /* ── Reset ────────────────────────────────────────────── */
@@ -86,4 +91,103 @@ body {
   color: var(--text-on-light);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  /* iOS Safari — не збільшувати текст у landscape */
+  text-size-adjust: 100%;
+}
+
+/* ── A11y: глобальний focus-visible (Етап 3, Крок 3 — Accessibility) ── */
+/* Кожен інтерактивний елемент отримує помітний фокус при tab-навігації. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Прибираємо outline для миші — він повертається тільки для клавіатури. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Зображення — за замовчуванням адаптивні. */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Buttons — спільні базові правила. Конкретний стайл — у scoped CSS. */
+button {
+  font-family: inherit;
+}
+
+/* Лінки за замовчуванням використовують primary-колір */
+a {
+  color: var(--color-primary);
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+/* Reduced motion — поважаємо системне налаштування користувача (Етап 4: Cross-browser). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Safari: type="search" має дефолтний macOS-стиль — нормалізуємо. */
+input[type='search'] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Firefox: number input — приховуємо стрілочки, якщо вони не потрібні семантично. */
+input[type='number'].no-spinner {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input[type='number'].no-spinner::-webkit-outer-spin-button,
+input[type='number'].no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/*
+ * Прибираємо жовтий/блакитний autofill-фон Chrome'у у формах.
+ * Браузер сам підсвічує заповнені поля — це ламало дизайн модалок логіну.
+ * Хак з box-shadow перекриває autofill background власним білим.
+ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: var(--text-on-light) !important;
+  caret-color: var(--text-on-light);
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* ── Screen Readers Only (SEO utility) ── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

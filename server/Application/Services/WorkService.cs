@@ -4,6 +4,7 @@
 
 namespace Book2Screen.Application.Services;
 
+using AutoMapper;
 using Book2Screen.Application.DTOs;
 using Book2Screen.Application.Filters;
 using Book2Screen.Application.Interfaces;
@@ -12,22 +13,23 @@ using Book2Screen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 /// <summary>
-/// Реалізація сервісу для роботи з творами.
+/// Сервіс для роботи з творами (Work).
+/// Об'єднує книги та їх адаптації.
 /// </summary>
 public class WorkService : IWorkService
 {
     private readonly ApplicationDbContext context;
-    private readonly IVoteService voteService;
+    private readonly IMapper mapper;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkService"/> class.
     /// </summary>
     /// <param name="context">Контекст бази даних.</param>
-    /// <param name="voteService">Сервіс голосування.</param>
-    public WorkService(ApplicationDbContext context, IVoteService voteService)
+    /// <param name="mapper">Мапер об'єктів.</param>
+    public WorkService(ApplicationDbContext context, IMapper mapper)
     {
         this.context = context;
-        this.voteService = voteService;
+        this.mapper = mapper;
     }
 
     /// <inheritdoc/>
@@ -35,8 +37,13 @@ public class WorkService : IWorkService
     {
         var query = this.context.Works
             .Include(w => w.Book)
+                .ThenInclude(b => b.Authors)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
+            .Include(w => w.Votes)
+            .Include(w => w.Rating)
+            .Include(w => w.DifferenceMap)
+                .ThenInclude(dm => dm!.Differences)
             .AsQueryable();
 
         if (filter != null)
@@ -63,16 +70,7 @@ public class WorkService : IWorkService
         }
 
         var works = await query.ToListAsync();
-        var dtos = new List<BookScreenItemDto>();
-
-        foreach (var w in works)
-        {
-            var dto = this.MapToDto(w);
-            dto.VoteStats = await this.voteService.GetVoteStatsAsync(w.Id);
-            dtos.Add(dto);
-        }
-
-        return dtos;
+        return works.Select(w => this.mapper.Map<BookScreenItemDto>(w)).ToList();
     }
 
     /// <inheritdoc/>
@@ -80,8 +78,11 @@ public class WorkService : IWorkService
     {
         var work = await this.context.Works
             .Include(w => w.Book)
+                .ThenInclude(b => b.Authors)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
+            .Include(w => w.Votes)
+            .Include(w => w.Rating)
             .Include(w => w.DifferenceMap)
                 .ThenInclude(dm => dm!.Differences)
             .FirstOrDefaultAsync(w => w.Id == id);
@@ -91,23 +92,7 @@ public class WorkService : IWorkService
             throw new KeyNotFoundException($"Work with ID {id} not found.");
         }
 
-        var dto = this.MapToDto(work);
-        dto.VoteStats = await this.voteService.GetVoteStatsAsync(work.Id);
-
-        if (work.DifferenceMap != null)
-        {
-            dto.HasMap = true;
-            dto.Differences = work.DifferenceMap.Differences.Select(d => new DifferenceDto
-            {
-                Id = d.Id,
-                Title = d.DifferenceType,
-                BookText = d.Description,
-                FilmText = d.Description,
-                IsSpoiler = d.ImportanceLevel == "high",
-            }).ToList();
-        }
-
-        return dto;
+        return this.mapper.Map<BookScreenItemDto>(work);
     }
 
     /// <inheritdoc/>
@@ -115,44 +100,19 @@ public class WorkService : IWorkService
     {
         var works = await this.context.Works
             .Include(w => w.Book)
+                .ThenInclude(b => b.Authors)
             .Include(w => w.Adaptation)
             .Include(w => w.Reviews)
+            .Include(w => w.Votes)
+            .Include(w => w.Rating)
             .Include(w => w.DifferenceMap)
+                .ThenInclude(dm => dm!.Differences)
             .ToListAsync();
 
-        var dtos = new List<BookScreenItemDto>();
-        foreach (var w in works)
-        {
-            var dto = this.MapToDto(w);
-            dto.VoteStats = await this.voteService.GetVoteStatsAsync(w.Id);
-            dto.HasMap = w.DifferenceMap != null;
-            dtos.Add(dto);
-        }
-
-        return dtos.OrderByDescending(d => d.FilmRating).Take(count);
-    }
-
-    private BookScreenItemDto MapToDto(Work w)
-    {
-        return new BookScreenItemDto
-        {
-            Id = w.Id,
-            Title = w.Title,
-            Year = w.Adaptation.ReleaseYear ?? 0,
-            Genre = w.Book.Genre ?? "Драма",
-            Country = w.Adaptation.Country ?? "Unknown",
-            Poster = w.Adaptation.PosterUrl ?? "https://via.placeholder.com/300x450",
-            BookRating = w.Reviews.Any(r => r.TargetType == "book")
-                ? Math.Round(w.Reviews.Where(r => r.TargetType == "book").Average(r => r.Rating), 1)
-                : 0,
-            FilmRating = w.Reviews.Any(r => r.TargetType == "adaptation")
-                ? Math.Round(w.Reviews.Where(r => r.TargetType == "adaptation").Average(r => r.Rating), 1)
-                : 0,
-            Description = w.Summary ?? w.Book.Description ?? string.Empty,
-            FilmYear = w.Adaptation.ReleaseYear,
-            FilmCountry = w.Adaptation.Country,
-            FilmPoster = w.Adaptation.PosterUrl,
-            HasMap = w.DifferenceMap != null,
-        };
+        return works
+            .Select(w => this.mapper.Map<BookScreenItemDto>(w))
+            .OrderByDescending(d => d.FilmRating)
+            .Take(count)
+            .ToList();
     }
 }

@@ -1,7 +1,9 @@
 ﻿FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS base
 RUN apk add --no-cache krb5-libs curl
 WORKDIR /app
-EXPOSE 80
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+USER app
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 RUN apk add --no-cache krb5-libs

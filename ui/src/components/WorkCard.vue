@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import type { BookScreenItem } from '../services/types';
+import { STR } from '../constants';
+import { onImgError } from '../composables/useImageFallback';
+
+const t = STR.detail;
 
 /**
  * Картка твору — використовується на Home (карусель) і Top (сітка).
@@ -24,19 +28,27 @@ function goToDetail(): void {
 </script>
 
 <template>
-  <article class="work-card" @click="goToDetail">
+  <article
+    class="work-card"
+    tabindex="0"
+    role="button"
+    :aria-label="`${item.title}, ${item.year}`"
+    @click="goToDetail"
+    @keydown.enter="goToDetail"
+    @keydown.space.prevent="goToDetail"
+  >
     <div class="work-card__poster">
-      <img :src="item.poster" :alt="item.title" />
+      <img :src="item.poster" :alt="item.title" loading="lazy" @error="onImgError" />
     </div>
 
     <div class="work-card__info">
       <h3 class="work-card__title">{{ item.title }}</h3>
-      <p class="work-card__meta">Рік: {{ item.year }}</p>
-      <p class="work-card__meta">Жанр: {{ item.genre }}</p>
-      <p class="work-card__meta">Країна: {{ item.country }}</p>
+      <p class="work-card__meta">{{ t.bookYear }} {{ item.year }}</p>
+      <p class="work-card__meta">{{ t.bookGenre }} {{ item.genre }}</p>
+      <p class="work-card__meta">{{ t.bookCountry }} {{ item.country }}</p>
     </div>
 
-    <button class="work-card__btn" @click.stop="goToDetail">Переглянути</button>
+    <button type="button" class="work-card__btn" @click.stop="goToDetail">{{ STR.profile.view }}</button>
   </article>
 </template>
 

@@ -1,94 +1,149 @@
+// <copyright file="VoteServiceTests.cs" company="Team 17">
+// Copyright (c) Team 17. All rights reserved.
+// </copyright>
+
 namespace Book2Screen.Tests.Services;
 
 using Book2Screen.Application.DTOs;
 using Book2Screen.Application.Services;
 using Book2Screen.Domain.Entities;
-using Book2Screen.Infrastructure.Persistence;
+using Book2Screen.Tests.Helpers;
+using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 
-public class VoteServiceTests : IDisposable
+/// <summary>
+/// Юніт тести для VoteService.
+/// </summary>
+public class VoteServiceTests
 {
-    private readonly ApplicationDbContext _context;
-    private readonly VoteService _service;
+    // ── VoteAsync ─────────────────────────────────────────────────────────────
 
-    public VoteServiceTests()
-    {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .ConfigureWarnings(x => x.Ignore(InMemoryEventId.TransactionIgnoredWarning))
-            .Options;
-        _context = new ApplicationDbContext(options);
-        _service = new VoteService(_context);
-    }
-
-    public void Dispose()
-    {
-        _context.Database.EnsureDeleted();
-        _context.Dispose();
-    }
-
+    /// <summary>
+    /// Голосування за книгу зберігається і повертає правильну статистику.
+    /// </summary>
     [Fact]
-    public async Task VoteAsync_CreatesNewVote()
+    public async Task VoteAsync_VoteForBook_SavesAndReturnsStats()
     {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var workId = Guid.NewGuid();
-        var request = new VoteRequest { WorkId = workId, VoteType = "BOOK" };
+        using var context = TestDbHelper.CreateContext(nameof(this.VoteAsync_VoteForBook_SavesAndReturnsStats));
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new VoteService(context);
 
-        // Act
-        var result = await _service.VoteAsync(userId, request);
+        var result = await service.VoteAsync(userId, new VoteRequest { WorkId = workId, VoteType = "book" });
 
-        // Assert
-        Assert.Equal(1, result.TotalVotes);
-        Assert.Equal(1, result.BookVotes);
-        Assert.Equal(0, result.MovieVotes);
-        Assert.Equal(100, result.BookPercentage);
-        
-        var voteInDb = await _context.Votes.FirstOrDefaultAsync();
-        Assert.NotNull(voteInDb);
-        Assert.Equal("book", voteInDb.SelectedOption);
+        result.TotalVotes.Should().Be(1);
+        result.BookVotes.Should().Be(1);
+        result.MovieVotes.Should().Be(0);
+        result.BookPercentage.Should().Be(100.0);
+        result.MoviePercentage.Should().Be(0.0);
+
+        var vote = await context.Votes.FirstAsync(v => v.UserId == userId);
+        vote.SelectedOption.Should().Be("book");
     }
 
+    /// <summary>
+    /// Голосування за фільм зберігається як "movie".
+    /// </summary>
     [Fact]
-    public async Task VoteAsync_UpdatesExistingVote()
+    public async Task VoteAsync_VoteForMovie_SavesAsMovie()
     {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var workId = Guid.NewGuid();
-        await _service.VoteAsync(userId, new VoteRequest { WorkId = workId, VoteType = "BOOK" });
+        using var context = TestDbHelper.CreateContext(nameof(this.VoteAsync_VoteForMovie_SavesAsMovie));
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new VoteService(context);
 
-        // Act
-        var result = await _service.VoteAsync(userId, new VoteRequest { WorkId = workId, VoteType = "MOVIE" });
+        var result = await service.VoteAsync(userId, new VoteRequest { WorkId = workId, VoteType = "movie" });
 
-        // Assert
-        Assert.Equal(1, result.TotalVotes);
-        Assert.Equal(0, result.BookVotes);
-        Assert.Equal(1, result.MovieVotes);
-        Assert.Equal(100, result.MoviePercentage);
-        
-        var votesCount = await _context.Votes.CountAsync();
-        Assert.Equal(1, votesCount);
+        result.MovieVotes.Should().Be(1);
+        result.BookVotes.Should().Be(0);
+        var vote = await context.Votes.FirstAsync(v => v.UserId == userId);
+        vote.SelectedOption.Should().Be("movie");
     }
 
-    [Fact]
-    public async Task GetVoteStatsAsync_ReturnsCorrectPercentages()
+    /// <summary>
+    /// VoteType конвертується до нижнього регістру при збереженні.
+    /// (BUG-034 — перевірка що бекенд нормалізує регістр)
+    /// </summary>
+    [Theory]
+    [InlineData("BOOK", "book")]
+    [InlineData("Book", "book")]
+    [InlineData("MOVIE", "movie")]
+    [InlineData("Movie", "movie")]
+    public async Task VoteAsync_VoteTypeNormalizedToLowerCase(string input, string expected)
     {
-        // Arrange
-        var workId = Guid.NewGuid();
-        await _service.VoteAsync(Guid.NewGuid(), new VoteRequest { WorkId = workId, VoteType = "BOOK" });
-        await _service.VoteAsync(Guid.NewGuid(), new VoteRequest { WorkId = workId, VoteType = "BOOK" });
-        await _service.VoteAsync(Guid.NewGuid(), new VoteRequest { WorkId = workId, VoteType = "MOVIE" });
+        using var context = TestDbHelper.CreateContext($"VoteType_{input}");
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new VoteService(context);
 
-        // Act
-        var result = await _service.GetVoteStatsAsync(workId);
+        await service.VoteAsync(userId, new VoteRequest { WorkId = workId, VoteType = input });
 
-        // Assert
-        Assert.Equal(3, result.TotalVotes);
-        Assert.Equal(2, result.BookVotes);
-        Assert.Equal(1, result.MovieVotes);
-        Assert.True(Math.Abs(66.67 - result.BookPercentage) < 0.1);
-        Assert.True(Math.Abs(33.33 - result.MoviePercentage) < 0.1);
+        var vote = await context.Votes.FirstAsync(v => v.UserId == userId);
+        vote.SelectedOption.Should().Be(expected);
+    }
+
+    /// <summary>
+    /// Повторне голосування оновлює вибір без дубліката.
+    /// </summary>
+    [Fact]
+    public async Task VoteAsync_SecondVote_UpdatesExistingWithoutDuplicate()
+    {
+        using var context = TestDbHelper.CreateContext(nameof(this.VoteAsync_SecondVote_UpdatesExistingWithoutDuplicate));
+        var (userId, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new VoteService(context);
+        await service.VoteAsync(userId, new VoteRequest { WorkId = workId, VoteType = "book" });
+
+        var result = await service.VoteAsync(userId, new VoteRequest { WorkId = workId, VoteType = "movie" });
+
+        result.TotalVotes.Should().Be(1);
+        result.BookVotes.Should().Be(0);
+        result.MovieVotes.Should().Be(1);
+
+        var count = await context.Votes.CountAsync(v => v.UserId == userId && v.WorkId == workId);
+        count.Should().Be(1);
+    }
+
+    // ── GetVoteStatsAsync ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Статистика для твору без голосів повертає 0%.
+    /// </summary>
+    [Fact]
+    public async Task GetVoteStatsAsync_NoVotes_ReturnsZeroPercentages()
+    {
+        using var context = TestDbHelper.CreateContext(nameof(this.GetVoteStatsAsync_NoVotes_ReturnsZeroPercentages));
+        var (_, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var service = new VoteService(context);
+
+        var result = await service.GetVoteStatsAsync(workId);
+
+        result.TotalVotes.Should().Be(0);
+        result.BookPercentage.Should().Be(0.0);
+        result.MoviePercentage.Should().Be(0.0);
+    }
+
+    /// <summary>
+    /// Статистика коректно рахує відсотки (75% книга, 25% фільм).
+    /// </summary>
+    [Fact]
+    public async Task GetVoteStatsAsync_MultipleVotes_CalculatesCorrectPercentages()
+    {
+        using var context = TestDbHelper.CreateContext(nameof(this.GetVoteStatsAsync_MultipleVotes_CalculatesCorrectPercentages));
+        var (userId1, workId) = await TestDbHelper.SeedUserAndWork(context);
+        var userId2 = await TestDbHelper.SeedUser(context, "u2@test.com", "u2");
+        var userId3 = await TestDbHelper.SeedUser(context, "u3@test.com", "u3");
+        var userId4 = await TestDbHelper.SeedUser(context, "u4@test.com", "u4");
+        var service = new VoteService(context);
+
+        await service.VoteAsync(userId1, new VoteRequest { WorkId = workId, VoteType = "book" });
+        await service.VoteAsync(userId2, new VoteRequest { WorkId = workId, VoteType = "book" });
+        await service.VoteAsync(userId3, new VoteRequest { WorkId = workId, VoteType = "book" });
+        await service.VoteAsync(userId4, new VoteRequest { WorkId = workId, VoteType = "movie" });
+
+        var result = await service.GetVoteStatsAsync(workId);
+
+        result.TotalVotes.Should().Be(4);
+        result.BookVotes.Should().Be(3);
+        result.MovieVotes.Should().Be(1);
+        result.BookPercentage.Should().BeApproximately(75.0, 0.01);
+        result.MoviePercentage.Should().BeApproximately(25.0, 0.01);
     }
 }

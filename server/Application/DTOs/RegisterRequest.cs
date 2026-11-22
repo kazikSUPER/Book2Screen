@@ -12,11 +12,15 @@ using System.ComponentModel.DataAnnotations;
 public class RegisterRequest
 {
     /// <summary>
-    /// Gets or sets унікальне ім'я користувача (нікнейм).
+    /// Gets or sets унікальне ім'я користувача (логін).
     /// </summary>
-    [Required]
+    public string Username { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets нікнейм (аліас для Username для сумісності).
+    /// </summary>
     [MaxLength(50)]
-    public string Nickname { get; set; } = null!;
+    public string? Nickname { get => this.Username; set => this.Username = value ?? this.Username; }
 
     /// <summary>
     /// Gets or sets електронну пошту користувача.

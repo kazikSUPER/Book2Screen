@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { reportReview } from '../services/reviews';
 import { useNotificationsStore } from '../state/notifications';
 import { extractErrorMessage } from '../services/error';
+import { REPORT_REASONS, STR } from '../constants';
 
 /**
  * Модалка "Поскаржитись на коментар" (Figma — DetailView, скрін 5).
@@ -22,14 +23,8 @@ const emit = defineEmits<{
 }>();
 
 const notifications = useNotificationsStore();
-
-const reasons: string[] = [
-  'Спойлер без позначки',
-  'Образи / нецензурна лексика',
-  'Спам або реклама',
-  'Не по темі',
-  'Інше',
-];
+const t = STR.report;
+const reasons = REPORT_REASONS;
 
 const selectedReason = ref<string>('');
 const isSubmitting = ref(false);
@@ -37,14 +32,14 @@ const errorMessage = ref('');
 
 async function submit(): Promise<void> {
   if (!selectedReason.value) {
-    errorMessage.value = 'Оберіть причину';
+    errorMessage.value = t.reasonRequired;
     return;
   }
   isSubmitting.value = true;
   errorMessage.value = '';
   try {
     await reportReview(props.reviewId, selectedReason.value);
-    notifications.pushSuccess('Скаргу надіслано на модерацію');
+    notifications.pushSuccess(t.submitted);
     emit('reported');
     emit('close');
   } catch (err) {
@@ -54,42 +49,42 @@ async function submit(): Promise<void> {
   }
 }
 
-function onBackdropClick(e: MouseEvent): void {
-  // Закриваємо тільки при кліку саме на бекдроп, не на саму модалку.
-  if (e.target === e.currentTarget) emit('close');
+// Безпечне закриття overlay: модалка не закривається, якщо користувач
+// почав drag всередині модалки і випадково відпустив кнопку поза нею.
+const mouseDownOnOverlay = { value: false };
+function onOverlayMouseDown(e: MouseEvent) {
+  mouseDownOnOverlay.value = e.target === e.currentTarget;
+}
+function onOverlayClick(e: MouseEvent) {
+  if (mouseDownOnOverlay.value && e.target === e.currentTarget) {
+    emit('close');
+  }
+  mouseDownOnOverlay.value = false;
 }
 </script>
 
 <template>
-  <div class="modal-backdrop" @click="onBackdropClick">
-    <div
-      class="modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="report-title"
-    >
-      <button class="modal__close" type="button" aria-label="Закрити" @click="$emit('close')">✕</button>
+  <div class="modal-backdrop" @mousedown="onOverlayMouseDown" @click="onOverlayClick">
+    <div class="modal-frame" @click.stop @mousedown.stop>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="report-title">
+        <button class="modal__close" type="button" :aria-label="STR.common.close" @click="$emit('close')">✕</button>
 
-      <h2 id="report-title" class="modal__title">Поскаржитись на коментар</h2>
+        <h2 id="report-title" class="modal__title">{{ t.title }}</h2>
 
-      <label class="modal__field">
-        <span class="modal__label">Вкажіть причину</span>
-        <select v-model="selectedReason" class="modal__select" :disabled="isSubmitting">
-          <option value="">— оберіть —</option>
-          <option v-for="r in reasons" :key="r" :value="r">{{ r }}</option>
-        </select>
-      </label>
+        <label class="modal__field">
+          <span class="modal__label">{{ t.reasonLabel }}</span>
+          <select v-model="selectedReason" class="modal__select" :disabled="isSubmitting">
+            <option value="">{{ t.chooseReason }}</option>
+            <option v-for="r in reasons" :key="r" :value="r">{{ r }}</option>
+          </select>
+        </label>
 
-      <p v-if="errorMessage" class="modal__error">{{ errorMessage }}</p>
+        <p v-if="errorMessage" class="modal__error">{{ errorMessage }}</p>
 
-      <button
-        type="button"
-        class="modal__submit"
-        :disabled="isSubmitting || !selectedReason"
-        @click="submit"
-      >
-        {{ isSubmitting ? 'Надсилаємо…' : 'Надіслати' }}
-      </button>
+        <button type="button" class="modal__submit" :disabled="isSubmitting || !selectedReason" @click="submit">
+          {{ isSubmitting ? t.sending : STR.common.submit }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -106,10 +101,17 @@ function onBackdropClick(e: MouseEvent): void {
   z-index: 1000;
 }
 
+.modal-frame {
+  background: #3d0f1a;
+  padding: 30px;
+  border-radius: var(--radius-md);
+  max-width: 440px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .modal {
   position: relative;
-  width: 100%;
-  max-width: 380px;
   background: var(--color-modal-bg);
   border: 2px solid var(--color-card);
   border-radius: var(--radius-md);

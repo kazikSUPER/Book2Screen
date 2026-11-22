@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { useUserStore } from '../state/user';
 import { extractErrorMessage } from '../services/error';
+import { STR } from '../constants';
 
 const emit = defineEmits<{
   close: [];
@@ -9,6 +10,7 @@ const emit = defineEmits<{
 }>();
 
 const userStore = useUserStore();
+const t = STR.auth;
 
 const email = ref('');
 const password = ref('');
@@ -35,17 +37,17 @@ const validate = (): boolean => {
   let isValid = true;
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
-    errors.value.email = 'Введіть коректний email';
+    errors.value.email = t.invalidEmail;
     isValid = false;
   }
 
   if (password.value.length < 8) {
-    errors.value.password = 'Пароль має бути не менше 8 символів';
+    errors.value.password = t.passwordTooShort;
     isValid = false;
   }
 
   if (password.value !== passwordConfirm.value) {
-    errors.value.passwordConfirm = 'Паролі не співпадають';
+    errors.value.passwordConfirm = t.passwordsMismatch;
     isValid = false;
   }
 
@@ -72,60 +74,78 @@ const handleRegister = async () => {
     isSubmitting.value = false;
   }
 };
+
+// Безпечне закриття overlay: модалка не закривається, якщо користувач
+// почав drag всередині модалки і випадково відпустив кнопку поза нею.
+const mouseDownOnOverlay = { value: false };
+function onOverlayMouseDown(e: MouseEvent) {
+  mouseDownOnOverlay.value = e.target === e.currentTarget;
+}
+function onOverlayClick(e: MouseEvent) {
+  if (mouseDownOnOverlay.value && e.target === e.currentTarget) {
+    emit('close');
+  }
+  mouseDownOnOverlay.value = false;
+}
 </script>
 
 <template>
-  <div class="modal-overlay" @click.self="emit('close')">
-    <div class="modal">
-      <button class="modal-close" @click="emit('close')">✕</button>
+  <div class="modal-overlay" @mousedown="onOverlayMouseDown" @click="onOverlayClick">
+    <div class="modal-frame" @click.stop @mousedown.stop>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="register-title">
+        <button class="modal-close" type="button" :aria-label="STR.common.close" @click="emit('close')">✕</button>
 
-      <h2 class="modal-title">Реєстрація</h2>
+        <h2 id="register-title" class="modal-title">{{ t.registerTitle }}</h2>
 
-      <div class="modal-body">
-        <div class="field">
-          <label class="field-label">Email</label>
-          <input
-            v-model="email"
-            type="email"
-            class="field-input"
-            :class="{ error: errors.email }"
-            placeholder="Введіть Email"
-            :disabled="isSubmitting"
-          />
-          <span v-if="errors.email" class="error-text">{{ errors.email }}</span>
+        <div class="modal-body">
+          <div class="field">
+            <label class="field-label">{{ t.email }}</label>
+            <input
+              v-model="email"
+              type="email"
+              autocomplete="email"
+              class="field-input"
+              :class="{ error: errors.email }"
+              :placeholder="t.emailPlaceholder"
+              :disabled="isSubmitting"
+            />
+            <span v-if="errors.email" class="error-text">{{ errors.email }}</span>
+          </div>
+
+          <div class="field">
+            <label class="field-label">{{ t.password }}</label>
+            <input
+              v-model="password"
+              type="password"
+              autocomplete="new-password"
+              class="field-input"
+              :class="{ error: errors.password }"
+              :placeholder="t.passwordPlaceholder"
+              :disabled="isSubmitting"
+            />
+            <span v-if="errors.password" class="error-text">{{ errors.password }}</span>
+          </div>
+
+          <div class="field">
+            <label class="field-label">{{ t.passwordRepeat }}</label>
+            <input
+              v-model="passwordConfirm"
+              type="password"
+              autocomplete="new-password"
+              class="field-input"
+              :class="{ error: errors.passwordConfirm }"
+              :placeholder="t.passwordPlaceholder"
+              :disabled="isSubmitting"
+            />
+            <span v-if="errors.passwordConfirm" class="error-text">{{ errors.passwordConfirm }}</span>
+          </div>
+
+          <p v-if="apiError" class="api-error">{{ apiError }}</p>
+
+          <button type="button" class="register-btn" :disabled="!isFormValid || isSubmitting" @click="handleRegister">
+            {{ isSubmitting ? t.submittingRegister : t.submitRegister }}
+          </button>
         </div>
-
-        <div class="field">
-          <label class="field-label">Пароль</label>
-          <input
-            v-model="password"
-            type="password"
-            class="field-input"
-            :class="{ error: errors.password }"
-            placeholder="Введіть пароль"
-            :disabled="isSubmitting"
-          />
-          <span v-if="errors.password" class="error-text">{{ errors.password }}</span>
-        </div>
-
-        <div class="field">
-          <label class="field-label">Повторіть пароль</label>
-          <input
-            v-model="passwordConfirm"
-            type="password"
-            class="field-input"
-            :class="{ error: errors.passwordConfirm }"
-            placeholder="Введіть пароль"
-            :disabled="isSubmitting"
-          />
-          <span v-if="errors.passwordConfirm" class="error-text">{{ errors.passwordConfirm }}</span>
-        </div>
-
-        <p v-if="apiError" class="api-error">{{ apiError }}</p>
-
-        <button class="register-btn" :disabled="!isFormValid || isSubmitting" @click="handleRegister">
-          {{ isSubmitting ? 'Реєстрація...' : 'Зареєструватись' }}
-        </button>
       </div>
     </div>
   </div>
@@ -135,20 +155,30 @@ const handleRegister = async () => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(49, 22, 32, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
+  padding: 16px;
+}
+
+.modal-frame {
+  background: #3d0f1a;
+  padding: 30px;
+  border-radius: var(--radius-md);
+  max-width: 440px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .modal {
-  background-color: var(--pink-light);
-  border-radius: 12px;
-  width: 100%;
-  max-width: 380px;
+  background-color: var(--color-modal-bg);
+  border: 2px solid var(--color-card);
+  /* border-radius: var(--radius-md); */
   padding: 32px;
   position: relative;
+  box-shadow: var(--shadow-md);
 }
 
 .modal-close {
@@ -158,20 +188,26 @@ const handleRegister = async () => {
   background: none;
   border: none;
   font-size: 18px;
-  color: var(--dark-card);
+  color: var(--text-on-light);
   cursor: pointer;
   line-height: 1;
 }
 
 .modal-close:hover {
-  color: var(--accent);
+  color: var(--color-primary);
+}
+
+.modal-close:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .modal-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--dark-card);
-  font-family: 'Georgia', serif;
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--text-on-light);
+  font-family: var(--font-display);
   margin: 0 0 24px;
   text-align: center;
 }
@@ -190,33 +226,33 @@ const handleRegister = async () => {
 
 .field-label {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--dark-card);
-  font-family: 'Georgia', serif;
+  font-weight: 500;
+  color: var(--text-on-light);
+  font-family: var(--font-display);
 }
 
 .field-input {
-  background-color: #fff;
-  border: 1px solid var(--pink-mid);
-  border-radius: 6px;
+  background-color: #ffffff;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
   padding: 10px 14px;
-  color: var(--dark-card);
+  color: var(--text-on-light);
   font-size: 14px;
-  font-family: 'Georgia', serif;
+  font-family: var(--font-body);
   outline: none;
   transition: border-color 0.2s;
 }
 
 .field-input::placeholder {
-  color: #aaa;
+  color: var(--text-muted);
 }
 
 .field-input:focus {
-  border-color: var(--accent);
+  border-color: var(--color-primary);
 }
 
 .field-input.error {
-  border-color: #ff6b6b;
+  border-color: var(--text-error);
 }
 
 .field-input:disabled {
@@ -225,44 +261,60 @@ const handleRegister = async () => {
 }
 
 .error-text {
-  color: #cc0000;
+  color: var(--text-error);
   font-size: 12px;
+  font-family: var(--font-body);
 }
 
 .api-error {
-  color: #cc0000;
+  color: var(--text-error);
   font-size: 13px;
   text-align: center;
   padding: 6px 8px;
-  background: rgba(204, 0, 0, 0.08);
-  border-radius: 4px;
+  background: rgba(198, 40, 40, 0.08);
+  border-radius: var(--radius-xs);
   margin: 0;
+  font-family: var(--font-body);
 }
 
 .register-btn {
-  background-color: var(--accent);
-  color: var(--pink-light);
-  border: none;
-  border-radius: 6px;
+  background-color: var(--color-primary);
+  color: var(--text-on-primary);
+  border: 2px solid var(--color-primary-dark);
+  border-radius: var(--radius-sm);
   padding: 12px;
-  font-size: 15px;
-  font-family: 'Georgia', serif;
-  font-weight: 600;
+  font-size: 14px;
+  font-family: var(--font-display);
+  font-weight: 400;
   cursor: pointer;
   width: 100%;
   margin-top: 4px;
-  transition:
-    background 0.2s,
-    transform 0.15s;
+  transition: background 0.2s;
 }
 
 .register-btn:hover:not(:disabled) {
-  background-color: #a82040;
-  transform: translateY(-1px);
+  background-color: var(--color-primary-hover);
 }
 
 .register-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.register-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .modal {
+    max-width: calc(100vw - 24px);
+    padding: 24px 20px;
+  }
+
+  .modal-title {
+    font-size: 18px;
+    margin-bottom: 18px;
+  }
 }
 </style>

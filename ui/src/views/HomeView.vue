@@ -1,38 +1,41 @@
 <template>
   <div class="home">
+    <h1 class="sr-only">Book2Screen — порівняння книг та екранізацій</h1>
     <section class="hero">
-      <img :src="heroImg" alt="Книга чи фільм – що краще?" class="hero-image" />
-      <button class="hero-btn" @click="goToTop">Переглянути ТОП</button>
+      <img :src="heroImg" :alt="STR.home.heroAlt" class="hero-image" />
+      <button type="button" class="hero-btn" @click="goToTop">
+        {{ STR.home.heroBtn }} <span class="hero-btn__accent">{{ STR.home.heroBtnAccent }}</span>
+      </button>
     </section>
 
     <section class="popular">
-      <h2 class="section-title">Популярні порівняння</h2>
+      <h2 class="section-title">{{ STR.home.popularTitle }}</h2>
 
-      <p v-if="isLoading" class="no-results">Завантаження...</p>
+      <p v-if="isLoading" class="no-results">{{ STR.common.loading }}</p>
 
       <div v-else-if="errorMessage" class="no-results">
         <p>⚠ {{ errorMessage }}</p>
-        <button class="retry-btn" @click="loadItems">Повторити</button>
+        <button type="button" class="retry-btn" @click="loadItems">{{ STR.common.retry }}</button>
       </div>
 
-      <p v-else-if="filteredItems.length === 0" class="no-results">Нічого не знайдено 😔</p>
+      <p v-else-if="filteredItems.length === 0" class="no-results">{{ STR.common.notFound }}</p>
 
       <div v-else class="cards-wrapper">
-        <div class="cards-scroll" ref="cardsRef">
+        <div ref="cardsRef" class="cards-scroll">
           <div v-for="item in filteredItems" :key="item.id" class="card" @click="goToItem(item)">
             <div class="card-poster">
-              <img :src="item.poster" :alt="item.title" />
+              <img :src="item.poster" :alt="item.title" loading="lazy" />
             </div>
             <div class="card-info">
               <h3 class="card-title">{{ item.title }}</h3>
-              <p class="card-meta">Рік: {{ item.year }}</p>
-              <p class="card-meta">Жанр: {{ item.genre }}</p>
-              <p class="card-meta">Країна: {{ item.country }}</p>
-              <button class="card-btn" @click.stop="goToItem(item)">Переглянути</button>
+              <p class="card-meta">{{ STR.detail.bookYear }} {{ item.year }}</p>
+              <p class="card-meta">{{ STR.detail.bookGenre }} {{ item.genre }}</p>
+              <p class="card-meta">{{ STR.detail.bookCountry }} {{ item.country }}</p>
+              <button type="button" class="card-btn">{{ STR.profile.view }}</button>
             </div>
           </div>
         </div>
-        <button class="scroll-btn" @click="scrollRight" aria-label="Далі">›</button>
+        <button type="button" class="scroll-btn" aria-label="Далі" @click="scrollRight">›</button>
       </div>
     </section>
   </div>
@@ -41,11 +44,12 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useFilter } from '../hooks/useFilter';
+import { useFilter } from '../composables/useFilter';
 import type { BookScreenItem } from '../services/types';
 import { fetchWorks } from '../services/works';
 import { extractErrorMessage } from '../services/error';
 import heroImg from '../assets/Hero.png';
+import { STR } from '../constants';
 
 export default defineComponent({
   name: 'HomeView',
@@ -77,12 +81,13 @@ export default defineComponent({
       if (cardsRef.value) cardsRef.value.scrollBy({ left: 380, behavior: 'smooth' });
     };
 
-    const goToTop = (): void => {
-      router.push({ name: 'top' });
-    };
-
     const goToItem = (item: BookScreenItem): void => {
       router.push({ name: 'detail', params: { id: item.id } });
+    };
+
+    // SCRUM-67 — Hero-кнопка "Переглянути ТОП" веде на сторінку Top Lists.
+    const goToTop = (): void => {
+      router.push({ name: 'top' });
     };
 
     return {
@@ -95,6 +100,7 @@ export default defineComponent({
       goToItem,
       goToTop,
       heroImg,
+      STR,
     };
   },
 });
@@ -144,6 +150,15 @@ export default defineComponent({
 
 .hero-btn:hover {
   background-color: var(--color-primary);
+}
+
+.hero-btn__accent {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.hero-btn:hover .hero-btn__accent {
+  color: var(--text-on-dark);
 }
 
 /* ── Popular ── */
@@ -355,7 +370,7 @@ export default defineComponent({
   }
 
   .card-meta {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .card-btn {

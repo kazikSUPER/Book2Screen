@@ -37,28 +37,54 @@ public class ReviewService : IReviewService
             throw new KeyNotFoundException($"Work with ID {request.WorkId} not found.");
         }
 
+        var user = await this.context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null)
+        {
+            throw new UnauthorizedException("User not found.");
+        }
+
         using var transaction = await this.context.Database.BeginTransactionAsync();
         try
         {
-            var review = new Review
-            {
-                UserId = userId,
-                WorkId = request.WorkId,
-                Text = request.Text,
-                IsSpoiler = request.IsSpoiler,
-                Rating = request.Rating,
-                TargetType = request.TargetType.ToLower(),
-            };
+            var targetTypeLower = request.TargetType.ToLower();
+            var existingReview = await this.context.Reviews
+                .FirstOrDefaultAsync(r => r.UserId == userId && r.WorkId == request.WorkId && r.TargetType == targetTypeLower);
 
-            await this.context.Reviews.AddAsync(review);
+            Review review;
+            if (existingReview != null)
+            {
+                review = existingReview;
+                review.Text = request.Text ?? review.Text; // Keep old text if new is null
+                review.IsSpoiler = request.IsSpoiler;
+                review.Rating = request.Rating;
+            }
+            else
+            {
+                review = new Review
+                {
+                    UserId = userId,
+                    WorkId = request.WorkId,
+                    Text = request.Text,
+                    IsSpoiler = request.IsSpoiler,
+                    Rating = request.Rating,
+                    TargetType = targetTypeLower,
+                };
+                await this.context.Reviews.AddAsync(review);
+            }
+
             await this.context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            // Перераховуємо рейтинг після коміту основної транзакції
+            await this.SyncWorkRatingAsync(review.WorkId);
 
             return new ReviewResponse
             {
                 ReviewId = review.Id,
                 WorkId = review.WorkId,
                 UserId = review.UserId ?? Guid.Empty,
+                UserNickname = user.Username,
+                UserAvatar = user.AvatarUrl,
                 Text = review.Text,
                 IsSpoiler = review.IsSpoiler,
                 Rating = review.Rating,
@@ -77,6 +103,7 @@ public class ReviewService : IReviewService
     public async Task<IEnumerable<ReviewResponse>> GetReviewsByWorkIdAsync(Guid workId)
     {
         return await this.context.Reviews
+            .Include(r => r.User)
             .Where(r => r.WorkId == workId)
             .OrderByDescending(r => r.CreatedAt)
             .Select(r => new ReviewResponse
@@ -84,10 +111,13 @@ public class ReviewService : IReviewService
                 ReviewId = r.Id,
                 WorkId = r.WorkId,
                 UserId = r.UserId ?? Guid.Empty,
+                UserNickname = r.User!.Username,
+                UserAvatar = r.User!.AvatarUrl,
                 Text = r.Text,
                 IsSpoiler = r.IsSpoiler,
                 Rating = r.Rating,
                 TargetType = r.TargetType,
+                LikesCount = r.LikesCount,
                 CreatedAt = r.CreatedAt,
             })
             .ToListAsync();
@@ -113,6 +143,9 @@ public class ReviewService : IReviewService
         review.TargetType = request.TargetType.ToLower();
 
         await this.context.SaveChangesAsync();
+
+        await this.SyncWorkRatingAsync(review.WorkId);
+
         return true;
     }
 
@@ -130,8 +163,12 @@ public class ReviewService : IReviewService
             throw new ForbiddenException("You can only delete your own reviews.");
         }
 
+        var workId = review.WorkId;
         this.context.Reviews.Remove(review);
         await this.context.SaveChangesAsync();
+
+        await this.SyncWorkRatingAsync(workId);
+
         return true;
     }
 
@@ -139,6 +176,7 @@ public class ReviewService : IReviewService
     public async Task<IEnumerable<ReviewResponse>> GetUserReviewsAsync(Guid userId)
     {
         return await this.context.Reviews
+            .Include(r => r.User)
             .Where(r => r.UserId == userId)
             .OrderByDescending(r => r.CreatedAt)
             .Select(r => new ReviewResponse
@@ -146,10 +184,13 @@ public class ReviewService : IReviewService
                 ReviewId = r.Id,
                 WorkId = r.WorkId,
                 UserId = r.UserId ?? Guid.Empty,
+                UserNickname = r.User!.Username,
+                UserAvatar = r.User!.AvatarUrl,
                 Text = r.Text,
                 IsSpoiler = r.IsSpoiler,
                 Rating = r.Rating,
                 TargetType = r.TargetType,
+                LikesCount = r.LikesCount,
                 CreatedAt = r.CreatedAt,
             })
             .ToListAsync();
@@ -175,6 +216,7 @@ public class ReviewService : IReviewService
     {
         return await this.context.Reports
             .Include(r => r.Review)
+                .ThenInclude(rev => rev!.User)
             .OrderByDescending(r => r.CreatedAt)
             .Select(r => new ReportResponse
             {
@@ -185,6 +227,19 @@ public class ReviewService : IReviewService
                 Status = r.Status,
                 CreatedAt = r.CreatedAt,
                 ReviewText = r.Review != null ? r.Review.Text : "Review deleted",
+                Review = r.Review == null ? null : new ReviewResponse
+                {
+                    ReviewId = r.Review.Id,
+                    WorkId = r.Review.WorkId,
+                    UserId = r.Review.UserId ?? Guid.Empty,
+                    UserNickname = r.Review.User!.Username ?? "Deleted User",
+                    UserAvatar = r.Review.User!.AvatarUrl,
+                    Text = r.Review.Text,
+                    IsSpoiler = r.Review.IsSpoiler,
+                    Rating = r.Review.Rating,
+                    TargetType = r.Review.TargetType,
+                    CreatedAt = r.Review.CreatedAt,
+                },
             })
             .ToListAsync();
     }
@@ -206,7 +261,7 @@ public class ReviewService : IReviewService
         {
             switch (action.ToLower())
             {
-                case "approve":
+                case "delete":
                     if (report.Review != null)
                     {
                         this.context.Reviews.Remove(report.Review);
@@ -214,7 +269,7 @@ public class ReviewService : IReviewService
 
                     report.Status = "Resolved";
                     break;
-                case "reject":
+                case "dismiss":
                     report.Status = "Dismissed";
                     break;
                 case "spoiler":
@@ -226,16 +281,48 @@ public class ReviewService : IReviewService
                     report.Status = "Resolved";
                     break;
                 default:
-                    throw new ArgumentException("Invalid action. Use approve, reject, or spoiler.");
+                    throw new ArgumentException("Invalid action. Use delete, dismiss, or spoiler.");
             }
 
             await this.context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            if (report.Review != null)
+            {
+                await this.SyncWorkRatingAsync(report.Review.WorkId);
+            }
         }
         catch
         {
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    /// <summary>
+    /// Перераховує та синхронізує рейтинг твору на основі всіх відгуків.
+    /// </summary>
+    private async Task SyncWorkRatingAsync(Guid workId)
+    {
+        var reviews = await this.context.Reviews
+            .Where(r => r.WorkId == workId)
+            .ToListAsync();
+
+        var rating = await this.context.Ratings.FirstOrDefaultAsync(r => r.WorkId == workId);
+
+        if (rating == null)
+        {
+            rating = new Rating { Id = Guid.NewGuid(), WorkId = workId };
+            await this.context.Ratings.AddAsync(rating);
+        }
+
+        var bookReviews = reviews.Where(r => r.TargetType == "book" || r.TargetType == "comparison").ToList();
+        var adaptationReviews = reviews.Where(r => r.TargetType == "adaptation" || r.TargetType == "comparison").ToList();
+
+        rating.BookRating = bookReviews.Any() ? (decimal?)Math.Round(bookReviews.Average(r => r.Rating), 1) : 0;
+        rating.AdaptationRating = adaptationReviews.Any() ? (decimal?)Math.Round(adaptationReviews.Average(r => r.Rating), 1) : 0;
+        rating.VotesCount = reviews.Count;
+
+        await this.context.SaveChangesAsync();
     }
 }

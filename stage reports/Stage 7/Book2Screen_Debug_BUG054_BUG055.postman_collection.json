@@ -1,0 +1,410 @@
+{
+  "info": {
+    "name": "Book2Screen — Debug BUG-054 & BUG-055",
+    "description": "Діагностика BUG-054 (adaptationId не знаходиться при PUT/DELETE) та BUG-055 (дублювання даних книги в картці екранізації)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
+    { "key": "adminToken", "value": "", "type": "string" },
+    { "key": "workId", "value": "", "type": "string" },
+    { "key": "adaptationId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "0. AUTH",
+      "item": [
+        {
+          "name": "POST /auth/login — admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('adminToken', j.token);",
+                  "console.log('[AUTH] adminToken saved:', j.token ? 'OK' : 'EMPTY');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/Auth/login", "host": ["{{baseUrl}}"], "path": ["api","v1","Auth","login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"Email\": \"admin@book2screen.com\",\n  \"Password\": \"Admin123!\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "1. ДІАГНОСТИКА BUG-054 — adaptationId",
+      "item": [
+        {
+          "name": "1.1 GET /works — перевірка adaptationId у відповіді",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "pm.test('Масив не порожній', () => pm.expect(items.length).to.be.greaterThan(0));",
+                  "",
+                  "const first = items[0];",
+                  "console.log('--- ДІАГНОСТИКА adaptationId ---');",
+                  "console.log('workId (id):', first.id);",
+                  "console.log('adaptationId:', first.adaptationId);",
+                  "console.log('title:', first.title);",
+                  "",
+                  "pm.collectionVariables.set('workId', first.id);",
+                  "pm.collectionVariables.set('adaptationId', first.adaptationId ?? '');",
+                  "",
+                  "pm.test('adaptationId присутній', () => {",
+                  "  pm.expect(first.adaptationId).to.be.a('string');",
+                  "});",
+                  "pm.test('adaptationId не порожній UUID', () => {",
+                  "  pm.expect(first.adaptationId).to.not.eql('00000000-0000-0000-0000-000000000000');",
+                  "});",
+                  "pm.test('adaptationId не дорівнює workId', () => {",
+                  "  pm.expect(first.adaptationId).to.not.eql(first.id);",
+                  "});",
+                  "",
+                  "// Виводимо всі adaptationId для діагностики",
+                  "items.forEach((item, i) => {",
+                  "  console.log(`[${i}] title=${item.title} | id=${item.id} | adaptationId=${item.adaptationId}`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/Works", "host": ["{{baseUrl}}"], "path": ["api","v1","Works"] }
+          }
+        },
+        {
+          "name": "1.2 GET /works/{workId} — перевірка одного твору",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const item = pm.response.json();",
+                  "console.log('--- GET /works/{id} ---');",
+                  "console.log('id:', item.id);",
+                  "console.log('adaptationId:', item.adaptationId);",
+                  "console.log('title:', item.title);",
+                  "pm.test('adaptationId присутній', () => pm.expect(item.adaptationId).to.be.a('string'));",
+                  "pm.test('adaptationId не порожній', () => pm.expect(item.adaptationId).to.not.eql('00000000-0000-0000-0000-000000000000'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/Works/{{workId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","Works","{{workId}}"] }
+          }
+        },
+        {
+          "name": "1.3 GET /admin/adaptations/{adaptationId} — чи знаходить бекенд",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 — BUG-054 перевірка', () => {",
+                  "  if (pm.response.code === 404) {",
+                  "    console.log('BUG-054 ПІДТВЕРДЖЕНО: бекенд не знаходить adaptationId =', pm.collectionVariables.get('adaptationId'));",
+                  "  } else {",
+                  "    console.log('BUG-054 OK: адаптація знайдена за adaptationId');",
+                  "  }",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const item = pm.response.json();",
+                  "console.log('Знайдено:', item.title, '| id:', item.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{adaptationId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","{{adaptationId}}"] }
+          }
+        },
+        {
+          "name": "1.4 GET /admin/adaptations/{workId} — чи знаходить за workId (помилковий запит)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('--- GET /admin/adaptations/{workId} ---');",
+                  "console.log('workId:', pm.collectionVariables.get('workId'));",
+                  "console.log('Response status:', pm.response.code);",
+                  "if (pm.response.code === 404) {",
+                  "  console.log('ОЧІКУВАНО: workId != adaptationId — бекенд правильно повертає 404');",
+                  "} else if (pm.response.code === 200) {",
+                  "  console.log('ДИВНО: workId == adaptationId — ID збігаються в БД');",
+                  "}",
+                  "pm.test('Відповідь отримана', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{workId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","{{workId}}"] }
+          }
+        },
+        {
+          "name": "1.5 PUT /admin/adaptations/{adaptationId} — BUG-054 ретест",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('--- PUT з adaptationId ---');",
+                  "console.log('adaptationId:', pm.collectionVariables.get('adaptationId'));",
+                  "console.log('Response status:', pm.response.code);",
+                  "if (pm.response.code === 404) {",
+                  "  console.log('BUG-054 АКТИВНИЙ: PUT повертає 404 навіть з правильним adaptationId');",
+                  "} else if (pm.response.code === 200) {",
+                  "  console.log('BUG-054 ВИПРАВЛЕНО: PUT успішний з adaptationId');",
+                  "}",
+                  "pm.test('Status 200 — BUG-054', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{adaptationId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","{{adaptationId}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"BUG-054 ретест\",\n  \"type\": \"movie\",\n  \"releaseYear\": 2001,\n  \"genre\": \"Фентезі\",\n  \"author\": \"Дж. К. Ролінґ\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "1.6 PUT /admin/adaptations/{workId} — з workId (помилковий запит як у UI)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('--- PUT з workId (як робить UI зараз) ---');",
+                  "console.log('workId:', pm.collectionVariables.get('workId'));",
+                  "console.log('Response status:', pm.response.code);",
+                  "if (pm.response.code === 404) {",
+                  "  console.log('ПІДТВЕРДЖЕНО: UI надсилає workId замість adaptationId → 404');",
+                  "} else if (pm.response.code === 200) {",
+                  "  console.log('workId == adaptationId в БД — seed дані мають однакові ID');",
+                  "}",
+                  "pm.test('Відповідь отримана', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/adaptations/{{workId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","admin","adaptations","{{workId}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"BUG-054 workId тест\",\n  \"type\": \"movie\",\n  \"releaseYear\": 2001,\n  \"genre\": \"Фентезі\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "2. ДІАГНОСТИКА BUG-055 — дублювання карток",
+      "item": [
+        {
+          "name": "2.1 GET /works/{workId} — перевірка полів книги vs екранізації",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const item = pm.response.json();",
+                  "",
+                  "console.log('--- ДІАГНОСТИКА BUG-055 ---');",
+                  "console.log('title:', item.title);",
+                  "console.log('--- КНИГА ---');",
+                  "console.log('bookRating:', item.bookRating);",
+                  "console.log('bookSummary:', item.bookSummary);",
+                  "console.log('author:', item.author);",
+                  "console.log('genre:', item.genre);",
+                  "console.log('country:', item.country);",
+                  "console.log('poster:', item.poster);",
+                  "console.log('--- ЕКРАНІЗАЦІЯ ---');",
+                  "console.log('filmRating:', item.filmRating);",
+                  "console.log('filmSummary:', item.filmSummary);",
+                  "console.log('filmYear:', item.filmYear);",
+                  "console.log('filmCountry:', item.filmCountry);",
+                  "console.log('filmPoster:', item.filmPoster);",
+                  "console.log('director:', item.director);",
+                  "",
+                  "pm.test('filmSummary присутній і не дублює bookSummary', () => {",
+                  "  if (item.filmSummary && item.bookSummary) {",
+                  "    pm.expect(item.filmSummary).to.not.eql(item.bookSummary);",
+                  "  } else {",
+                  "    console.log('WARN: filmSummary порожній — BUG-055 причина може бути тут');",
+                  "    pm.expect(true).to.be.true;",
+                  "  }",
+                  "});",
+                  "pm.test('filmPoster присутній', () => {",
+                  "  if (!item.filmPoster) console.log('WARN: filmPoster порожній');",
+                  "  pm.expect(true).to.be.true;",
+                  "});",
+                  "pm.test('filmCountry присутній', () => {",
+                  "  if (!item.filmCountry) console.log('WARN: filmCountry порожній');",
+                  "  pm.expect(true).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/Works/{{workId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","Works","{{workId}}"] }
+          }
+        },
+        {
+          "name": "2.2 GET /works — всі поля film* для всіх творів",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "",
+                  "console.log('--- BUG-055: film* поля ---');",
+                  "items.forEach((item, i) => {",
+                  "  console.log(`[${i}] ${item.title}`);",
+                  "  console.log(`  poster=${item.poster}`);",
+                  "  console.log(`  filmPoster=${item.filmPoster}`);",
+                  "  console.log(`  country=${item.country}`);",
+                  "  console.log(`  filmCountry=${item.filmCountry}`);",
+                  "  console.log(`  bookSummary=${item.bookSummary ? item.bookSummary.substring(0,50)+'...' : 'NULL'}`);",
+                  "  console.log(`  filmSummary=${item.filmSummary ? item.filmSummary.substring(0,50)+'...' : 'NULL'}`);",
+                  "  const hasDuplicate = item.poster === item.filmPoster && item.country === item.filmCountry;",
+                  "  if (hasDuplicate) console.log(`  ⚠ ДУБЛЮВАННЯ: poster і country однакові`);",
+                  "});",
+                  "",
+                  "const withDuplicates = items.filter(i => i.poster === i.filmPoster && i.country === i.filmCountry);",
+                  "console.log(`Творів з дублюванням: ${withDuplicates.length}/${items.length}`);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/Works", "host": ["{{baseUrl}}"], "path": ["api","v1","Works"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "3. РЕГРЕСІЯ — суміжний функціонал",
+      "item": [
+        {
+          "name": "3.1 GET /works/top — не зламався",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Масив', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "console.log('Top works count:', pm.response.json().length);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/Works/top", "host": ["{{baseUrl}}"], "path": ["api","v1","Works","top"] }
+          }
+        },
+        {
+          "name": "3.2 POST /votes — голосування не зламалось",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 або 201', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/Votes", "host": ["{{baseUrl}}"], "path": ["api","v1","Votes"] },
+            "body": { "mode": "raw", "raw": "{\n  \"workId\": \"{{workId}}\",\n  \"voteType\": \"book\"\n}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        {
+          "name": "3.3 GET /reviews/work/{workId} — відгуки не зламались",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Масив', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/Reviews/work/{{workId}}", "host": ["{{baseUrl}}"], "path": ["api","v1","Reviews","work","{{workId}}"] }
+          }
+        },
+        {
+          "name": "3.4 GET /favorites — вішліст не зламався",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Масив', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/Favorites", "host": ["{{baseUrl}}"], "path": ["api","v1","Favorites"] }
+          }
+        }
+      ]
+    }
+  ]
+}

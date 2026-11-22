@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import type { ReviewResponse } from '../services/types';
 import StarRating from './StarRating.vue';
+import { STR } from '../constants';
 
 /**
  * Один відгук у списку коментарів. Якщо isSpoiler=true — текст приховано
@@ -9,7 +10,7 @@ import StarRating from './StarRating.vue';
  * фактичний submit іде через окрему модалку (ReportCommentModal).
  */
 
-defineProps<{
+const props = defineProps<{
   review: ReviewResponse;
 }>();
 
@@ -17,15 +18,22 @@ defineEmits<{
   report: [reviewId: string];
 }>();
 
+const t = STR.detail;
+
 // Чи розкрив користувач спойлер локально.
 const revealed = ref(false);
 
+// SCRUM-72 — форматуємо createdAt у локальну дату.
+// До цього тут був зламаний стаб, що завжди повертав ''.
 const formattedDate = computed(() => {
-  // У createdAt бекенд може повертати як ISO рядок. Парсимо безпечно.
-  const d = new Date();
-  d.setTime(Date.now()); // fallback
-  // ця компонента — тільки для відображення, не критично
-  return '';
+  if (!props.review.createdAt) return '';
+  const d = new Date(props.review.createdAt);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('uk-UA', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
 });
 </script>
 
@@ -40,22 +48,25 @@ const formattedDate = computed(() => {
       <header class="review__head">
         <span class="review__author">{{ review.userNickname || 'Користувач' }}</span>
         <StarRating v-if="review.rating > 0" :model-value="review.rating" readonly :size="14" />
+        <span v-if="review.targetType" class="review__target-badge" :class="`review__target-badge--${review.targetType}`">
+          {{ review.targetType === 'book' ? t.targetBook : (review.targetType === 'adaptation' ? t.targetAdaptation : t.targetComparison) }}
+        </span>
+        <time v-if="formattedDate" class="review__date" :datetime="review.createdAt">{{ formattedDate }}</time>
       </header>
 
       <!-- Спойлер: показуємо плейсхолдер з тогглом -->
       <div v-if="review.isSpoiler && !revealed" class="review__spoiler">
-        <span>Коментар містить спойлер,</span>
-        <button type="button" class="review__reveal-link" @click="revealed = true">показати</button>
+        <span>{{ t.commentContainsSpoiler }}</span>
+        <button type="button" class="review__reveal-link" @click="revealed = true">{{ t.commentShow }}</button>
       </div>
       <p v-else class="review__text">{{ review.text }}</p>
 
       <footer class="review__foot">
         <button type="button" class="review__report" @click="$emit('report', review.reviewId)">
-          Поскаржитись
+          {{ t.reportBtn }}
         </button>
       </footer>
     </div>
-    <span v-if="formattedDate" class="visually-hidden">{{ formattedDate }}</span>
   </article>
 </template>
 
@@ -103,6 +114,13 @@ const formattedDate = computed(() => {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-on-light);
+}
+
+.review__date {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: auto;
 }
 
 .review__text {
@@ -158,11 +176,27 @@ const formattedDate = computed(() => {
   text-decoration: underline;
 }
 
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
+.review__target-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.review__target-badge--comparison {
+  background-color: rgba(142, 24, 47, 0.25);
+  color: #ff6b81;
+}
+
+.review__target-badge--book {
+  background-color: rgba(240, 192, 64, 0.25);
+  color: #ffd254;
+}
+
+.review__target-badge--adaptation {
+  background-color: rgba(64, 120, 240, 0.25);
+  color: #70a1ff;
 }
 </style>

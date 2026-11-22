@@ -23,7 +23,7 @@ public class UserValidator : AbstractValidator<User>
 
         this.RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email is required")
-            .EmailAddress().WithMessage("A valid email address is required");
+            .EmailAddress().WithMessage("Valid email address is required");
 
         this.RuleFor(x => x.Role)
             .Must(role => new[] { "user", "admin", "moderator" }.Contains(role))

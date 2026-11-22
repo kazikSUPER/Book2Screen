@@ -41,8 +41,7 @@ public class Review : BaseEntity
     /// <summary>
     /// Gets or sets текст відгуку.
     /// </summary>
-    [Required]
-    public string Text { get; set; } = null!;
+    public string? Text { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether чи містить відгук спойлери.

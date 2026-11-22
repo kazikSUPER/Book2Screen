@@ -2,9 +2,11 @@ import axios, { AxiosError } from 'axios';
 import { useUserStore } from '../state/user';
 import { useNotificationsStore } from '../state/notifications';
 import type { ApiError } from './types';
+import { API_URL } from './env';
+import { STR } from '../constants';
 
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -45,7 +47,7 @@ apiClient.interceptors.response.use(
       const notifications = useNotificationsStore();
       if (userStore.isAuthenticated) {
         userStore.logout();
-        notifications.pushWarning('Сесія закінчилась — увійдіть знову');
+        notifications.pushWarning(STR.common.sessionExpired);
       }
       return Promise.reject(error);
     }
@@ -53,7 +55,7 @@ apiClient.interceptors.response.use(
     // 2) Заборонено.
     if (status === 403) {
       const notifications = useNotificationsStore();
-      const message = error.response?.data?.message || 'Немає доступу до цього ресурсу';
+      const message = error.response?.data?.message || STR.common.accessDenied;
       notifications.pushError(message);
       return Promise.reject(error);
     }
@@ -63,7 +65,7 @@ apiClient.interceptors.response.use(
       const notifications = useNotificationsStore();
       const message =
         error.code === 'ERR_NETWORK'
-          ? 'Сервер недоступний. Перевірте інтернет або спробуйте пізніше.'
+          ? STR.common.networkError
           : error.response?.data?.message || `Помилка сервера (${status})`;
       notifications.pushError(message);
       return Promise.reject(error);

@@ -25,9 +25,9 @@ public class AuthResponse
     public string Email { get; set; } = null!;
 
     /// <summary>
-    /// Gets or sets публічне ім'я (нікнейм) користувача.
+    /// Gets or sets публічне ім'я (логін) користувача.
     /// </summary>
-    public string Nickname { get; set; } = null!;
+    public string Username { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets роль користувача (user, admin, moderator).

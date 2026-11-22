@@ -51,7 +51,7 @@ public class UserProfileController : ControllerBase
     /// <summary>
     /// Оновити аватар поточного користувача.
     /// </summary>
-    /// <param name="avatarUrl">URL нового аватара.</param>
+    /// <param name="request">Запит з URL нового аватара.</param>
     /// <response code="200">Аватар успішно оновлено.</response>
     /// <response code="401">Не авторизований.</response>
     /// <response code="404">Користувача не знайдено.</response>
@@ -60,10 +60,10 @@ public class UserProfileController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateMyAvatar([FromBody] string avatarUrl)
+    public async Task<IActionResult> UpdateMyAvatar([FromBody] AvatarUpdateDto request)
     {
         var userId = this.GetUserId();
-        await this.userService.UpdateAvatarAsync(userId, avatarUrl);
+        await this.userService.UpdateAvatarAsync(userId, request.AvatarUrl);
         return this.Ok(new { message = "Avatar updated successfully." });
     }
 

@@ -23,6 +23,12 @@ public class Favorite : BaseEntity
     public User User { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets тип обраного (напр. read, watch).
+    /// </summary>
+    [MaxLength(20)]
+    public string Kind { get; set; } = "favorite";
+
+    /// <summary>
     /// Gets or sets iD твору.
     /// </summary>
     [Required]

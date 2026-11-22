@@ -42,8 +42,8 @@ DetailView.vue
 **Неправильно:**
 
 ```
-login-modal.vue   
-home.vue          
+login-modal.vue
+home.vue
 ```
 
 ### 1.3. TypeScript-файли (`.ts`)
@@ -63,9 +63,9 @@ user.ts
 **Неправильно:**
 
 ```
-API.ts          
-use-filter.ts   
-UserStore.ts    
+API.ts
+use-filter.ts
+UserStore.ts
 ```
 
 ### 1.4. Композиції (Vue Composables / Hooks)
@@ -162,8 +162,8 @@ const apiUrl = ...;
 interface HttpConfig { ... }
 
 // Неправильно:
-const APIUrl = ...;     
-interface HTTPConfig { ... }   
+const APIUrl = ...;
+interface HTTPConfig { ... }
 ```
 
 ---
@@ -186,11 +186,11 @@ interface HTTPConfig { ... }
 
 **Замість них використовуй осмислені назви:**
 
-| Замість | Використовуй |
-|---------|--------------|
+| Замість | Використовуй                                    |
+| ------- | ----------------------------------------------- |
 | `data`  | `items`, `products`, `userList`, `responseBody` |
-| `info`  | `userDetails`, `meta`, `summary` |
-| `temp`  | `draft`, `buffer`, `cached` |
+| `info`  | `userDetails`, `meta`, `summary`                |
+| `temp`  | `draft`, `buffer`, `cached`                     |
 
 ---
 
@@ -198,15 +198,15 @@ interface HTTPConfig { ... }
 
 Правила форматування автоматично контролюються **Prettier** (`.prettierrc`) та **EditorConfig** (`.editorconfig`).
 
-| Параметр | Значення |
-|----------|----------|
-| Відступ | 2 пробіли |
-| Кодування | UTF-8 |
-| Кінець рядка | LF |
-| Максимальна довжина рядка | 120 символів |
-| Крапка з комою в кінці | Обов'язково (`semi: true`) |
-| Лапки для рядків | Одинарні (`'...'`) |
-| Trailing comma | `es5` |
+| Параметр                  | Значення                   |
+| ------------------------- | -------------------------- |
+| Відступ                   | 2 пробіли                  |
+| Кодування                 | UTF-8                      |
+| Кінець рядка              | LF                         |
+| Максимальна довжина рядка | 120 символів               |
+| Крапка з комою в кінці    | Обов'язково (`semi: true`) |
+| Лапки для рядків          | Одинарні (`'...'`)         |
+| Trailing comma            | `es5`                      |
 
 ---
 
